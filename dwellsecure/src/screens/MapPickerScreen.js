@@ -4,11 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  ScrollView,
-  TextInput,
-  Linking,
-  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,13 +25,7 @@ export default function MapPickerScreen() {
   const [selectedLocation, setSelectedLocation] = useState(
     initialLocation || null
   );
-  const [latitude, setLatitude] = useState(
-    initialLocation?.latitude?.toString() || ''
-  );
-  const [longitude, setLongitude] = useState(
-    initialLocation?.longitude?.toString() || ''
-  );
-  const [useManualEntry, setUseManualEntry] = useState(!WebView);
+  // Force Mapbox usage - don't allow manual entry fallback
 
   const handleMapMessage = (event) => {
     try {
@@ -52,113 +41,96 @@ export default function MapPickerScreen() {
     }
   };
 
-  const handleManualConfirm = () => {
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || isNaN(lng)) {
-      Alert.alert('Error', 'Please enter valid coordinates');
-      return;
-    }
-    
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      Alert.alert('Error', 'Invalid coordinate values');
-      return;
-    }
-    
-    const location = { latitude: lat, longitude: lng };
-    if (onConfirm) {
-      onConfirm(location);
-    }
-    navigation.goBack();
-  };
+  const [isConfirmPressed, setIsConfirmPressed] = useState(false);
 
   const handleConfirm = () => {
-    if (useManualEntry) {
-      handleManualConfirm();
-      return;
-    }
+    if (!selectedLocation) return;
     
-    if (selectedLocation && onConfirm) {
-      onConfirm(selectedLocation);
-    }
-    navigation.goBack();
+    // Show visual feedback
+    setIsConfirmPressed(true);
+    
+    // Short delay to show blue feedback
+    setTimeout(() => {
+      if (onConfirm) {
+        onConfirm(selectedLocation);
+      }
+      navigation.goBack();
+    }, 200); // Very short delay (200ms)
   };
 
-  const handleOpenExternalMap = async () => {
-    const mapAddress = address || '';
-    let url = '';
-    
-    if (Platform.OS === 'ios') {
-      url = `maps://maps.apple.com/?q=${encodeURIComponent(mapAddress)}`;
-    } else {
-      url = `geo:0,0?q=${encodeURIComponent(mapAddress)}`;
-    }
-    
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        const webUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`;
-        await Linking.openURL(webUrl);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Unable to open map application');
-    }
+  const handleConfirmPressIn = () => {
+    setIsConfirmPressed(true);
+  };
+
+  const handleConfirmPressOut = () => {
+    setIsConfirmPressed(false);
   };
 
   const getMapHTML = () => {
     const lat = selectedLocation?.latitude || initialLocation?.latitude || 37.78825;
     const lng = selectedLocation?.longitude || initialLocation?.longitude || -122.4324;
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
 
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+          <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
           <style>
             body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
             #map { height: 100%; width: 100%; }
+            .mapboxgl-ctrl-top-left { top: 10px; left: 10px; }
+            .mapboxgl-ctrl-top-right { top: 10px; right: 10px; }
+            .marker {
+              background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="%2330ACFF"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>');
+              background-size: cover;
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              cursor: pointer;
+            }
           </style>
         </head>
         <body>
           <div id="map"></div>
           <script>
-            let map;
-            let marker;
+            mapboxgl.accessToken = '${MAPBOX_TOKEN}';
             
-            function initMap() {
-              map = new L.Map('map', {
-                center: [${lat}, ${lng}],
-                zoom: 15,
-                zoomControl: true
-              });
-              
-              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-              }).addTo(map);
-              
-              marker = L.marker([${lat}, ${lng}], {
-                draggable: true
-              }).addTo(map);
-              
-              map.on('click', function(e) {
-                const lat = e.latlng.lat;
-                const lng = e.latlng.lng;
-                marker.setLatLng([lat, lng]);
-                sendLocation(lat, lng);
-              });
-              
-              marker.on('dragend', function(e) {
-                const lat = e.target.getLatLng().lat;
-                const lng = e.target.getLatLng().lng;
-                sendLocation(lat, lng);
-              });
-            }
+            let map = new mapboxgl.Map({
+              container: 'map',
+              style: 'mapbox://styles/mapbox/satellite-streets-v12',
+              center: [${lng}, ${lat}],
+              zoom: 15,
+              attributionControl: false
+            });
+            
+            // Create a marker element
+            const el = document.createElement('div');
+            el.className = 'marker';
+            
+            // Create marker
+            let marker = new mapboxgl.Marker({
+              element: el,
+              draggable: true
+            })
+              .setLngLat([${lng}, ${lat}])
+              .addTo(map);
+            
+            // Handle map click
+            map.on('click', function(e) {
+              const lng = e.lngLat.lng;
+              const lat = e.lngLat.lat;
+              marker.setLngLat([lng, lat]);
+              sendLocation(lat, lng);
+            });
+            
+            // Handle marker drag
+            marker.on('dragend', function() {
+              const lngLat = marker.getLngLat();
+              sendLocation(lngLat.lat, lngLat.lng);
+            });
             
             function sendLocation(lat, lng) {
               if (window.ReactNativeWebView) {
@@ -170,16 +142,18 @@ export default function MapPickerScreen() {
               }
             }
             
-            initMap();
+            // Add navigation controls
+            map.addControl(new mapboxgl.NavigationControl(), 'top-right');
           </script>
         </body>
       </html>
     `;
   };
 
-  if (useManualEntry || !WebView) {
+  // If WebView is not available, show error message
+  if (!WebView) {
     return (
-      <ScrollView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
             <Ionicons name="close" size={28} color="#333" />
@@ -187,56 +161,20 @@ export default function MapPickerScreen() {
           <Text style={styles.headerTitle}>Select Location</Text>
           <View style={{ width: 28 }} />
         </View>
-
-        <View style={styles.content}>
-          <Text style={styles.instructionText}>
-            Enter coordinates or use the map app to find them
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={60} color="#ff6b6b" />
+          <Text style={styles.errorTitle}>Map Not Available</Text>
+          <Text style={styles.errorText}>
+            Please install react-native-webview to use the interactive map.
           </Text>
-
-          <View style={styles.mapPlaceholder}>
-            <Ionicons name="map" size={80} color="#ccc" />
-            <TouchableOpacity style={styles.mapButton} onPress={handleOpenExternalMap}>
-              <Ionicons name="location" size={24} color="#999" />
-              <Text style={styles.mapButtonText}>Open in Map App</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.coordinatesSection}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Latitude</Text>
-              <TextInput
-                style={styles.input}
-                value={latitude}
-                onChangeText={setLatitude}
-                placeholder="e.g., 37.78825"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Longitude</Text>
-              <TextInput
-                style={styles.input}
-                value={longitude}
-                onChangeText={setLongitude}
-                placeholder="e.g., -122.4324"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
           <TouchableOpacity 
-            style={[styles.confirmButton, (!latitude || !longitude) && styles.confirmButtonDisabled]} 
-            onPress={handleConfirm}
-            disabled={!latitude || !longitude}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            <Ionicons name="checkmark" size={24} color="#fff" />
-            <Text style={styles.confirmButtonText}>Confirm Location</Text>
+            <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -271,9 +209,16 @@ export default function MapPickerScreen() {
           </View>
         )}
         <TouchableOpacity 
-          style={[styles.confirmButton, !selectedLocation && styles.confirmButtonDisabled]} 
+          style={[
+            styles.confirmButton, 
+            !selectedLocation && styles.confirmButtonDisabled,
+            isConfirmPressed && styles.confirmButtonActive
+          ]} 
           onPress={handleConfirm}
+          onPressIn={handleConfirmPressIn}
+          onPressOut={handleConfirmPressOut}
           disabled={!selectedLocation}
+          activeOpacity={0.8}
         >
           <Ionicons name="checkmark" size={24} color="#fff" />
           <Text style={styles.confirmButtonText}>Confirm Location</Text>
@@ -392,11 +337,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  confirmButtonActive: {
+    backgroundColor: '#30ACFF',
+    transform: [{ scale: 0.98 }],
+  },
   confirmButtonDisabled: {
     backgroundColor: '#D0D0D0',
     opacity: 0.6,
   },
   confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#30ACFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

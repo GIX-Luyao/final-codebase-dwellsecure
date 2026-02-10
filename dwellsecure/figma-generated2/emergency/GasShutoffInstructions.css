@@ -1,0 +1,217 @@
+.gas-shutoff-page {
+  min-height: 100vh;
+  background: var(--red);
+  position: relative;
+  overflow-y: auto;
+  padding-bottom: 150px;
+}
+
+.emergency-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px 20px;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  left: 35px;
+  top: 31px;
+  width: 49px;
+  height: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transform: rotate(45deg);
+  transition: all 0.2s ease;
+}
+
+.close-button:active {
+  transform: rotate(45deg) scale(0.9);
+}
+
+.emergency-title {
+  color: var(--white);
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.instructions-content {
+  padding: 40px 60px 0;
+}
+
+.main-heading {
+  color: var(--white);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: normal;
+  margin-bottom: 50px;
+}
+
+.instruction-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step-divider {
+  width: 242px;
+  height: 1px;
+  background: var(--white);
+  opacity: 0.6;
+  margin: 40px 0;
+}
+
+.instruction-step {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+}
+
+.instruction-step.highlighted .step-content {
+  background: rgba(151, 76, 76, 1);
+  border-radius: 30px;
+  padding: 20px 30px;
+  margin: -20px -30px;
+}
+
+.step-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+.step-content.icon-step {
+  align-items: center;
+  text-align: center;
+}
+
+.step-text {
+  color: var(--white);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: normal;
+  word-wrap: break-word;
+}
+
+.highlighted-text {
+  color: var(--white);
+}
+
+.gas-meter-icon,
+.wrench-icon,
+.person-icon {
+  margin: 20px 0;
+}
+
+.gas-meter-icon {
+  width: 150px;
+  height: 150px;
+}
+
+.wrench-icon {
+  width: 165px;
+  height: 200px;
+}
+
+.person-icon {
+  width: 153px;
+  height: 153px;
+}
+
+.call-911-button {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 120px);
+  max-width: 470px;
+  height: 80px;
+  background: rgba(151, 76, 76, 1);
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 60px 0 50px;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.call-911-button:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.call-911-button span {
+  color: var(--white);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.emergency-icon-small {
+  position: relative;
+  width: 100px;
+  height: 98px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emergency-icon-small::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100px;
+  height: 48px;
+  background: var(--red);
+  border-radius: 100px 100px 0 0;
+  z-index: 1;
+}
+
+.emergency-icon-small svg {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+}
+
+.drag-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 504px;
+  border-radius: 80px 80px 0 0;
+  background: var(--white);
+  opacity: 0.01;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .instructions-content {
+    padding: 40px 30px 0;
+  }
+
+  .main-heading {
+    font-size: 28px;
+  }
+
+  .step-text {
+    font-size: 28px;
+  }
+
+  .call-911-button {
+    width: calc(100% - 60px);
+    padding: 0 40px 0 30px;
+  }
+
+  .call-911-button span {
+    font-size: 24px;
+  }
+}

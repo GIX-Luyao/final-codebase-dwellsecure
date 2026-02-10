@@ -1,0 +1,95 @@
+.enter-utility-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+.utility-form {
+  flex: 1;
+  padding: 30px 59px;
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+}
+
+.progress-indicator {
+  width: 289px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--gray-2);
+  margin: 0 auto;
+}
+
+.form-section {
+  width: 100%;
+}
+
+.section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+}
+
+.section-half {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E1E1E;
+}
+
+.location-button {
+  position: relative;
+  aspect-ratio: 220 / 152;
+  border-radius: 15px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.location-button:hover {
+  transform: scale(1.02);
+}
+
+.location-pin {
+  position: absolute;
+  top: 50%;
+  left: 20%;
+  transform: translate(-50%, -50%);
+}
+
+.floor-select {
+  position: relative;
+}
+
+.dropdown-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}

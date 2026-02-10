@@ -28,17 +28,36 @@ export default function PropertyDetailScreen({ route }) {
   );
 
   const loadData = async () => {
-    const propertyData = await getProperty();
-    setProperty(propertyData);
+    try {
+      const propertyData = await getProperty(propertyId);
+      setProperty(propertyData || null);
 
-    const shutoffsData = await getShutoffs();
-    setShutoffs(shutoffsData);
+      const shutoffsData = await getShutoffs();
+      // Filter shutoffs by propertyId - only show shutoffs belonging to this property
+      const propertyShutoffs = propertyId && Array.isArray(shutoffsData)
+        ? shutoffsData.filter(s => s.propertyId === propertyId)
+        : [];
+      setShutoffs(propertyShutoffs);
 
-    const utilitiesData = await getUtilities();
-    setUtilities(utilitiesData);
+      const utilitiesData = await getUtilities();
+      // Filter utilities by propertyId - only show utilities belonging to this property
+      const propertyUtilities = propertyId && Array.isArray(utilitiesData)
+        ? utilitiesData.filter(u => u.propertyId === propertyId)
+        : [];
+      setUtilities(propertyUtilities);
 
-    const peopleData = await getPeople();
-    setPeople(peopleData);
+      const allPeople = await getPeople();
+      const propertyPeople = propertyId && Array.isArray(allPeople) 
+        ? allPeople.filter(p => p.propertyId === propertyId) 
+        : [];
+      setPeople(propertyPeople);
+    } catch (error) {
+      console.error('[PropertyDetail] Error loading data:', error);
+      // Set safe defaults on error
+      setShutoffs([]);
+      setUtilities([]);
+      setPeople([]);
+    }
   };
 
   const handleDelete = () => {
@@ -55,7 +74,7 @@ export default function PropertyDetailScreen({ route }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteProperty();
+              await deleteProperty(propertyId);
               navigation.navigate('PropertyList');
             } catch (error) {
               Alert.alert('Error', 'Failed to delete property');
@@ -91,7 +110,7 @@ export default function PropertyDetailScreen({ route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.imageSection}>
           {property?.imageUri ? (
             <Image source={{ uri: property.imageUri }} style={styles.propertyImage} />
@@ -106,44 +125,58 @@ export default function PropertyDetailScreen({ route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Shutoffs</Text>
           </View>
-          <View style={styles.itemsGrid}>
-            {shutoffs.slice(0, 3).map((shutoff, index) => {
-              const icons = ['flame-outline', 'flash-outline', 'water'];
-              return (
-                <View key={shutoff.id} style={styles.gridItemContainer}>
-                  <Ionicons name={icons[index]} size={20} color="#333" style={styles.gridItemIcon} />
-                  <TouchableOpacity
-                    style={styles.gridItem}
-                    onPress={() => navigation.navigate('ShutoffDetail', { shutoffId: shutoff.id })}
-                  >
-                    {shutoff.photoUri ? (
-                      <Image source={{ uri: shutoff.photoUri }} style={styles.gridItemImage} />
-                    ) : (
+          <View style={styles.shutoffsGrid}>
+            {['gas', 'electric', 'water'].map((type, index) => {
+              // Find shutoff of this type
+              const shutoff = Array.isArray(shutoffs) 
+                ? shutoffs.find(s => {
+                    const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+                    return normalizedType === type;
+                  })
+                : null;
+              
+              const icons = ['flame-outline', 'flash-outline', 'water-outline'];
+              const typeLabels = ['gas', 'electric', 'water'];
+              
+              if (shutoff && shutoff.id) {
+                // Get first photo if available
+                const firstPhoto = shutoff.photos && Array.isArray(shutoff.photos) && shutoff.photos.length > 0 
+                  ? shutoff.photos[0] 
+                  : null;
+                
+                return (
+                  <View key={shutoff.id} style={styles.gridItemContainer}>
+                    <Ionicons name={icons[index]} size={20} color="#333" style={styles.gridItemIcon} />
+                    <TouchableOpacity
+                      style={styles.gridItem}
+                      onPress={() => navigation.navigate('ShutoffDetail', { shutoffId: shutoff.id })}
+                    >
+                      {firstPhoto ? (
+                        <Image source={{ uri: firstPhoto }} style={styles.gridItemImage} />
+                      ) : (
+                        <View style={styles.gridItemPlaceholder}>
+                          <Ionicons name="image-outline" size={30} color="#ccc" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              } else {
+                // Show add button for this type
+                return (
+                  <View key={`placeholder-${type}`} style={styles.gridItemContainer}>
+                    <Ionicons name={icons[index]} size={20} color="#333" style={styles.gridItemIcon} />
+                    <TouchableOpacity
+                      style={styles.gridItem}
+                      onPress={() => navigation.navigate('AddEditShutoff', { shutoff: null, type: typeLabels[index], propertyId: propertyId })}
+                    >
                       <View style={styles.gridItemPlaceholder}>
-                        <Ionicons name="image-outline" size={30} color="#ccc" />
+                        <Ionicons name="add-circle-outline" size={40} color="#999" />
                       </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-            {[...Array(Math.max(0, 3 - shutoffs.length))].map((_, index) => {
-              const icons = ['flame-outline', 'flash-outline', 'water'];
-              const types = ['fire', 'power', 'water'];
-              const iconIndex = shutoffs.length + index;
-              return (
-                <View key={`placeholder-${index}`} style={styles.gridItemContainer}>
-                  <Ionicons name={icons[iconIndex]} size={20} color="#333" style={styles.gridItemIcon} />
-                  <TouchableOpacity
-                    style={styles.gridItem}
-                    onPress={() => navigation.navigate('AddEditShutoff', { shutoff: null, type: types[iconIndex] })}
-                  >
-                    <View style={styles.gridItemPlaceholder}>
-                      <Ionicons name="add-circle-outline" size={40} color="#999" />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              );
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
             })}
           </View>
         </View>
@@ -152,33 +185,39 @@ export default function PropertyDetailScreen({ route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Utilities</Text>
           </View>
-          <View style={styles.itemsGrid}>
-            {utilities.slice(0, 3).map((utility) => (
-              <TouchableOpacity
-                key={utility.id}
-                style={styles.utilityGridItem}
-                onPress={() => navigation.navigate('UtilityDetail', { utilityId: utility.id })}
-              >
-                {utility.photoUri ? (
-                  <Image source={{ uri: utility.photoUri }} style={styles.gridItemImage} />
-                ) : (
-                  <View style={styles.gridItemPlaceholder}>
-                    <Ionicons name="image-outline" size={30} color="#ccc" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-            {[...Array(Math.max(0, 3 - utilities.length))].map((_, index) => (
-              <TouchableOpacity
-                key={`add-utility-${index}`}
-                style={styles.utilityGridItem}
-                onPress={() => navigation.navigate('AddEditUtility', { utility: null })}
-              >
-                <View style={styles.addItemPlaceholder}>
-                  <Ionicons name="add-circle-outline" size={30} color="#999" />
-                </View>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.utilitiesGrid}>
+            {Array.isArray(utilities) && utilities.map((utility) => {
+              if (!utility || !utility.id) return null;
+              // Get first photo if available
+              const firstPhoto = utility.photos && Array.isArray(utility.photos) && utility.photos.length > 0 
+                ? utility.photos[0] 
+                : null;
+              
+              return (
+                <TouchableOpacity
+                  key={utility.id}
+                  style={styles.utilityGridItem}
+                  onPress={() => navigation.navigate('UtilityDetail', { utilityId: utility.id })}
+                >
+                  {firstPhoto ? (
+                    <Image source={{ uri: firstPhoto }} style={styles.gridItemImage} />
+                  ) : (
+                    <View style={styles.gridItemPlaceholder}>
+                      <Ionicons name="image-outline" size={30} color="#ccc" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {/* Add button always in next position */}
+            <TouchableOpacity
+              style={styles.utilityGridItem}
+              onPress={() => navigation.navigate('AddEditUtility', { utility: null, propertyId: propertyId })}
+            >
+              <View style={styles.addItemPlaceholder}>
+                <Ionicons name="add-circle-outline" size={30} color="#999" />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -186,8 +225,8 @@ export default function PropertyDetailScreen({ route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>People</Text>
           </View>
-          <View style={styles.itemsGrid}>
-            {people.slice(0, 1).map((person) => (
+          <View style={styles.peopleContainer}>
+            {people.map((person) => (
               <TouchableOpacity
                 key={person.id}
                 style={styles.personItem}
@@ -201,22 +240,18 @@ export default function PropertyDetailScreen({ route }) {
                   </View>
                 )}
                 <Text style={styles.personName}>{person.name}</Text>
-                <Text style={styles.personRole}>{person.role}</Text>
+                {person.role && <Text style={styles.personRole}>{person.role}</Text>}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.addPersonButton}
-              onPress={() => navigation.navigate('AddPerson')}
+              onPress={() => navigation.navigate('AddPerson', { propertyId: propertyId })}
             >
               <View style={styles.addPersonCircle}>
                 <Ionicons name="add" size={30} color="#999" />
               </View>
+              <Text style={styles.addPersonText}>Add Person</Text>
             </TouchableOpacity>
-            {[...Array(Math.max(0, 1 - people.length))].map((_, index) => (
-              <View key={`person-placeholder-${index}`} style={styles.utilityGridItem}>
-                {renderPlaceholder()}
-              </View>
-            ))}
           </View>
         </View>
       </ScrollView>
@@ -262,6 +297,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentContainer: {
+    paddingBottom: 100, // Space for bottom nav
+  },
   imageSection: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -296,11 +334,22 @@ const styles = StyleSheet.create({
   itemsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+  },
+  shutoffsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  utilitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
   gridItemContainer: {
     width: '30%',
     alignItems: 'center',
+    marginRight: '3.33%',
     marginBottom: 10,
   },
   gridItemIcon: {
@@ -317,6 +366,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 8,
     overflow: 'hidden',
+    marginRight: '3.33%',
+    marginBottom: 10,
   },
   gridItemImage: {
     width: '100%',
@@ -352,9 +403,15 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderStyle: 'dashed',
   },
+  peopleContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   personItem: {
     alignItems: 'center',
-    marginRight: 20,
+    width: 100,
+    marginRight: 15,
+    marginBottom: 15,
   },
   personAvatar: {
     width: 60,
@@ -383,6 +440,7 @@ const styles = StyleSheet.create({
   },
   addPersonButton: {
     alignItems: 'center',
+    width: 100,
   },
   addPersonCircle: {
     width: 60,
@@ -394,5 +452,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderStyle: 'dashed',
+    marginBottom: 8,
+  },
+  addPersonText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });

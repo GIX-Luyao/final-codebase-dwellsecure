@@ -17,7 +17,7 @@ import { savePerson, getPerson } from '../services/storage';
 export default function AddPersonScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { person } = route.params || {};
+  const { person, propertyId } = route.params || {};
   const isEditing = !!person;
 
   const [name, setName] = useState('');
@@ -71,6 +71,7 @@ export default function AddPersonScreen() {
       role: role.trim(),
       phone: phone.trim(),
       email: email.trim(),
+      propertyId: isEditing ? (person.propertyId || propertyId) : propertyId,
       createdAt: isEditing ? person.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

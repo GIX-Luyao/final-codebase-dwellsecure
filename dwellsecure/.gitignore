@@ -17,3 +17,6 @@ web-build/
 *.log
 *.tmp
 
+# Environment variables
+.env
+.env.local

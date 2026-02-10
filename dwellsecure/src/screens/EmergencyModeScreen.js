@@ -7,9 +7,11 @@ import {
   ScrollView,
   Linking,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getProperty, getShutoffs } from '../services/storage';
+import { getProperties, getShutoffs } from '../services/storage';
+import { setAppMode, NORMAL_MODE, EMERGENCY_MODE } from '../services/modeService';
 
 export default function EmergencyModeScreen({ navigation }) {
   const [step, setStep] = useState(0); // 0: choose shutoff, 1: instructions, 2: confirmation, 3: call 911
@@ -22,22 +24,36 @@ export default function EmergencyModeScreen({ navigation }) {
   const scrollViewRef = useRef(null);
 
   useEffect(() => {
-    loadData();
+    // SYSTEM BEHAVIOR: Set app to Emergency Mode when entering this screen
+    const enterEmergencyMode = async () => {
+      await setAppMode(EMERGENCY_MODE);
+      await loadData();
+    };
+    enterEmergencyMode();
+
+    // SYSTEM BEHAVIOR: Reset to Normal Mode when leaving this screen
+    return () => {
+      setAppMode(NORMAL_MODE).catch(err => {
+        console.error('Error resetting to normal mode:', err);
+      });
+    };
   }, []);
 
   const loadData = async () => {
-    const prop = await getProperty();
+    const props = await getProperties();
     const shuts = await getShutoffs();
-    setProperties(prop ? [prop] : []);
+    setProperties(props);
     setShutoffs(shuts);
   };
 
   const getShutoffTypeLabel = (type) => {
     switch (type) {
-      case 'fire':
-        return 'Fire';
-      case 'power':
-        return 'Power';
+      case 'gas':
+      case 'fire': // Backward compatibility
+        return 'Gas';
+      case 'electric':
+      case 'power': // Backward compatibility
+        return 'Electric';
       case 'water':
         return 'Water';
       default:
@@ -47,9 +63,11 @@ export default function EmergencyModeScreen({ navigation }) {
 
   const getShutoffIcon = (type) => {
     switch (type) {
-      case 'fire':
+      case 'gas':
+      case 'fire': // Backward compatibility
         return 'flame-outline';
-      case 'power':
+      case 'electric':
+      case 'power': // Backward compatibility
         return 'flash-outline';
       case 'water':
         return 'water-outline';
@@ -60,8 +78,11 @@ export default function EmergencyModeScreen({ navigation }) {
 
   // Default instructions if shutoff doesn't have description
   const getDefaultInstructions = (type) => {
-    switch (type) {
-      case 'fire':
+    // Normalize type for backward compatibility
+    const normalizedType = type === 'fire' ? 'gas' : type === 'power' ? 'electric' : type;
+    
+    switch (normalizedType) {
+      case 'gas':
         return [
           'Go out from front entrance',
           'Go to the right side exterior wall',
@@ -70,7 +91,7 @@ export default function EmergencyModeScreen({ navigation }) {
           'Turn the valve 90° to stop the gas',
           'Move away',
         ];
-      case 'power':
+      case 'electric':
         return [
           'Locate your electrical panel',
           'Find the main circuit breaker',
@@ -99,7 +120,9 @@ export default function EmergencyModeScreen({ navigation }) {
     return getDefaultInstructions(selectedShutoffType);
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    // SYSTEM BEHAVIOR: Reset to Normal Mode when exiting Emergency Mode
+    await setAppMode(NORMAL_MODE);
     setStep(0);
     setSelectedShutoffType(null);
     setSelectedShutoff(null);
@@ -109,8 +132,13 @@ export default function EmergencyModeScreen({ navigation }) {
   };
 
   const handleSelectShutoff = (type) => {
-    // Find shutoff of this type
-    const shutoff = shutoffs.find(s => s.type === type);
+    // SYSTEM BEHAVIOR: Emergency Mode retrieval returns only most relevant per type
+    // Find shutoff of this type (getShutoffs already filters to most relevant per type in Emergency Mode)
+    const shutoff = shutoffs.find(s => {
+      // Normalize type for comparison
+      const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+      return normalizedType === type;
+    });
     setSelectedShutoffType(type);
     setSelectedShutoff(shutoff || null);
     setStep(1); // Go to instructions
@@ -157,7 +185,20 @@ export default function EmergencyModeScreen({ navigation }) {
 
   const handleConfirm = () => {
     setIsConfirmed(true);
-    setStep(2);
+    setStep(4); // Go to success screen
+  };
+
+  const handleSuccessBack = () => {
+    // Go back to utility selection
+    setStep(0);
+    setIsConfirmed(false);
+    setSelectedShutoffType(null);
+    setSelectedShutoff(null);
+  };
+
+  const handleSuccessDone = async () => {
+    // Exit Emergency Mode
+    await handleClose();
   };
 
   const handleNotConfirmed = () => {
@@ -180,31 +221,57 @@ export default function EmergencyModeScreen({ navigation }) {
     </View>
   );
 
+  const renderCall911Button = () => (
+    <View style={styles.fixedCall911Container}>
+      <TouchableOpacity
+        style={styles.fixedCall911Button}
+        onPress={handleCall911}
+      >
+        <Ionicons name="call" size={24} color="#fff" />
+        <Text style={styles.fixedCall911ButtonText}>Call 911</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   // Screen 0: Choose shutoff type
   const renderChooseShutoff = () => {
-    const shutoffTypes = [
-      { type: 'fire', label: 'Fire', icon: 'flame-outline' },
-      { type: 'power', label: 'Power', icon: 'flash-outline' },
+    // SYSTEM BEHAVIOR: Always show all 3 utility types, even if no records exist
+    const allTypes = [
+      { type: 'gas', label: 'Gas', icon: 'flame-outline' },
+      { type: 'electric', label: 'Electric', icon: 'flash-outline' },
       { type: 'water', label: 'Water', icon: 'water-outline' },
     ];
+
+    // Get shutoff info for each type
+    const getShutoffForType = (type) => {
+      return shutoffs.find(s => {
+        const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+        return normalizedType === type;
+      });
+    };
 
     return (
       <View style={styles.content}>
         <Text style={styles.questionText}>Choose the utility you need help with</Text>
         <View style={styles.utilitiesContainer}>
-          {shutoffTypes.map((item) => (
-            <TouchableOpacity
-              key={item.type}
-              style={[
-                styles.utilityCard,
-                selectedShutoffType === item.type && styles.selectedCard,
-              ]}
-              onPress={() => handleSelectShutoff(item.type)}
-            >
-              <Ionicons name={item.icon} size={60} color="#fff" />
-              <Text style={styles.utilityLabel}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {allTypes.map((item) => {
+            const isSelected = selectedShutoffType === item.type;
+            const hasRecord = !!getShutoffForType(item.type);
+
+            return (
+              <TouchableOpacity
+                key={item.type}
+                style={[
+                  styles.utilityCard,
+                  isSelected ? styles.selectedCard : hasRecord ? styles.utilityCardWithRecord : styles.utilityCardNoRecord,
+                ]}
+                onPress={() => handleSelectShutoff(item.type)}
+              >
+                <Ionicons name={item.icon} size={60} color="#fff" />
+                <Text style={styles.utilityLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
     );
@@ -256,7 +323,7 @@ export default function EmergencyModeScreen({ navigation }) {
             onPress={handlePreviousInstruction}
             disabled={currentInstructionIndex === 0}
           >
-            <Ionicons name="chevron-back" size={24} color={currentInstructionIndex === 0 ? "#999" : "#fff"} />
+            <Ionicons name="chevron-back" size={24} color={currentInstructionIndex === 0 ? "#999" : "#333"} />
           </TouchableOpacity>
           <Text style={styles.stepIndicator}>
             {currentInstructionIndex + 1} / {instructions.length}
@@ -266,9 +333,9 @@ export default function EmergencyModeScreen({ navigation }) {
             onPress={handleNextInstruction}
           >
             {currentInstructionIndex === instructions.length - 1 ? (
-              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Ionicons name="checkmark" size={24} color="#333" />
             ) : (
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
+              <Ionicons name="chevron-forward" size={24} color="#333" />
             )}
           </TouchableOpacity>
         </View>
@@ -282,9 +349,9 @@ export default function EmergencyModeScreen({ navigation }) {
       <View style={styles.content}>
         <View style={styles.confirmationContainer}>
           <View style={styles.checkmarkContainer}>
-            <Ionicons name="checkmark-circle" size={80} color="#fff" />
+            <Ionicons name="help-circle" size={80} color="#fff" />
           </View>
-          <Text style={styles.confirmationTitle}>Shutoff Complete</Text>
+          <Text style={styles.confirmationTitle}>Shutoff Complete?</Text>
           <Text style={styles.confirmationText}>
             Have you successfully shut off the {getShutoffTypeLabel(selectedShutoffType).toLowerCase()}?
           </Text>
@@ -307,6 +374,35 @@ export default function EmergencyModeScreen({ navigation }) {
     );
   };
 
+  // Screen 4: Success (after confirming shutoff)
+  const renderSuccess = () => {
+    return (
+      <View style={styles.content}>
+        <View style={styles.successContainer}>
+          <View style={styles.checkmarkContainer}>
+            <Ionicons name="checkmark-circle" size={100} color="#fff" />
+          </View>
+          <Text style={styles.successTitle}>Great Job!</Text>
+          <Text style={styles.successText}>
+            You have successfully shut off the {getShutoffTypeLabel(selectedShutoffType).toLowerCase()}.
+          </Text>
+          <Text style={styles.successSubtext}>
+            The {getShutoffTypeLabel(selectedShutoffType).toLowerCase()} has been safely shut off.
+          </Text>
+          <View style={styles.successButtons}>
+            <TouchableOpacity
+              style={[styles.successButton, styles.successButtonDone]}
+              onPress={handleSuccessDone}
+            >
+              <Text style={styles.successButtonText}>Done</Text>
+              <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   // Screen 3: Call 911
   const renderCall911 = () => {
     return (
@@ -320,13 +416,6 @@ export default function EmergencyModeScreen({ navigation }) {
             If you were unable to shut off the {getShutoffTypeLabel(selectedShutoffType).toLowerCase()}, 
             please call 911 immediately.
           </Text>
-          <TouchableOpacity
-            style={styles.call911Button}
-            onPress={handleCall911}
-          >
-            <Ionicons name="call" size={32} color="#8E8E93" />
-            <Text style={styles.call911ButtonText}>Call 911</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -337,25 +426,32 @@ export default function EmergencyModeScreen({ navigation }) {
     if (step === 1) return renderInstructions();
     if (step === 2) return renderConfirmation();
     if (step === 3) return renderCall911();
+    if (step === 4) return renderSuccess();
     return null;
   };
 
   return (
-    <View style={styles.container}>
-      {renderHeader()}
-      {renderContent()}
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.mainContent}>
+        {renderHeader()}
+        {renderContent()}
+      </View>
+      {renderCall911Button()}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#8E8E93',
+    backgroundColor: '#d32f2f',
+  },
+  mainContent: {
+    flex: 1,
   },
   header: {
-    backgroundColor: '#8E8E93',
-    paddingTop: 60,
+    backgroundColor: '#d32f2f',
+    paddingTop: 10,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -378,41 +474,53 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
+    paddingTop: 30,
+    paddingBottom: 100, // Space for fixed call 911 button
   },
   questionText: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 40,
+    color: '#FFFFFF',
     textAlign: 'center',
+    marginBottom: 30,
+    marginTop: 10,
+    paddingHorizontal: 10,
   },
   utilitiesContainer: {
-    gap: 20,
+    gap: 15,
     width: '100%',
   },
   utilityCard: {
-    backgroundColor: '#D1D1D6',
+    backgroundColor: 'transparent',
     borderRadius: 20,
-    padding: 40,
+    padding: 25,
     alignItems: 'center',
     width: '100%',
-    minHeight: 200,
+    minHeight: 120,
     justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 2,
+  },
+  utilityCardWithRecord: {
+    borderColor: '#fff',
+  },
+  utilityCardNoRecord: {
+    borderColor: '#E8E8E8',
+    borderStyle: 'dashed',
   },
   selectedCard: {
-    backgroundColor: '#AEAEB2',
     borderWidth: 3,
     borderColor: '#fff',
   },
   utilityLabel: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 16,
+    marginTop: 12,
   },
   instructionsContainer: {
     flex: 1,
+    paddingBottom: 70, // Space for fixed call 911 button
   },
   instructionsTitle: {
     fontSize: 36,
@@ -426,7 +534,7 @@ const styles = StyleSheet.create({
   },
   instructionsContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 15,
   },
   instructionStepContainer: {
     position: 'relative',
@@ -438,10 +546,10 @@ const styles = StyleSheet.create({
     top: -20,
     width: 3,
     height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   connectorActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: '#FFFFFF',
   },
   instructionStep: {
     backgroundColor: 'transparent',
@@ -449,55 +557,54 @@ const styles = StyleSheet.create({
     padding: 20,
     minHeight: 100,
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   instructionStepActive: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: '#8B0000',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   instructionText: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#FFFFFF',
     paddingLeft: 60,
   },
   instructionTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   instructionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 10,
   },
   navButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#AEAEB2',
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
   },
   navButtonDisabled: {
     opacity: 0.5,
   },
   navButtonComplete: {
-    backgroundColor: '#AEAEB2',
+    backgroundColor: '#fff',
   },
   stepIndicator: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  navButtonComplete: {
-    backgroundColor: '#AEAEB2',
-  },
-  stepIndicator: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#fff',
     fontWeight: '600',
   },
   confirmationContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: 100, // Space for fixed call 911 button
   },
   checkmarkContainer: {
     marginBottom: 30,
@@ -527,17 +634,30 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderRadius: 50,
     alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    // Shadow for Android
+    elevation: 8,
   },
   confirmButtonYes: {
-    backgroundColor: '#AEAEB2',
+    backgroundColor: 'transparent',
   },
   confirmButtonNo: {
-    backgroundColor: '#D1D1D6',
+    backgroundColor: 'transparent',
   },
   confirmButtonText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#FFFFFF',
   },
   call911Container: {
     alignItems: 'center',
@@ -569,10 +689,148 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 50,
     gap: 12,
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
   },
   call911ButtonText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8E8E93',
+    color: '#333',
+  },
+  emptyMessage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyMessageText: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    marginTop: 20,
+    lineHeight: 26,
+  },
+  verificationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 12,
+  },
+  verificationBannerVerified: {
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+  },
+  verificationBannerUnverified: {
+    backgroundColor: 'rgba(255, 152, 0, 0.9)',
+  },
+  verificationBannerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  noRecordBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(158, 158, 158, 0.9)',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 12,
+  },
+  noRecordBannerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  successContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 100, // Space for fixed call 911 button
+  },
+  successTitle: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 20,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  successText: {
+    fontSize: 24,
+    color: '#fff',
+    marginBottom: 15,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  successSubtext: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 40,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  successButtons: {
+    width: '100%',
+    gap: 15,
+    paddingHorizontal: 20,
+  },
+  successButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 50,
+    gap: 10,
+  },
+  successButtonDone: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    // Shadow for Android
+    elevation: 8,
+  },
+  successButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  fixedCall911Container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#d32f2f',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: 2,
+    borderTopColor: '#fff',
+  },
+  fixedCall911Button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 50,
+    gap: 12,
+  },
+  fixedCall911ButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#d32f2f',
   },
 });

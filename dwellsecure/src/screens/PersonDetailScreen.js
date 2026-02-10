@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 100, // Space for bottom nav
   },
   profileSection: {
     alignItems: 'center',

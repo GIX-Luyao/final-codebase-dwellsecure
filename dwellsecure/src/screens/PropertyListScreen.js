@@ -10,24 +10,24 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
-import { getProperty, deleteProperty, resetOnboarding, resetAllData } from '../services/storage';
+import { getProperties, deleteProperty, resetOnboarding, resetAllData } from '../services/storage';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
-  const [property, setProperty] = useState(null);
+  const [properties, setProperties] = useState([]);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadProperty();
+      loadProperties();
     }, [])
   );
 
-  const loadProperty = async () => {
-    const data = await getProperty();
-    setProperty(data);
+  const loadProperties = async () => {
+    const data = await getProperties();
+    setProperties(data);
   };
 
-  const handleLongPress = () => {
+  const handleLongPress = (property) => {
     Alert.alert(
       'Property Options',
       'What would you like to do?',
@@ -53,8 +53,8 @@ export default function PropertyListScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      await deleteProperty();
-                      setProperty(null);
+                      await deleteProperty(property.id);
+                      loadProperties();
                     } catch (error) {
                       Alert.alert('Error', 'Failed to delete property');
                     }
@@ -149,13 +149,16 @@ export default function PropertyListScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {property ? (
+        {properties.length > 0 ? (
           <View style={styles.propertyContainer}>
-            <PropertyCard
-              property={property}
-              onPress={() => navigation.navigate('PropertyDetail', { propertyId: property.id })}
-              onLongPress={handleLongPress}
-            />
+            {properties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onPress={() => navigation.navigate('PropertyDetail', { propertyId: property.id })}
+                onLongPress={() => handleLongPress(property)}
+              />
+            ))}
             
             <TouchableOpacity 
               style={styles.addPropertyBox}

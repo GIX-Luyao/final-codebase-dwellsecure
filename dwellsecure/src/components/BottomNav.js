@@ -62,13 +62,14 @@ export default function BottomNav() {
   
   // Hide nav only on add/edit screens (not detail screens)
   const hideNavScreens = [
-    'AddEditShutoff',
-    'AddEditUtility',
     'AddProperty',
     'AddPerson',
     'EditProperty',
     'EmergencyMode',
     'MapPicker',
+    'Success',
+    'AddEditShutoff',
+    'AddEditUtility',
   ];
   
   // Hide nav only on add/edit screens
@@ -113,6 +114,7 @@ export default function BottomNav() {
             activeIndex === index && styles.navItemActive,
           ]}
           onPress={() => handleNavPress(index)}
+          activeOpacity={0.7}
         />
       ))}
     </View>
@@ -126,19 +128,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 40,
-    backgroundColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
     gap: 12,
     zIndex: 100,
-    elevation: 10,
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    // Shadow for Android
+    elevation: 8,
   },
   navItem: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: '#E8E8E8',
   },
   navItemActive: {
-    backgroundColor: '#999',
+    backgroundColor: '#007AFF',
   },
 });
 

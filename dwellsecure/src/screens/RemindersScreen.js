@@ -1,14 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Animated,
+  PanResponder,
+  Dimensions,
+  Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getReminders } from '../services/storage';
+import { getReminders, saveReminder } from '../services/storage';
+import SwipeableReminderItem from '../components/SwipeableReminderItem';
 
 export default function RemindersScreen() {
   const navigation = useNavigation();
@@ -23,10 +28,16 @@ export default function RemindersScreen() {
   const loadReminders = async () => {
     const allReminders = await getReminders();
     
-    // Group reminders by date
+    console.log('[RemindersScreen] Total reminders loaded:', allReminders.length);
+    
+    // Group reminders by date (only show incomplete reminders)
+    // Filter out reminders where completed === true
     const grouped = {};
+    let incompleteCount = 0;
     allReminders.forEach((reminder) => {
-      if (!reminder.completed && reminder.date) {
+      // Only show reminders that are not completed (completed === false or undefined)
+      if (reminder.completed !== true && reminder.date) {
+        incompleteCount++;
         const date = new Date(reminder.date);
         const dateKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         
@@ -36,6 +47,9 @@ export default function RemindersScreen() {
         grouped[dateKey].push(reminder);
       }
     });
+
+    console.log('[RemindersScreen] Incomplete reminders:', incompleteCount);
+    console.log('[RemindersScreen] Completed reminders filtered out:', allReminders.length - incompleteCount);
 
     // Convert to array format and sort by date
     const groupedArray = Object.keys(grouped)
@@ -58,12 +72,32 @@ export default function RemindersScreen() {
     }
   };
 
+  const handleCompleteReminder = async (reminder) => {
+    try {
+      const updatedReminder = {
+        ...reminder,
+        completed: true,
+        updatedAt: new Date().toISOString(),
+      };
+      console.log('[RemindersScreen] Marking reminder as completed:', reminder.id);
+      console.log('[RemindersScreen] Updated reminder data:', updatedReminder);
+      await saveReminder(updatedReminder);
+      console.log('[RemindersScreen] ✅ Reminder marked as completed and synced to database');
+      // Reload reminders to reflect the change (will filter out completed ones)
+      await loadReminders();
+    } catch (error) {
+      console.error('[RemindersScreen] Error completing reminder:', error);
+      Alert.alert('Error', 'Failed to update reminder. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>Reminders</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Reminders</Text>
         <Text style={styles.subtitle}>Check all your upcoming alerts</Text>
-
+      </View>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         {reminders.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={60} color="#ccc" />
@@ -71,25 +105,19 @@ export default function RemindersScreen() {
           </View>
         ) : (
           reminders.map((section, index) => (
-            <View key={index} style={styles.section}>
-              <Text style={styles.dateLabel}>{section.date}</Text>
-              {section.items.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.reminderCard}
-                  onPress={() => handleReminderPress(item)}
-                >
-                  <View style={styles.iconContainer}>
-                    <Ionicons name={item.icon || 'alert-circle-outline'} size={24} color="#999" />
-                  </View>
-                  <View style={styles.reminderContent}>
-                    <Text style={styles.reminderText}>{item.title}</Text>
-                    {item.description && (
-                      <Text style={styles.reminderDescription}>{item.description}</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+            <View key={`section-${index}`} style={styles.reminderGroup}>
+              <Text style={styles.dateHeading}>{section.date}</Text>
+              <View style={styles.reminderList}>
+                {section.items.map((item) => (
+                  <SwipeableReminderItem
+                    key={item.id}
+                    reminder={item}
+                    onPress={() => handleReminderPress(item)}
+                    onComplete={handleCompleteReminder}
+                    completed={false}
+                  />
+                ))}
+              </View>
             </View>
           ))
         )}
@@ -103,62 +131,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 25,
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 6,
+  },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 100, // Space for bottom nav
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 150, // Space for bottom nav
   },
   subtitle: {
     fontSize: 14,
+    fontWeight: '700',
     color: '#999',
+    letterSpacing: -0.28,
+  },
+  reminderGroup: {
     marginBottom: 32,
   },
-  section: {
-    marginBottom: 32,
-  },
-  dateLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+  dateHeading: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#000',
+    letterSpacing: -0.36,
     marginBottom: 12,
   },
-  reminderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8E8E8',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#D0D0D0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  reminderContent: {
-    flex: 1,
-  },
-  reminderText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  reminderDescription: {
-    fontSize: 14,
-    color: '#666',
+  reminderList: {
+    // Gap handled by SwipeableReminderItem marginBottom
   },
   emptyState: {
     alignItems: 'center',
@@ -166,8 +175,8 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
-    marginTop: 16,
+    marginTop: 12,
   },
 });

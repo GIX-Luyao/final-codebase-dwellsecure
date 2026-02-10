@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getUtilities, deleteUtility } from '../services/storage';
@@ -7,6 +7,7 @@ import UtilityCard from '../components/UtilityCard';
 
 export default function UtilitiesListScreen({ navigation }) {
   const [utilities, setUtilities] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -15,8 +16,24 @@ export default function UtilitiesListScreen({ navigation }) {
   );
 
   const loadUtilities = async () => {
-    const data = await getUtilities();
-    setUtilities(data);
+    try {
+      setErrorMessage(null);
+      const data = await getUtilities();
+      // Ensure data is always an array to prevent crashes
+      setUtilities(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('[UtilitiesList] Error loading utilities:', error);
+      // Set empty array on error to show empty state instead of crashing
+      setUtilities([]);
+      // Show user-friendly error message
+      if (error.message && error.message.includes('Network')) {
+        setErrorMessage('Network error: Unable to load utilities. Check your connection.');
+      } else if (error.message && error.message.includes('API_UNAVAILABLE')) {
+        setErrorMessage('Server unavailable: Using local data only.');
+      } else {
+        setErrorMessage('Error loading utilities. Please try again.');
+      }
+    }
   };
 
   const handleAdd = () => {
@@ -28,12 +45,26 @@ export default function UtilitiesListScreen({ navigation }) {
   };
 
   const handleDelete = async (id) => {
-    await deleteUtility(id);
-    loadUtilities();
+    try {
+      await deleteUtility(id);
+      loadUtilities();
+    } catch (error) {
+      console.error('[UtilitiesList] Error deleting utility:', error);
+      Alert.alert('Error', 'Failed to delete utility. Please try again.');
+    }
   };
 
   return (
     <View style={styles.container}>
+      {errorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={20} color="#d32f2f" />
+          <Text style={styles.errorText}>{errorMessage}</Text>
+          <TouchableOpacity onPress={() => setErrorMessage(null)}>
+            <Ionicons name="close" size={20} color="#d32f2f" />
+          </TouchableOpacity>
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Utilities</Text>
         <TouchableOpacity onPress={handleAdd} style={styles.addButton}>
@@ -107,5 +138,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 10,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffcdd2',
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#d32f2f',
   },
 });

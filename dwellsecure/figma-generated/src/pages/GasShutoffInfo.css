@@ -1,0 +1,136 @@
+.gas-shutoff-info-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 114px 53px;
+  background: var(--white);
+}
+
+.page-title {
+  font-size: 36px;
+  font-weight: 700;
+  text-align: center;
+  color: #1E1E1E;
+  margin-bottom: 60px;
+  max-width: 472px;
+}
+
+.info-card {
+  position: relative;
+  width: 100%;
+  max-width: 507px;
+  height: 567px;
+  padding: 75px 49px;
+  border-radius: 30px;
+  background: var(--blue-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.diagram-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.diagram-placeholder {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #F5E6B3 0%, #D4E5C9 50%, #C7C7C7 100%);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-element {
+  position: absolute;
+}
+
+.main {
+  top: 50%;
+  left: 30%;
+  transform: translate(-50%, -50%);
+}
+
+.pipe {
+  width: 80px;
+  height: 6px;
+  background: #7FAFB8;
+  border-radius: 3px;
+}
+
+.valve {
+  width: 40px;
+  height: 40px;
+  background: #5A9AA8;
+  border-radius: 50%;
+  margin-top: 10px;
+}
+
+.detail-1,
+.detail-2 {
+  background: var(--white);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.detail-1 {
+  top: 60px;
+  right: 40px;
+}
+
+.detail-2 {
+  bottom: 80px;
+  right: 20px;
+}
+
+.detail-icon {
+  width: 60px;
+  height: 60px;
+  background: var(--gray-4);
+  border-radius: 4px;
+}
+
+.nav-arrow {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -5px 0 10px rgba(0, 0, 0, 0.25);
+}
+
+.progress-bars {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 60px;
+}
+
+.progress-bar {
+  width: 274px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--gray-2);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}

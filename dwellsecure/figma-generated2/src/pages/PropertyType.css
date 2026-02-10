@@ -1,0 +1,59 @@
+.property-type-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+.property-type-content {
+  flex: 1;
+  padding: 40px 57px;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+}
+
+.property-options {
+  display: flex;
+  flex-direction: column;
+  gap: 27px;
+}
+
+.property-option {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 30px;
+  border-radius: 15px;
+  background: var(--gray-5);
+  border: 3px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.property-option.selected {
+  background: var(--blue-4);
+  border-color: var(--blue-grey-2);
+  backdrop-filter: blur(2px);
+}
+
+.property-icon {
+  font-size: 60px;
+}
+
+.property-label {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-0);
+}
+
+.property-option.selected .property-label {
+  color: var(--blue-0);
+}
+
+.action-section {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding: 40px 0;
+}

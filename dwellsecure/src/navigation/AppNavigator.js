@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
+  PanResponder,
+  Dimensions,
+  Modal,
+  Linking,
+  Platform,
 } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +32,7 @@ import AIAssistanceScreen from '../screens/AIAssistanceScreen';
 import EmergencyModeScreen from '../screens/EmergencyModeScreen';
 import ShareScreen from '../screens/ShareScreen';
 import MapPickerScreen from '../screens/MapPickerScreen';
+import SuccessScreen from '../screens/SuccessScreen';
 import BottomNav from '../components/BottomNav';
 import { isOnboardingComplete } from '../services/storage';
 
@@ -82,16 +88,14 @@ function ShutoffsStack() {
 
 function UtilitiesStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="UtilitiesList"
         component={UtilitiesListScreen}
-        options={{ title: 'Utilities' }}
       />
       <Stack.Screen
         name="AddEditUtility"
         component={AddEditUtilityScreen}
-        options={{ title: 'Utility Details' }}
       />
     </Stack.Navigator>
   );
@@ -113,12 +117,76 @@ function PropertyStack() {
       <Stack.Screen name="AddEditShutoff" component={AddEditShutoffScreen} />
       <Stack.Screen name="AddEditUtility" component={AddEditUtilityScreen} />
       <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+      <Stack.Screen name="Success" component={SuccessScreen} />
     </Stack.Navigator>
   );
 }
 
 function MainStack() {
   const navigation = useNavigation();
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const buttonSize = 64;
+  const bottomNavHeight = 100; // Approximate bottom nav height
+  
+  const [buttonPosition, setButtonPosition] = useState({
+    x: screenWidth - buttonSize - 16,
+    y: screenHeight - bottomNavHeight - buttonSize - 16,
+  });
+  
+  const [show911Modal, setShow911Modal] = useState(false);
+  
+  const initialPosition = useRef({ x: 0, y: 0 });
+  const hasMoved = useRef(false);
+  const touchStartTime = useRef(0);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        hasMoved.current = false;
+        touchStartTime.current = Date.now();
+        initialPosition.current = { ...buttonPosition };
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only start dragging if movement is significant
+        if (Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5) {
+          hasMoved.current = true;
+          const newX = initialPosition.current.x + gestureState.dx;
+          const newY = initialPosition.current.y + gestureState.dy;
+          
+          // Constrain to screen bounds
+          const constrainedX = Math.max(0, Math.min(screenWidth - buttonSize, newX));
+          const constrainedY = Math.max(0, Math.min(screenHeight - bottomNavHeight - buttonSize, newY));
+          
+          setButtonPosition({ x: constrainedX, y: constrainedY });
+        }
+      },
+      onPanResponderRelease: () => {
+        const wasDrag = hasMoved.current;
+        hasMoved.current = false;
+        
+        // If it was a tap (not a drag), show modal
+        if (!wasDrag) {
+          setTimeout(() => {
+            setShow911Modal(true);
+          }, 50);
+        }
+      },
+    })
+  ).current;
+
+  const handleCall911 = () => {
+    const phoneNumber = '911';
+    const url = Platform.OS === 'ios' ? `telprompt:${phoneNumber}` : `tel:${phoneNumber}`;
+    Linking.openURL(url).catch(err => console.error('Error calling 911:', err));
+  };
+
+  const handleContinueToEmergency = () => {
+    setShow911Modal(false);
+    navigation.navigate('EmergencyMode');
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -136,13 +204,60 @@ function MainStack() {
         <BottomNav />
       </View>
 
-      <TouchableOpacity
-        style={styles.emergencyFab}
-        onPress={() => navigation.navigate('EmergencyMode')}
-        accessibilityLabel="Open emergency mode"
+      <View
+        {...panResponder.panHandlers}
+        style={[
+          styles.emergencyFab,
+          {
+            left: buttonPosition.x,
+            top: buttonPosition.y,
+          },
+        ]}
       >
-        <Ionicons name="alert" size={28} color="#fff" />
-      </TouchableOpacity>
+        <View
+          style={styles.emergencyFabButton}
+          accessibilityLabel="Open emergency mode"
+          accessible={true}
+        >
+          <Ionicons name="alert" size={28} color="#fff" />
+        </View>
+      </View>
+
+      {/* 911 Confirmation Modal */}
+      <Modal
+        visible={show911Modal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShow911Modal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Did you call 911 first?</Text>
+            <TouchableOpacity
+              style={styles.call911Row}
+              onPress={handleCall911}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="call" size={24} color="#007AFF" />
+              <Text style={styles.call911Text}>911</Text>
+            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShow911Modal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalContinueButton}
+                onPress={handleContinueToEmergency}
+              >
+                <Text style={styles.modalContinueButtonText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -230,8 +345,11 @@ const styles = StyleSheet.create({
   },
   emergencyFab: {
     position: 'absolute',
-    right: 16,
-    bottom: 100,
+    width: 64,
+    height: 64,
+    zIndex: 1000,
+  },
+  emergencyFabButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -243,6 +361,74 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
-    zIndex: 1000,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    width: '80%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  call911Row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+    gap: 8,
+  },
+  call911Text: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 15,
+    width: '100%',
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 12,
+    backgroundColor: '#E8E8E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  modalContinueButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 12,
+    backgroundColor: '#d32f2f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContinueButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
