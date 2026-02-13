@@ -1,8 +1,8 @@
-# 🧪 添加集成测试数据指南
+# 🧪 Add Integration Test Data Guide
 
-## 📋 测试用例数据
+## 📋 Test Case Data
 
-我已经为你准备了三个测试用例的数据：
+I have prepared data for three test cases:
 
 ### Test Case 1: Water Shutoff
 - **ID:** `test-water-shutoff-001`
@@ -27,44 +27,44 @@
 
 ---
 
-## 🚀 添加数据的方法
+## 🚀 Methods to Add Data
 
-### 方法 1: 通过 API（推荐，如果服务器正在运行）
+### Method 1: Via API (Recommended, if server is running)
 
-**前提：** 服务器必须正在运行
+**Prerequisite:** Server must be running
 
 ```bash
 cd server
 node add-test-data-via-api.js
 ```
 
-**这个方法不需要直接连接 MongoDB，而是通过 HTTP API，所以不会遇到 SSL 错误。**
+**This method does not require direct MongoDB connection, but uses HTTP API instead, so you won't encounter SSL errors.**
 
 ---
 
-### 方法 2: 直接连接 MongoDB（如果连接正常）
+### Method 2: Direct MongoDB Connection (if connection is normal)
 
 ```bash
 cd server
 node add-test-data.js
 ```
 
-**注意：** 如果遇到 SSL 错误，使用方法 1。
+**Note:** If you encounter SSL errors, use Method 1.
 
 ---
 
-### 方法 3: 在应用中手动添加
+### Method 3: Manually Add in App
 
-1. **启动服务器** (`cd server && npm start`)
-2. **启动应用**
-3. **在应用中添加三个 shutoff：**
-   - Water shutoff（使用 Test Case 1 的数据）
-   - Gas shutoff（使用 Test Case 2 的数据）
-   - Electric shutoff（使用 Test Case 3 的数据，不填写 description 和 location）
+1. **Start server** (`cd server && npm start`)
+2. **Start app**
+3. **Add three shutoffs in app:**
+   - Water shutoff (using Test Case 1 data)
+   - Gas shutoff (using Test Case 2 data)
+   - Electric shutoff (using Test Case 3 data, don't fill description and location)
 
 ---
 
-## 📝 详细数据
+## 📝 Detailed Data
 
 ### Test Case 1: Water Shutoff
 
@@ -130,73 +130,73 @@ node add-test-data.js
 
 ---
 
-## 🧪 测试步骤
+## 🧪 Testing Steps
 
-### 步骤 1: 添加数据
+### Step 1: Add Data
 
-**如果服务器正在运行，使用：**
+**If server is running, use:**
 ```bash
 cd server
 node add-test-data-via-api.js
 ```
 
-**如果服务器没有运行：**
-1. 启动服务器：`cd server && npm start`
-2. 然后运行：`node add-test-data-via-api.js`
+**If server is not running:**
+1. Start server: `cd server && npm start`
+2. Then run: `node add-test-data-via-api.js`
 
 ---
 
-### 步骤 2: 验证数据
+### Step 2: Verify Data
 
-**运行：**
+**Run:**
 ```bash
 cd server
 node check-current-data.js
 ```
 
-**应该能看到三个测试用例的数据。**
+**Should see data for all three test cases.**
 
 ---
 
-### 步骤 3: 在应用中测试
+### Step 3: Test in App
 
-1. **Test Case 1:** 在应用中查看 `test-water-shutoff-001`
-   - 应该显示完整的 water shutoff 信息
+1. **Test Case 1:** View `test-water-shutoff-001` in app
+   - Should display complete water shutoff information
 
-2. **Test Case 2:** 在应用中查看 `test-gas-shutoff-002`
-   - 应该显示完整的 gas shutoff 信息
-   - 应用不应该崩溃
+2. **Test Case 2:** View `test-gas-shutoff-002` in app
+   - Should display complete gas shutoff information
+   - App should not crash
 
-3. **Test Case 3:** 在应用中查看 `test-incomplete-shutoff-003`
-   - 应该显示 fallback 消息（例如 "No description available"）
-   - 应用不应该崩溃
-
----
-
-## 💡 提示
-
-- **推荐使用方法 1（通过 API）** - 不会遇到 SSL 错误
-- **确保服务器正在运行** - 这是最重要的
-- **时间戳已设置** - 所有数据都有合理的 createdAt 和 updatedAt
+3. **Test Case 3:** View `test-incomplete-shutoff-003` in app
+   - Should display fallback message (e.g., "No description available")
+   - App should not crash
 
 ---
 
-## 🎯 快速开始
+## 💡 Tips
 
-1. **启动服务器：**
+- **Recommended to use Method 1 (via API)** - Won't encounter SSL errors
+- **Ensure server is running** - This is most important
+- **Timestamps are set** - All data have reasonable createdAt and updatedAt
+
+---
+
+## 🎯 Quick Start
+
+1. **Start server:**
    ```bash
    cd server
    npm start
    ```
 
-2. **添加测试数据：**
+2. **Add test data:**
    ```bash
    node add-test-data-via-api.js
    ```
 
-3. **验证数据：**
+3. **Verify data:**
    ```bash
    node check-current-data.js
    ```
 
-4. **在应用中测试！**
+4. **Test in app!**

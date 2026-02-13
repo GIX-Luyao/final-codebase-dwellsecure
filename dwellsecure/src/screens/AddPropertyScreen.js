@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
+import { useOnboarding } from '../contexts/OnboardingContext';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
 
@@ -35,7 +36,8 @@ const PROPERTY_TYPES = [
 
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
-  const { property } = route?.params || {};
+  const onboarding = useOnboarding();
+  const { property, onboardingMode } = route?.params || {};
   const isEditing = !!property;
   
   const [step, setStep] = useState(1);
@@ -99,11 +101,9 @@ export default function AddPropertyScreen({ route }) {
         }
       }
       
-      // Check for location returned from MapPicker
       const selectedLocation = route?.params?.selectedLocation;
       if (selectedLocation) {
         setLocation(selectedLocation);
-        // Clear the param to avoid re-applying on next focus
         navigation.setParams({ selectedLocation: undefined });
       }
     }, [property?.id, property?.address, property?.latitude, property?.longitude, step, route?.params?.selectedLocation, navigation])
@@ -254,9 +254,9 @@ export default function AddPropertyScreen({ route }) {
 
   const handleMapPress = () => {
     navigation.navigate('MapPicker', {
-      initialLocation: location,
-      address: address || `${addressLine1}, ${city}, ${state} ${zipCode}`,
-      onConfirm: handleLocationConfirm,
+      returnScreen: route.name,
+      returnParamKey: 'selectedLocation',
+      initialLocation: location || undefined,
     });
   };
 
@@ -318,7 +318,12 @@ export default function AddPropertyScreen({ route }) {
     setTimeout(async () => {
       try {
         await saveProperty(propertyData);
-        
+
+        if (onboardingMode && onboarding?.completeOnboarding) {
+          onboarding.completeOnboarding();
+          return;
+        }
+
         // Navigate to Success screen instead of showing alert
         navigation.navigate('Success', {
           address: fullAddress,
@@ -614,12 +619,18 @@ export default function AddPropertyScreen({ route }) {
     }
   };
 
+  const showBackButton = !onboardingMode || step > 1;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Ionicons name="chevron-back" size={28} color="#333" />
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity onPress={handleBack}>
+            <Ionicons name="chevron-back" size={28} color="#333" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
         <Text style={styles.headerTitle}>Dwell Secure</Text>
         <View style={{ width: 28 }} />
       </View>

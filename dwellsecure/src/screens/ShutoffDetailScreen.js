@@ -23,7 +23,6 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGR
 // Generate Mapbox Static Images API URL for map thumbnail (satellite style)
 const getMapThumbnailUrl = (latitude, longitude, width = 120, height = 120, zoom = 15) => {
   if (!latitude || !longitude) return null;
-  // Use satellite-streets style to match MapPicker
   const styleId = 'mapbox/satellite-streets-v12';
   const markerColor = '1095EE'; // Blue color matching location button
   return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
@@ -62,6 +61,22 @@ export default function ShutoffDetailScreen({ route }) {
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
   const [fullScreenImageUri, setFullScreenImageUri] = useState(null);
 
+  // Refs for persisting reminder state when user leaves (e.g. switches tab)
+  const maintenanceDateRef = useRef(null);
+  const maintenanceTimeRef = useRef(null);
+  const markCompleteRef = useRef(false);
+  const reminderRef = useRef(null);
+  const shutoffRef = useRef(null);
+  const shutoffIdRef = useRef(null);
+  useEffect(() => {
+    maintenanceDateRef.current = maintenanceDate;
+    maintenanceTimeRef.current = maintenanceTime;
+    markCompleteRef.current = markComplete;
+    reminderRef.current = reminder;
+    shutoffRef.current = shutoff;
+    shutoffIdRef.current = shutoffId;
+  }, [maintenanceDate, maintenanceTime, markComplete, reminder, shutoff, shutoffId]);
+
   useEffect(() => {
     if (isEditing) {
       loadShutoffData();
@@ -74,6 +89,39 @@ export default function ShutoffDetailScreen({ route }) {
       if (isEditing && shutoffId) {
         loadReminderData();
       }
+      return () => {
+        if (!shutoffIdRef.current) return;
+        const mDate = maintenanceDateRef.current;
+        const mTime = maintenanceTimeRef.current;
+        const completed = markCompleteRef.current;
+        const rem = reminderRef.current;
+        const shutoffData = shutoffRef.current;
+        if (mDate && mTime) {
+          const reminderDate = new Date(mDate);
+          reminderDate.setHours(mTime.getHours(), mTime.getMinutes(), 0, 0);
+          const reminderToSave = {
+            ...(rem || {}),
+            id: rem?.id || `reminder-${Date.now()}`,
+            shutoffId: shutoffIdRef.current,
+            type: 'shutoff',
+            date: reminderDate.toISOString(),
+            completed: completed,
+            title: `Maintenance reminder for ${shutoffData?.type || 'shutoff'}`,
+            description: `Maintenance reminder for ${shutoffData?.description || shutoffData?.type || 'shutoff'}`,
+            contacts: rem?.contacts || [],
+            notes: rem?.notes || '',
+            createdAt: rem?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          saveReminder(reminderToSave).then(() => {
+            if (shutoffData) {
+              saveShutoff({ ...shutoffData, reminderId: reminderToSave.id }).catch(() => {});
+            }
+          }).catch(() => {});
+        } else if (rem?.id) {
+          deleteReminder(rem.id).catch(() => {});
+        }
+      };
     }, [shutoffId, isEditing])
   );
 
@@ -213,10 +261,15 @@ export default function ShutoffDetailScreen({ route }) {
     }
   };
 
+  /** Opens AddEditShutoff for this shutoff. Edit button is only shown when shutoff is loaded (isEditing && shutoff); this guard avoids navigating with undefined if state is stale. */
   const handleEdit = () => {
-    if (shutoff) {
-      navigation.navigate('AddEditShutoff', { shutoff });
-    }
+    if (!shutoff) return;
+    navigation.navigate('AddEditShutoff', {
+      shutoff: { ...shutoff },
+      type: shutoff.type,
+      propertyId: shutoff.propertyId,
+      initialStep: 2,
+    });
   };
 
   const handleDelete = () => {
@@ -429,98 +482,6 @@ export default function ShutoffDetailScreen({ route }) {
     setVideos(videos.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a name for the shutoff');
-      return;
-    }
-
-    const shutoffData = {
-      id: isEditing ? shutoffId : Date.now().toString(),
-      name: name.trim(),
-      description: shutoff?.description || name.trim(),
-      location: location.trim(),
-      photos: photos,
-      videos: videos,
-      latitude: locationCoords?.latitude || null,
-      longitude: locationCoords?.longitude || null,
-      locationCoords: locationCoords,
-      profile: profile.trim(),
-      role: role.trim(),
-      maintenanceDate: maintenanceDate ? maintenanceDate.toISOString() : null,
-      contactName: contactName.trim(),
-      contactPhone: contactPhone.trim(),
-      createdAt: isEditing ? shutoff?.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      type: shutoff?.type || 'gas',
-      propertyId: shutoff?.propertyId || null,
-    };
-
-    await saveShutoff(shutoffData);
-    
-    // Handle reminder: create, update, or delete based on current state
-    if (maintenanceDate && maintenanceTime) {
-      // Create or update reminder with current date, time, and completed status
-      try {
-        const reminderDate = new Date(maintenanceDate);
-        reminderDate.setHours(maintenanceTime.getHours());
-        reminderDate.setMinutes(maintenanceTime.getMinutes());
-        reminderDate.setSeconds(0);
-        reminderDate.setMilliseconds(0);
-        
-        const reminderToSave = {
-          ...(reminder || {}),
-          id: reminder?.id || `reminder-${Date.now()}`,
-          shutoffId: shutoffData.id,
-          type: 'shutoff',
-          date: reminderDate.toISOString(),
-          completed: markComplete || false, // Use current markComplete state
-          title: `Maintenance reminder for ${shutoffData.type || 'shutoff'}`,
-          description: `Maintenance reminder for ${shutoffData.description || shutoffData.type || 'shutoff'}`,
-          contacts: reminder?.contacts || [],
-          notes: reminder?.notes || '',
-          createdAt: reminder?.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        await saveReminder(reminderToSave);
-        setReminder(reminderToSave);
-        shutoffData.reminderId = reminderToSave.id;
-        console.log('[ShutoffDetail] Reminder saved/updated with completed:', markComplete);
-      } catch (error) {
-        console.error('[ShutoffDetail] Error saving reminder:', error);
-        Alert.alert('Error', 'Failed to save reminder');
-      }
-    } else if (reminder && reminder.id) {
-      // If date/time cleared (reset), delete the reminder
-      try {
-        await deleteReminder(reminder.id);
-        setReminder(null);
-        setMarkComplete(false);
-        console.log('[ShutoffDetail] Reminder deleted (reset)');
-      } catch (error) {
-        console.error('[ShutoffDetail] Error deleting reminder:', error);
-        Alert.alert('Error', 'Failed to delete reminder');
-      }
-    } else if (reminder && reminder.id && !maintenanceDate && !maintenanceTime) {
-      // If reminder exists but no date/time, delete it
-      try {
-        await deleteReminder(reminder.id);
-        setReminder(null);
-        setMarkComplete(false);
-        console.log('[ShutoffDetail] Reminder deleted (no date/time)');
-      } catch (error) {
-        console.error('[ShutoffDetail] Error deleting reminder:', error);
-      }
-    }
-    
-    // Update local state
-    setShutoff(shutoffData);
-    Alert.alert('Success', 'Shutoff saved successfully', [
-      { text: 'OK' }
-    ]);
-  };
-
   const renderShutoffTab = () => (
     <View style={styles.tabContent}>
       {/* Location and Photo/Video side by side */}
@@ -529,21 +490,7 @@ export default function ShutoffDetailScreen({ route }) {
           <Text style={styles.sectionLabel}>Location</Text>
           <TouchableOpacity 
             style={styles.locationButton}
-            onPress={() => {
-              // Navigate to map picker
-              navigation.navigate('MapPicker', {
-                initialLocation: locationCoords,
-                onConfirm: (selectedLocation) => {
-                  if (selectedLocation && selectedLocation.latitude && selectedLocation.longitude) {
-                    setLocationCoords({
-                      latitude: selectedLocation.latitude,
-                      longitude: selectedLocation.longitude,
-                    });
-                    setLocation(`${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`);
-                  }
-                },
-              });
-            }}
+            onPress={() => {}}
             activeOpacity={0.7}
           >
             {locationCoords && locationCoords.latitude && locationCoords.longitude ? (
@@ -608,28 +555,6 @@ export default function ShutoffDetailScreen({ route }) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {isEditing && shutoff?.contacts && shutoff.contacts.length > 0 && (
-        <View style={styles.formSection}>
-          <Text style={styles.sectionLabel}>Technician</Text>
-          {shutoff.contacts.map((contact, index) => (
-            <View key={index} style={styles.contactDisplayCard}>
-              <Ionicons name="person-circle-outline" size={20} color="#666" />
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactDisplayName}>
-                  {contact.name || contact.role || 'Technician'}
-                </Text>
-                {contact.phone && (
-                  <Text style={styles.contactDisplayPhone}>{contact.phone}</Text>
-                )}
-                {contact.role && (
-                  <Text style={styles.contactDisplayRole}>{contact.role}</Text>
-                )}
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
 
       <View style={styles.formSection}>
         <View style={styles.maintenanceSection}>
@@ -735,29 +660,20 @@ export default function ShutoffDetailScreen({ route }) {
 
       <View style={styles.formSection}>
         <Text style={styles.sectionLabel}>Contact</Text>
-        <View style={styles.contactCard}>
-          <Ionicons name="person-circle-outline" size={24} color="#666" />
-          <View style={styles.contactInfo}>
-            <TextInput
-              style={styles.contactName}
-              value={contactName}
-              onChangeText={setContactName}
-              placeholder="Contact name"
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.contactPhone}
-              value={contactPhone}
-              onChangeText={setContactPhone}
-              placeholder="Phone number"
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-            />
-          </View>
-        </View>
-        <TouchableOpacity style={styles.saveButtonIcon} onPress={handleSave}>
-          <Ionicons name="pencil" size={24} color="#fff" />
-        </TouchableOpacity>
+        {shutoff?.contacts && shutoff.contacts.length > 0 ? (
+          shutoff.contacts.map((contact, index) => (
+            <View key={index} style={styles.contactDisplayCard}>
+              <Ionicons name="person-circle-outline" size={20} color="#666" />
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactDisplayName}>{contact.name || contact.role || 'Technician'}</Text>
+                {contact.phone && <Text style={styles.contactDisplayPhone}>{contact.phone}</Text>}
+                {contact.role && <Text style={styles.contactDisplayRole}>{contact.role}</Text>}
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.optionalLabel}>No contact</Text>
+        )}
       </View>
     </View>
   );
@@ -1215,6 +1131,12 @@ export default function ShutoffDetailScreen({ route }) {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={28} color="#333" />
           </TouchableOpacity>
+          {isEditing && shutoff && (
+            <TouchableOpacity onPress={handleEdit} style={styles.editButtonHeader}>
+              <Ionicons name="pencil" size={22} color="#1095EE" />
+              <Text style={styles.editButtonHeaderText}>Edit</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Hero Image Section */}
@@ -1226,11 +1148,13 @@ export default function ShutoffDetailScreen({ route }) {
               <Ionicons name="image-outline" size={40} color="#ccc" />
             </View>
           )}
-          <TouchableOpacity onPress={() => pickMedia('photo')} style={styles.editPhotoButton}>
-            <View style={styles.editPhotoButtonCircle}>
-              <Ionicons name="pencil" size={30} color="#333" />
-            </View>
-          </TouchableOpacity>
+          {isEditing && shutoff && (
+            <TouchableOpacity onPress={handleEdit} style={styles.editPhotoButton}>
+              <View style={styles.editPhotoButtonCircle}>
+                <Ionicons name="pencil" size={30} color="#333" />
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Title */}
@@ -1241,6 +1165,16 @@ export default function ShutoffDetailScreen({ route }) {
         {/* Shutoff Details */}
         {renderShutoffTab()}
       </ScrollView>
+
+      {/* Bottom Edit bar - always visible */}
+      {isEditing && shutoff && (
+        <View style={styles.bottomEditBar}>
+          <TouchableOpacity style={styles.bottomEditButton} onPress={handleEdit} activeOpacity={0.8}>
+            <Ionicons name="pencil" size={22} color="#fff" />
+            <Text style={styles.bottomEditButtonText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Media Modal */}
       <Modal
@@ -1437,7 +1371,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Space for bottom nav
+    paddingBottom: 180, // Space for bottom nav + bottom Edit bar
+  },
+  bottomEditBar: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  bottomEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1095EE',
+    paddingVertical: 14,
+    borderRadius: 8,
+  },
+  bottomEditButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   // Header styles matching AddProperty/AddEditShutoff
   overviewHeader: {
@@ -1446,6 +1405,19 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editButtonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  editButtonHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1095EE',
   },
   // Hero image section
   overviewHero: {

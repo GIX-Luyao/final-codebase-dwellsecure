@@ -20,21 +20,22 @@ import AddEditShutoffScreen from '../screens/AddEditShutoffScreen';
 import UtilitiesListScreen from '../screens/UtilitiesListScreen';
 import AddEditUtilityScreen from '../screens/AddEditUtilityScreen';
 import RemindersScreen from '../screens/RemindersScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
 import PropertyDetailScreen from '../screens/PropertyDetailScreen';
 import PropertyListScreen from '../screens/PropertyListScreen';
 import ShutoffDetailScreen from '../screens/ShutoffDetailScreen';
 import UtilityDetailScreen from '../screens/UtilityDetailScreen';
 import AddPropertyScreen from '../screens/AddPropertyScreen';
+import MapPickerScreen from '../screens/MapPickerScreen';
 import AddPersonScreen from '../screens/AddPersonScreen';
 import PersonDetailScreen from '../screens/PersonDetailScreen';
 import AIAssistanceScreen from '../screens/AIAssistanceScreen';
 import EmergencyModeScreen from '../screens/EmergencyModeScreen';
 import ShareScreen from '../screens/ShareScreen';
-import MapPickerScreen from '../screens/MapPickerScreen';
 import SuccessScreen from '../screens/SuccessScreen';
+import OnboardingWelcomeScreen from '../screens/OnboardingWelcomeScreen';
 import BottomNav from '../components/BottomNav';
-import { isOnboardingComplete } from '../services/storage';
+import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
+import { OnboardingProvider } from '../contexts/OnboardingContext';
 
 const Stack = createStackNavigator();
 const RootStack = createStackNavigator();
@@ -52,6 +53,7 @@ function ShutoffsStack() {
         component={AddEditShutoffScreen}
         options={{ title: 'Shutoff Details' }}
       />
+      <Stack.Screen name="MapPicker" component={MapPickerScreen} />
       <Stack.Screen
         name="PropertyList"
         component={PropertyListScreen}
@@ -97,6 +99,7 @@ function UtilitiesStack() {
         name="AddEditUtility"
         component={AddEditUtilityScreen}
       />
+      <Stack.Screen name="MapPicker" component={MapPickerScreen} />
     </Stack.Navigator>
   );
 }
@@ -194,6 +197,7 @@ function MainStack() {
         screenOptions={{ headerShown: false }}
         initialRouteName="Property"
       >
+        {/* Property = main screen (PropertyListScreen); Reminders, AI, Share = other tabs */}
         <Stack.Screen name="Property" component={PropertyStack} />
         <Stack.Screen name="Reminders" component={RemindersScreen} />
         <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
@@ -262,28 +266,34 @@ function MainStack() {
   );
 }
 
-export default function AppNavigator() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+export default function AppNavigator({ showOnboarding, setShowOnboarding }) {
+  const isLoading = showOnboarding === undefined;
+  const [onboardingPhase, setOnboardingPhase] = useState('welcome'); // 'welcome' | 'add-property'
+  const prevShowOnboardingRef = useRef(false);
 
   useEffect(() => {
+    if (showOnboarding !== undefined) return;
     checkOnboarding();
-    
-    // Check onboarding status periodically when not showing onboarding
-    // This allows the settings button to reset onboarding and have it detected
-    const interval = setInterval(async () => {
-      if (!showOnboarding && !isLoading) {
-        try {
-          const completed = await isOnboardingComplete();
-          if (!completed) {
-            setShowOnboarding(true);
-          }
-        } catch (error) {
-          // Ignore errors in periodic check
-        }
-      }
-    }, 1000); // Check every second
+  }, [showOnboarding]);
 
+  useEffect(() => {
+    if (showOnboarding) setOnboardingPhase('welcome');
+    prevShowOnboardingRef.current = !!showOnboarding;
+  }, [showOnboarding]);
+
+  // When we just entered onboarding (e.g. after Reset), always show Welcome first.
+  // Otherwise we might still have onboardingPhase === 'add-property' from last time.
+  const justEnteredOnboarding = showOnboarding && !prevShowOnboardingRef.current;
+  const showWelcomeScreen = showOnboarding && (onboardingPhase === 'welcome' || justEnteredOnboarding);
+
+  useEffect(() => {
+    if (isLoading || showOnboarding) return;
+    const interval = setInterval(async () => {
+      try {
+        const completed = await isOnboardingComplete();
+        if (!completed) setShowOnboarding(true);
+      } catch (error) {}
+    }, 1000);
     return () => clearInterval(interval);
   }, [showOnboarding, isLoading]);
 
@@ -293,14 +303,16 @@ export default function AppNavigator() {
       setShowOnboarding(!completed);
     } catch (error) {
       console.error('Error checking onboarding:', error);
-      // If there's an error, skip onboarding and go to main app
       setShowOnboarding(false);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = async () => {
+    try {
+      await setOnboardingComplete();
+    } catch (e) {
+      console.warn('Error saving onboarding complete:', e);
+    }
     setShowOnboarding(false);
   };
 
@@ -314,7 +326,29 @@ export default function AppNavigator() {
   }
 
   if (showOnboarding) {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+    if (showWelcomeScreen) {
+      return (
+        <OnboardingProvider completeOnboarding={handleOnboardingComplete}>
+          <OnboardingWelcomeScreen onAddProperty={() => setOnboardingPhase('add-property')} />
+        </OnboardingProvider>
+      );
+    }
+    return (
+      <OnboardingProvider completeOnboarding={handleOnboardingComplete}>
+        <Stack.Navigator
+          key="onboarding-add-stack"
+          screenOptions={{ headerShown: false }}
+          initialRouteName="AddPropertyOnboarding"
+        >
+          <Stack.Screen
+            name="AddPropertyOnboarding"
+            component={AddPropertyScreen}
+            initialParams={{ onboardingMode: true }}
+          />
+          <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+        </Stack.Navigator>
+      </OnboardingProvider>
+    );
   }
 
   return (
