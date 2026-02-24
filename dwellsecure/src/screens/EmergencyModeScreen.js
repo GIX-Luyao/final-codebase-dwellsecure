@@ -474,13 +474,13 @@ export default function EmergencyModeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#CA4B4B',
   },
   mainContent: {
     flex: 1,
   },
   header: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#CA4B4B',
     paddingTop: 10,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#CA4B4B',
     paddingVertical: 15,
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -901,6 +901,6 @@ const styles = StyleSheet.create({
   fixedCall911ButtonText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#d32f2f',
+    color: '#CA4B4B',
   },
 });
