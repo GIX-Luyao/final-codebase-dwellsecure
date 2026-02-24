@@ -1,10 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getStreetAddress } from '../utils/addressUtils';
 
 export default function PropertyCard({ property, onPress, onLongPress }) {
-  const displayAddress = getStreetAddress(property) || property?.address || 'Address';
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -22,7 +20,7 @@ export default function PropertyCard({ property, onPress, onLongPress }) {
       </View>
       
       <View style={styles.infoContainer}>
-        <Text style={styles.address}>{displayAddress}</Text>
+        <Text style={styles.address}>{property.address}</Text>
         <View style={styles.indicators}>
           <View style={styles.indicator} />
           <View style={[styles.indicator, styles.inactiveIndicator]} />
