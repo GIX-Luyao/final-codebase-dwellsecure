@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  Animated,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
   PanResponder,
-  Dimensions,
+  useWindowDimensions,
   Modal,
   Linking,
   Platform,
@@ -14,31 +15,51 @@ import {
 import { createStackNavigator } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '../contexts/AuthContext';
+import LoginScreen from '../screens/LoginScreen';
+import SignUpScreen from '../screens/SignUpScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ShutoffsListScreen from '../screens/ShutoffsListScreen';
 import AddEditShutoffScreen from '../screens/AddEditShutoffScreen';
 import UtilitiesListScreen from '../screens/UtilitiesListScreen';
 import AddEditUtilityScreen from '../screens/AddEditUtilityScreen';
 import RemindersScreen from '../screens/RemindersScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import PropertyDetailScreen from '../screens/PropertyDetailScreen';
 import PropertyListScreen from '../screens/PropertyListScreen';
 import ShutoffDetailScreen from '../screens/ShutoffDetailScreen';
 import UtilityDetailScreen from '../screens/UtilityDetailScreen';
 import AddPropertyScreen from '../screens/AddPropertyScreen';
-import MapPickerScreen from '../screens/MapPickerScreen';
 import AddPersonScreen from '../screens/AddPersonScreen';
 import PersonDetailScreen from '../screens/PersonDetailScreen';
 import AIAssistanceScreen from '../screens/AIAssistanceScreen';
 import EmergencyModeScreen from '../screens/EmergencyModeScreen';
 import ShareScreen from '../screens/ShareScreen';
+import MapPickerScreen from '../screens/MapPickerScreen';
 import SuccessScreen from '../screens/SuccessScreen';
-import OnboardingWelcomeScreen from '../screens/OnboardingWelcomeScreen';
 import BottomNav from '../components/BottomNav';
-import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
-import { OnboardingProvider } from '../contexts/OnboardingContext';
+import { isOnboardingComplete } from '../services/storage';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 const Stack = createStackNavigator();
 const RootStack = createStackNavigator();
+
+function AuthStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animationEnabled: true,
+      }}
+    >
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </Stack.Navigator>
+  );
+}
 
 function ShutoffsStack() {
   return (
@@ -53,7 +74,6 @@ function ShutoffsStack() {
         component={AddEditShutoffScreen}
         options={{ title: 'Shutoff Details' }}
       />
-      <Stack.Screen name="MapPicker" component={MapPickerScreen} />
       <Stack.Screen
         name="PropertyList"
         component={PropertyListScreen}
@@ -99,7 +119,6 @@ function UtilitiesStack() {
         name="AddEditUtility"
         component={AddEditUtilityScreen}
       />
-      <Stack.Screen name="MapPicker" component={MapPickerScreen} />
     </Stack.Navigator>
   );
 }
@@ -127,20 +146,51 @@ function PropertyStack() {
 
 function MainStack() {
   const navigation = useNavigation();
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const buttonSize = 64;
-  const bottomNavHeight = 100; // Approximate bottom nav height
-  
-  const [buttonPosition, setButtonPosition] = useState({
-    x: screenWidth - buttonSize - 16,
-    y: screenHeight - bottomNavHeight - buttonSize - 16,
-  });
-  
+  const edgeMargin = 16;
+  const topGutter = 96;    // keep below header region
+  const bottomGutter = 96; // keep above bottom nav
+
   const [show911Modal, setShow911Modal] = useState(false);
-  
-  const initialPosition = useRef({ x: 0, y: 0 });
+
+  const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const lastPosition = useRef({ x: 0, y: 0, initialized: false });
   const hasMoved = useRef(false);
-  const touchStartTime = useRef(0);
+
+  const getBounds = () => {
+    const minX = edgeMargin;
+    const maxX = Math.max(edgeMargin, screenWidth - buttonSize - edgeMargin);
+
+    const minY = topGutter;
+    const bottomSafe = Math.max(insets.bottom, 12);
+    const maxY = Math.max(
+      minY,
+      screenHeight - buttonSize - edgeMargin - bottomSafe - bottomGutter
+    );
+
+    return { minX, maxX, minY, maxY };
+  };
+
+  const clampToBounds = (x, y) => {
+    const { minX, maxX, minY, maxY } = getBounds();
+    return {
+      x: Math.max(minX, Math.min(maxX, x)),
+      y: Math.max(minY, Math.min(maxY, y)),
+    };
+  };
+
+  useEffect(() => {
+    const { maxX, maxY } = getBounds();
+    const next = lastPosition.current.initialized
+      ? clampToBounds(lastPosition.current.x, lastPosition.current.y)
+      : { x: maxX, y: maxY };
+
+    lastPosition.current = { ...next, initialized: true };
+    position.setValue(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenWidth, screenHeight, insets.bottom]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -149,32 +199,53 @@ function MainStack() {
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
         hasMoved.current = false;
-        touchStartTime.current = Date.now();
-        initialPosition.current = { ...buttonPosition };
+        position.stopAnimation((value) => {
+          lastPosition.current = {
+            x: value.x,
+            y: value.y,
+            initialized: lastPosition.current.initialized,
+          };
+          position.setOffset({ x: value.x, y: value.y });
+          position.setValue({ x: 0, y: 0 });
+        });
       },
-      onPanResponderMove: (_, gestureState) => {
-        // Only start dragging if movement is significant
-        if (Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5) {
-          hasMoved.current = true;
-          const newX = initialPosition.current.x + gestureState.dx;
-          const newY = initialPosition.current.y + gestureState.dy;
-          
-          // Constrain to screen bounds
-          const constrainedX = Math.max(0, Math.min(screenWidth - buttonSize, newX));
-          const constrainedY = Math.max(0, Math.min(screenHeight - bottomNavHeight - buttonSize, newY));
-          
-          setButtonPosition({ x: constrainedX, y: constrainedY });
+      onPanResponderMove: Animated.event(
+        [null, { dx: position.x, dy: position.y }],
+        {
+          useNativeDriver: false,
+          listener: (_, gestureState) => {
+            if (!hasMoved.current && (Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4)) {
+              hasMoved.current = true;
+            }
+          },
         }
-      },
+      ),
       onPanResponderRelease: () => {
         const wasDrag = hasMoved.current;
         hasMoved.current = false;
-        
-        // If it was a tap (not a drag), show modal
+        position.flattenOffset();
+
+        position.stopAnimation((value) => {
+          const clamped = clampToBounds(value.x, value.y);
+          const { minX, maxX } = getBounds();
+
+          // Snap horizontally to the nearest edge so it never “gets stuck” mid-screen.
+          const centerX = clamped.x + buttonSize / 2;
+          const snapX = centerX < screenWidth / 2 ? minX : maxX;
+
+          const target = { x: snapX, y: clamped.y };
+          Animated.spring(position, {
+            toValue: target,
+            useNativeDriver: false,
+            tension: 140,
+            friction: 18,
+          }).start(() => {
+            lastPosition.current = { ...target, initialized: true };
+          });
+        });
+
         if (!wasDrag) {
-          setTimeout(() => {
-            setShow911Modal(true);
-          }, 50);
+          setTimeout(() => setShow911Modal(true), 50);
         }
       },
     })
@@ -197,7 +268,6 @@ function MainStack() {
         screenOptions={{ headerShown: false }}
         initialRouteName="Property"
       >
-        {/* Property = main screen (PropertyListScreen); Reminders, AI, Share = other tabs */}
         <Stack.Screen name="Property" component={PropertyStack} />
         <Stack.Screen name="Reminders" component={RemindersScreen} />
         <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
@@ -208,14 +278,11 @@ function MainStack() {
         <BottomNav />
       </View>
 
-      <View
+      <Animated.View
         {...panResponder.panHandlers}
         style={[
           styles.emergencyFab,
-          {
-            left: buttonPosition.x,
-            top: buttonPosition.y,
-          },
+          { transform: [{ translateX: position.x }, { translateY: position.y }] },
         ]}
       >
         <View
@@ -225,7 +292,7 @@ function MainStack() {
         >
           <Ionicons name="alert" size={28} color="#fff" />
         </View>
-      </View>
+      </Animated.View>
 
       {/* 911 Confirmation Modal */}
       <Modal
@@ -242,7 +309,7 @@ function MainStack() {
               onPress={handleCall911}
               activeOpacity={0.7}
             >
-              <Ionicons name="call" size={24} color="#007AFF" />
+              <Ionicons name="call" size={24} color={colors.primary} />
               <Text style={styles.call911Text}>911</Text>
             </TouchableOpacity>
             <View style={styles.modalButtons}>
@@ -266,89 +333,107 @@ function MainStack() {
   );
 }
 
-export default function AppNavigator({ showOnboarding, setShowOnboarding }) {
-  const isLoading = showOnboarding === undefined;
-  const [onboardingPhase, setOnboardingPhase] = useState('welcome'); // 'welcome' | 'add-property'
-  const prevShowOnboardingRef = useRef(false);
+export default function AppNavigator() {
+  const { isSignedIn, isLoading: authLoading } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (showOnboarding !== undefined) return;
+    if (!isSignedIn) return;
     checkOnboarding();
-  }, [showOnboarding]);
+  }, [isSignedIn]);
 
   useEffect(() => {
-    if (showOnboarding) setOnboardingPhase('welcome');
-    prevShowOnboardingRef.current = !!showOnboarding;
-  }, [showOnboarding]);
-
-  // When we just entered onboarding (e.g. after Reset), always show Welcome first.
-  // Otherwise we might still have onboardingPhase === 'add-property' from last time.
-  const justEnteredOnboarding = showOnboarding && !prevShowOnboardingRef.current;
-  const showWelcomeScreen = showOnboarding && (onboardingPhase === 'welcome' || justEnteredOnboarding);
-
-  useEffect(() => {
-    if (isLoading || showOnboarding) return;
+    if (!isSignedIn) return;
     const interval = setInterval(async () => {
-      try {
-        const completed = await isOnboardingComplete();
-        if (!completed) setShowOnboarding(true);
-      } catch (error) {}
+      if (!showOnboarding && !isLoading) {
+        try {
+          const completed = await isOnboardingComplete();
+          if (!completed) {
+            setShowOnboarding(true);
+            // #region agent log
+            fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Debug-Session-Id': '6eea19',
+              },
+              body: JSON.stringify({
+                sessionId: '6eea19',
+                runId: 'pre-fix',
+                hypothesisId: 'H3',
+                location: 'src/navigation/AppNavigator.js:297',
+                message: 'Interval forcing onboarding because completed=false',
+                data: { completed },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+            // #endregion
+          }
+        } catch (_) {}
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [showOnboarding, isLoading]);
+  }, [isSignedIn, showOnboarding, isLoading]);
 
   const checkOnboarding = async () => {
     try {
       const completed = await isOnboardingComplete();
       setShowOnboarding(!completed);
+      // #region agent log
+      fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': '6eea19',
+        },
+        body: JSON.stringify({
+          sessionId: '6eea19',
+          runId: 'pre-fix',
+          hypothesisId: 'H3',
+          location: 'src/navigation/AppNavigator.js:308',
+          message: 'checkOnboarding result',
+          data: { completed },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch (error) {
       console.error('Error checking onboarding:', error);
       setShowOnboarding(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOnboardingComplete = async () => {
-    try {
-      await setOnboardingComplete();
-    } catch (e) {
-      console.warn('Error saving onboarding complete:', e);
-    }
+  const handleOnboardingComplete = () => {
     setShowOnboarding(false);
   };
+
+  if (authLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <AuthStack />;
+  }
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#999" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
   if (showOnboarding) {
-    if (showWelcomeScreen) {
-      return (
-        <OnboardingProvider completeOnboarding={handleOnboardingComplete}>
-          <OnboardingWelcomeScreen onAddProperty={() => setOnboardingPhase('add-property')} />
-        </OnboardingProvider>
-      );
-    }
-    return (
-      <OnboardingProvider completeOnboarding={handleOnboardingComplete}>
-        <Stack.Navigator
-          key="onboarding-add-stack"
-          screenOptions={{ headerShown: false }}
-          initialRouteName="AddPropertyOnboarding"
-        >
-          <Stack.Screen
-            name="AddPropertyOnboarding"
-            component={AddPropertyScreen}
-            initialParams={{ onboardingMode: true }}
-          />
-          <Stack.Screen name="MapPicker" component={MapPickerScreen} />
-        </Stack.Navigator>
-      </OnboardingProvider>
-    );
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
   return (
@@ -364,12 +449,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: spacing.md,
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
   },
   bottomNavContainer: {
     position: 'absolute',
@@ -379,6 +464,8 @@ const styles = StyleSheet.create({
   },
   emergencyFab: {
     position: 'absolute',
+    left: 0,
+    top: 0,
     width: 64,
     height: 64,
     zIndex: 1000,
@@ -387,14 +474,10 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#CA4B4B',
+    backgroundColor: colors.emergency,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    ...shadows.fab,
   },
   modalOverlay: {
     flex: 1,
@@ -403,66 +486,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 30,
-    width: '80%',
-    maxWidth: 400,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: 28,
+    width: '84%',
+    maxWidth: 360,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     elevation: 10,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 30,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 24,
     textAlign: 'center',
   },
   call911Row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
     gap: 8,
   },
   call911Text: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.primary,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 15,
+    gap: 12,
     width: '100%',
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 15,
-    borderRadius: 12,
-    backgroundColor: '#E8E8E8',
+    paddingVertical: 14,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   modalContinueButton: {
     flex: 1,
-    paddingVertical: 15,
-    borderRadius: 12,
-    backgroundColor: '#CA4B4B',
+    paddingVertical: 14,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.emergency,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalContinueButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
   },
 });

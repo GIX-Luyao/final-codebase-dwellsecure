@@ -16,17 +16,18 @@ const getApiBaseUrl = () => {
   if (Platform.OS === 'web') {
     return 'http://localhost:3000';
   } else if (Platform.OS === 'android') {
-    // Android emulator: use 10.0.2.2 to access host machine's localhost
+    // Android emulator uses 10.0.2.2 to access host machine's localhost
     // For physical device, you'll need to set EXPO_PUBLIC_API_URL to your computer's IP
     return process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000';
   } else if (Platform.OS === 'ios') {
-    // iOS simulator: use 127.0.0.1 (localhost sometimes doesn't work in iOS simulator)
+    // iOS simulator: use computer's IP address (localhost/127.0.0.1 often doesn't work)
     // For physical device, you'll need to set EXPO_PUBLIC_API_URL to your computer's IP
-    return process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:3000';
+    // Default to 192.168.1.166 (your main network IP) - change if needed
+    return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.166:3000';
   }
 
   // Fallback
-  return 'http://127.0.0.1:3000';
+  return 'http://localhost:3000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -37,8 +38,7 @@ export { API_BASE_URL };
 // Log the API URL being used (helpful for debugging)
 console.log(`[API] Platform: ${Platform.OS}, API URL: ${API_BASE_URL}`);
 
-// Start with false - will be set to true after successful health check
-let isApiAvailable = false;
+let isApiAvailable = true;
 
 /**
  * Check if API is available
@@ -67,7 +67,6 @@ export const checkApiHealth = async () => {
       const data = await response.json();
       isApiAvailable = data.db === 'connected';
       console.log(`[API] Health check result: ${isApiAvailable ? 'CONNECTED ✅' : 'DISCONNECTED ❌'}`, data);
-      console.log(`[API] Response status: ${response.status}, DB status: ${data.db}`);
       if (!isApiAvailable) {
         console.warn(`[API] MongoDB not connected. DB status: ${data.db}`);
       }
@@ -80,8 +79,9 @@ export const checkApiHealth = async () => {
       throw fetchError;
     }
   } catch (error) {
-    // Expected when server is not running or unreachable; app uses local storage.
-    console.log('[API] Using local storage (server not reachable)');
+    console.error('[API] Health check failed:', error.message);
+    console.error('[API] Full error:', error);
+    console.warn('[API] Will use AsyncStorage fallback');
     isApiAvailable = false;
     return false;
   }
@@ -139,15 +139,15 @@ const apiRequest = async (endpoint, options = {}) => {
   } catch (error) {
     const duration = Date.now() - startTime;
     if (error.message === 'API_UNAVAILABLE') {
-      console.log(`[API] ${method} ${endpoint} → using local storage`);
+      console.warn(`[API] ✗ ${method} ${endpoint} → API_UNAVAILABLE (${duration}ms)`);
     } else if (error.message.includes('Network request failed') || error.message.includes('fetch failed')) {
-      console.log(`[API] ${method} ${endpoint} → offline, using local storage`);
-      isApiAvailable = false;
+      console.error(`[API] ✗ ${method} ${endpoint} → Network Error (${duration}ms)`);
+      console.error(`[API] Network error details:`, error.message);
     } else if (method === 'PUT' && error.message.includes('404')) {
       // PUT 404 is expected (method not supported), already logged above, don't log again as error
       // Just silently re-throw
     } else {
-      console.log(`[API] ${method} ${endpoint} → failed (${duration}ms), using local storage`);
+      console.error(`[API] ✗ ${method} ${endpoint} → Error (${duration}ms):`, error.message);
     }
     throw error;
   }

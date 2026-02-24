@@ -11,10 +11,12 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
 import { saveShutoff } from '../services/storage';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 // Dynamically import expo-image-picker (handle if not installed)
 let ImagePicker;
@@ -25,7 +27,7 @@ try {
   ImagePicker = null;
 }
 
-export default function AIAssistanceScreen({ navigation }) {
+export default function AIAssistanceScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -295,25 +297,28 @@ export default function AIAssistanceScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Finder</Text>
-      </View>
-      
-      <ScrollView 
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Finder</Text>
+          <Text style={styles.headerSubtitle}>
+            Ask here or send an image to identify shutoffs
+          </Text>
+        </View>
+      <ScrollView
         ref={scrollViewRef}
         style={styles.chatContainer}
         contentContainerStyle={styles.chatContent}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
       >
         {messages.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#999" />
+            <Ionicons name="search-outline" size={56} color={colors.textMuted} />
             <Text style={styles.emptyStateText}>
-              Send an image or ask a question to get help identifying utility shutoffs
+              Send an image to identify or ask me anything
             </Text>
             <Text style={styles.emptyStateSubtext}>
-              I can help you identify fire/gas, power/electrical, and water shutoffs
+              I can help you find gas, electricity, and water shutoffs
             </Text>
           </View>
         ) : (
@@ -322,7 +327,7 @@ export default function AIAssistanceScreen({ navigation }) {
         {isLoadingText && (
           <View style={styles.loadingContainer}>
             <View style={styles.messageBubble}>
-              <ActivityIndicator size="small" color="#666" />
+              <ActivityIndicator size="small" color={colors.textSecondary} />
             </View>
           </View>
         )}
@@ -336,7 +341,7 @@ export default function AIAssistanceScreen({ navigation }) {
               style={styles.removeImageButton}
               onPress={() => setSelectedImage(null)}
             >
-              <Ionicons name="close-circle" size={20} color="#ff3b30" />
+              <Ionicons name="close-circle" size={20} color={colors.error} />
             </TouchableOpacity>
           </View>
         )}
@@ -348,7 +353,7 @@ export default function AIAssistanceScreen({ navigation }) {
               onPress={handleImageUpload}
               disabled={isLoadingText}
             >
-              <Ionicons name="image-outline" size={32} color="#0066cc" />
+              <Ionicons name="image-outline" size={32} color={colors.primary} />
               <Text style={styles.uploadButtonText}>Upload Photo</Text>
             </TouchableOpacity>
             <View style={styles.divider} />
@@ -357,7 +362,7 @@ export default function AIAssistanceScreen({ navigation }) {
               onPress={handleCameraCapture}
               disabled={isLoadingText}
             >
-              <Ionicons name="camera-outline" size={32} color="#0066cc" />
+              <Ionicons name="camera-outline" size={32} color={colors.primary} />
               <Text style={styles.uploadButtonText}>Using Camera</Text>
             </TouchableOpacity>
           </View>
@@ -367,7 +372,7 @@ export default function AIAssistanceScreen({ navigation }) {
           <TextInput
             style={styles.input}
             placeholder="Ask here..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={inputText}
             onChangeText={setInputText}
             editable={!isLoadingText}
@@ -379,7 +384,7 @@ export default function AIAssistanceScreen({ navigation }) {
             onPress={() => setShowUploadSection(!showUploadSection)}
             disabled={isLoadingText}
           >
-            <Ionicons name="add" size={28} color="#999" />
+            <Ionicons name="add" size={28} color={colors.textMuted} />
           </TouchableOpacity>
           {hasText && (
             <TouchableOpacity 
@@ -388,45 +393,52 @@ export default function AIAssistanceScreen({ navigation }) {
               disabled={isLoadingText}
             >
               {isLoadingText ? (
-                <ActivityIndicator size="small" color="#999" />
+                <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
-                <Ionicons name="send" size={20} color="#999" />
+                <Ionicons name="send" size={20} color={colors.textMuted} />
               )}
             </TouchableOpacity>
           )}
         </View>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 6,
   },
   chatContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   chatContent: {
-    padding: 16,
+    padding: spacing.lg,
     paddingBottom: 20,
   },
   emptyState: {
@@ -434,19 +446,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.screenPadding,
     minHeight: 400,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   messageContainer: {
@@ -461,7 +473,7 @@ const styles = StyleSheet.create({
   messageImage: {
     width: 200,
     height: 200,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     marginBottom: 8,
     resizeMode: 'cover',
   },
@@ -469,48 +481,48 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
     padding: 12,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   userMessageBubble: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primaryDark,
   },
   aiMessageBubble: {
-    backgroundColor: '#fff',
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   errorMessageBubble: {
-    backgroundColor: '#ffebee',
-    borderColor: '#ffcdd2',
+    backgroundColor: colors.errorBackground,
+    borderColor: colors.error,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#333',
+    color: colors.text,
   },
   messageParagraph: {
     marginTop: 12,
   },
   userMessageText: {
-    color: '#fff',
+    color: colors.white,
   },
   aiMessageText: {
-    color: '#333',
+    color: colors.text,
   },
   loadingContainer: {
     alignItems: 'flex-start',
     marginBottom: 16,
   },
   bottomSection: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
   },
   selectedImageContainer: {
     position: 'relative',
-    marginHorizontal: 20,
+    marginHorizontal: spacing.screenPadding,
     marginTop: 12,
     marginBottom: 8,
     alignSelf: 'flex-start',
@@ -518,28 +530,28 @@ const styles = StyleSheet.create({
   selectedImagePreview: {
     width: 100,
     height: 100,
-    borderRadius: 8,
+    borderRadius: borderRadius.sm,
     resizeMode: 'cover',
   },
   removeImageButton: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 10,
   },
   uploadSection: {
     flexDirection: 'row',
     alignItems: 'stretch',
     justifyContent: 'space-between',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
+    padding: spacing.lg,
+    marginHorizontal: spacing.screenPadding,
     marginTop: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   uploadButton: {
     flex: 1,
@@ -551,19 +563,19 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0066cc',
+    color: colors.primary,
     marginTop: 4,
   },
   divider: {
     width: 2,
     height: 60,
-    backgroundColor: '#D0D0D0',
-    marginHorizontal: 20,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.screenPadding,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.screenPadding,
     paddingBottom: 100,
     paddingTop: 12,
   },
@@ -571,34 +583,35 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 50,
     maxHeight: 100,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 25,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
+    color: colors.text,
   },
   addButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
   submitButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
 });

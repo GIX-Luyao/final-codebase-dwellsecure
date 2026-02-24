@@ -9,8 +9,9 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getProperties, getShutoffsForEmergencyMode } from '../services/storage';
+import { getProperties, getShutoffs } from '../services/storage';
 import { setAppMode, NORMAL_MODE, EMERGENCY_MODE } from '../services/modeService';
 
 export default function EmergencyModeScreen({ navigation }) {
@@ -39,20 +40,18 @@ export default function EmergencyModeScreen({ navigation }) {
     };
   }, []);
 
+  // Reload shutoffs/properties when screen is focused so any edits (pin, description, etc.) are reflected
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   const loadData = async () => {
     const props = await getProperties();
-    // Use getShutoffsForEmergencyMode - avoids mode timing, always returns filtered (1 per type)
-    const shuts = await getShutoffsForEmergencyMode();
+    const shuts = await getShutoffs();
     setProperties(props);
     setShutoffs(shuts);
-  };
-
-  // Shared logic: same as dashed/solid line - used for both button style AND click behavior
-  const getShutoffForType = (type) => {
-    return shutoffs.find(s => {
-      const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
-      return normalizedType === type;
-    });
   };
 
   const getShutoffTypeLabel = (type) => {
@@ -121,16 +120,46 @@ export default function EmergencyModeScreen({ navigation }) {
     }
   };
 
+  // Build instructions from the selected shutoff's current saved data (pin/location, floor, description)
+  // so any edit in the app (pin change, location, floor, custom steps) is reflected in emergency mode
   const getInstructions = () => {
-    // No record: default instruction is Call 911 (same logic as hasRecord/style)
-    if (!selectedShutoff) {
-      return [`No shutoff information found for ${getShutoffTypeLabel(selectedShutoffType || 'utility').toLowerCase()}. Please call 911 immediately for assistance.`];
+    const steps = [];
+    const record = selectedShutoff;
+    const type = selectedShutoffType;
+
+    // Location step: use saved location (pin coordinates or text) so pin/location edits are reflected
+    if (record && (record.location || (record.latitude != null && record.longitude != null))) {
+      const locationText = record.location && record.location.trim()
+        ? record.location.trim()
+        : (record.latitude != null && record.longitude != null)
+          ? `See the marked pin on the property (${Number(record.latitude).toFixed(5)}, ${Number(record.longitude).toFixed(5)})`
+          : null;
+      if (locationText) {
+        steps.push(`Location: ${locationText}`);
+      }
     }
-    // Has record: use description if exists, else default instructions
-    if (selectedShutoff.description) {
-      return selectedShutoff.description.split(/[.\n]/).filter(s => s.trim().length > 0);
+
+    // Floor step if saved
+    if (record && record.floor && String(record.floor).trim()) {
+      steps.push(`Floor/Level: ${String(record.floor).trim()}`);
     }
-    return getDefaultInstructions(selectedShutoffType);
+
+    // Custom description steps (from editing the shutoff/utility) or default by type
+    if (record && record.description && String(record.description).trim()) {
+      const descriptionSteps = record.description
+        .split(/[.\n]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      if (descriptionSteps.length > 0) {
+        steps.push(...descriptionSteps);
+      } else {
+        steps.push(...getDefaultInstructions(type));
+      }
+    } else {
+      steps.push(...getDefaultInstructions(type));
+    }
+
+    return steps.length > 0 ? steps : getDefaultInstructions(type);
   };
 
   const handleClose = async () => {
@@ -145,17 +174,17 @@ export default function EmergencyModeScreen({ navigation }) {
   };
 
   const handleSelectShutoff = (type) => {
-    // Same logic as dashed/solid line: hasRecord -> instructions, no record -> Call 911
-    const shutoff = getShutoffForType(type);
-    const hasRecord = !!shutoff;
+    // SYSTEM BEHAVIOR: Emergency Mode retrieval returns only most relevant per type
+    // Find shutoff of this type (getShutoffs already filters to most relevant per type in Emergency Mode)
+    const shutoff = shutoffs.find(s => {
+      // Normalize type for comparison
+      const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+      return normalizedType === type;
+    });
     setSelectedShutoffType(type);
     setSelectedShutoff(shutoff || null);
+    setStep(1); // Go to instructions
     setCurrentInstructionIndex(0);
-    if (hasRecord) {
-      setStep(1); // instructions
-    } else {
-      setStep(3); // Call 911 - no record
-    }
   };
 
   const handleNextInstruction = () => {
@@ -255,12 +284,17 @@ export default function EmergencyModeScreen({ navigation }) {
       { type: 'water', label: 'Water', icon: 'water-outline' },
     ];
 
+    // Get shutoff info for each type
+    const getShutoffForType = (type) => {
+      return shutoffs.find(s => {
+        const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+        return normalizedType === type;
+      });
+    };
+
     return (
       <View style={styles.content}>
         <Text style={styles.questionText}>Choose the utility you need help with</Text>
-        {shutoffs.length === 0 && (
-          <Text style={styles.hintText}>No shutoff records yet. Tapping any will show Call 911.</Text>
-        )}
         <View style={styles.utilitiesContainer}>
           {allTypes.map((item) => {
             const isSelected = selectedShutoffType === item.type;
@@ -411,41 +445,19 @@ export default function EmergencyModeScreen({ navigation }) {
     );
   };
 
-  // Screen 3: Call 911 (shown when no record OR when user couldn't complete shutoff)
+  // Screen 3: Call 911
   const renderCall911 = () => {
-    const hasNoRecord = !selectedShutoff;
-    const label = getShutoffTypeLabel(selectedShutoffType || 'utility').toLowerCase();
     return (
       <View style={styles.content}>
         <View style={styles.call911Container}>
-          {hasNoRecord && (
-            <View style={styles.noRecordBanner}>
-              <Ionicons name="warning" size={24} color="#fff" />
-              <Text style={styles.noRecordBannerText}>No shutoff record</Text>
-            </View>
-          )}
           <View style={styles.emergencyIconContainer}>
             <Ionicons name="call" size={80} color="#fff" />
           </View>
           <Text style={styles.call911Title}>Call Emergency Services</Text>
           <Text style={styles.call911Text}>
-            {hasNoRecord
-              ? `No shutoff information found for ${label}. Please call 911 immediately for assistance.`
-              : `If you were unable to shut off the ${label}, please call 911 immediately.`}
+            If you were unable to shut off the {getShutoffTypeLabel(selectedShutoffType).toLowerCase()}, 
+            please call 911 immediately.
           </Text>
-          {hasNoRecord && (
-            <TouchableOpacity
-              style={styles.backToSelectionButton}
-              onPress={() => {
-                setStep(0);
-                setSelectedShutoffType(null);
-                setSelectedShutoff(null);
-              }}
-            >
-              <Ionicons name="arrow-back" size={20} color="#fff" />
-              <Text style={styles.backToSelectionText}>Choose another utility</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     );
@@ -515,13 +527,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginTop: 10,
     paddingHorizontal: 10,
-  },
-  hintText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginBottom: 16,
-    fontStyle: 'italic',
   },
   utilitiesContainer: {
     gap: 15,
@@ -717,39 +722,6 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     textAlign: 'center',
     lineHeight: 28,
-  },
-  noRecordBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  noRecordBannerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  backToSelectionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderWidth: 2,
-    borderColor: '#fff',
-    borderRadius: 12,
-  },
-  backToSelectionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
   },
   call911Button: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import { getShutoffs, deleteShutoff, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 import ShutoffCard from '../components/ShutoffCard';
 import ApiStatusIndicator from '../components/ApiStatusIndicator';
+import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function ShutoffsListScreen({ navigation }) {
   const [shutoffs, setShutoffs] = useState([]);
@@ -78,10 +79,10 @@ export default function ShutoffsListScreen({ navigation }) {
       <ApiStatusIndicator />
       {errorMessage && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={20} color="#d32f2f" />
+          <Ionicons name="alert-circle" size={20} color={colors.error} />
           <Text style={styles.errorText}>{errorMessage}</Text>
           <TouchableOpacity onPress={() => setErrorMessage(null)}>
-            <Ionicons name="close" size={20} color="#d32f2f" />
+            <Ionicons name="close" size={20} color={colors.error} />
           </TouchableOpacity>
         </View>
       )}
@@ -89,22 +90,22 @@ export default function ShutoffsListScreen({ navigation }) {
         <Text style={styles.headerTitle}>Shutoffs</Text>
         {isInEmergencyMode && (
           <View style={styles.emergencyBadge}>
-            <Ionicons name="alert-circle" size={20} color="#d32f2f" />
+            <Ionicons name="alert-circle" size={20} color={colors.emergency} />
             <Text style={styles.emergencyText}>Emergency Mode</Text>
           </View>
         )}
-        <TouchableOpacity 
-          onPress={handleAdd} 
+        <TouchableOpacity
+          onPress={handleAdd}
           style={[styles.addButton, isInEmergencyMode && styles.addButtonDisabled]}
           disabled={isInEmergencyMode}
         >
-          <Ionicons name="add" size={28} color={isInEmergencyMode ? "#999" : "#0066cc"} />
+          <Ionicons name="add" size={28} color={isInEmergencyMode ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
       </View>
 
       {shutoffs.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="list-outline" size={64} color="#ccc" />
+          <Ionicons name="list-outline" size={64} color={colors.textMuted} />
           <Text style={styles.emptyText}>No shutoffs recorded</Text>
           <Text style={styles.emptySubtext}>Tap + to add your first shutoff</Text>
         </View>
@@ -129,24 +130,24 @@ export default function ShutoffsListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: spacing.screenPadding,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
   },
   addButton: {
-    padding: 5,
+    padding: spacing.sm,
   },
   addButtonDisabled: {
     opacity: 0.5,
@@ -154,53 +155,53 @@ const styles = StyleSheet.create({
   emergencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffebee',
-    paddingHorizontal: 12,
+    backgroundColor: colors.emergencyLight,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 10,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.sm,
     gap: 6,
   },
   emergencyText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#d32f2f',
+    color: colors.emergency,
   },
   list: {
-    padding: 15,
-    paddingBottom: 100, // Space for bottom nav
+    padding: spacing.lg,
+    paddingBottom: 100,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    paddingBottom: 100, // Space for bottom nav
+    padding: spacing.xxl,
+    paddingBottom: 100,
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
-    marginTop: 20,
+    color: colors.textSecondary,
+    marginTop: spacing.xl,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 10,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffebee',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: colors.errorBackground,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#ffcdd2',
-    gap: 8,
+    borderBottomColor: colors.error,
+    gap: spacing.sm,
   },
   errorText: {
     flex: 1,
     fontSize: 14,
-    color: '#d32f2f',
+    color: colors.error,
   },
 });
 

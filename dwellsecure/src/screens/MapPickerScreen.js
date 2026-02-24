@@ -1,12 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { geocodeAddress } from '../utils/geocode';
 
 // Try to import WebView, fallback to manual entry if not available
 let WebView = null;
@@ -16,15 +18,35 @@ try {
   console.log('WebView not available, using manual entry');
 }
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
+
 export default function MapPickerScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { initialLocation, onConfirm, address, returnScreen, returnParamKey = 'selectedLocation' } = route.params || {};
+  const { initialLocation, onConfirm, address } = route.params || {};
   const webViewRef = useRef(null);
 
-  const [selectedLocation, setSelectedLocation] = useState(
-    initialLocation || null
-  );
+  const [selectedLocation, setSelectedLocation] = useState(initialLocation || null);
+  const [isGeocoding, setIsGeocoding] = useState(!!(address && !initialLocation));
+
+  // When address is passed (e.g. from property form), geocode and place the pin at that location
+  useEffect(() => {
+    if (!address || !address.trim()) {
+      setIsGeocoding(false);
+      return;
+    }
+    let cancelled = false;
+    setIsGeocoding(true);
+    geocodeAddress(address.trim(), MAPBOX_TOKEN)
+      .then((coords) => {
+        if (!cancelled && coords) setSelectedLocation(coords);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsGeocoding(false);
+      });
+    return () => { cancelled = true; };
+  }, [address]);
 
   const handleMapMessage = (event) => {
     try {
@@ -44,19 +66,17 @@ export default function MapPickerScreen() {
 
   const handleConfirm = () => {
     if (!selectedLocation) return;
-
+    
+    // Show visual feedback
     setIsConfirmPressed(true);
-
+    
+    // Short delay to show blue feedback
     setTimeout(() => {
       if (onConfirm) {
         onConfirm(selectedLocation);
-        navigation.goBack();
-      } else if (returnScreen) {
-        navigation.navigate(returnScreen, { [returnParamKey]: selectedLocation });
-      } else {
-        navigation.goBack();
       }
-    }, 200);
+      navigation.goBack();
+    }, 200); // Very short delay (200ms)
   };
 
   const handleConfirmPressIn = () => {
@@ -98,7 +118,7 @@ export default function MapPickerScreen() {
           <div id="map"></div>
           <script>
             mapboxgl.accessToken = '${MAPBOX_TOKEN}';
-
+            
             let map = new mapboxgl.Map({
               container: 'map',
               style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -106,29 +126,33 @@ export default function MapPickerScreen() {
               zoom: 15,
               attributionControl: false
             });
-
+            
+            // Create a marker element
             const el = document.createElement('div');
             el.className = 'marker';
-
+            
+            // Create marker
             let marker = new mapboxgl.Marker({
               element: el,
               draggable: true
             })
               .setLngLat([${lng}, ${lat}])
               .addTo(map);
-
+            
+            // Handle map click
             map.on('click', function(e) {
               const lng = e.lngLat.lng;
               const lat = e.lngLat.lat;
               marker.setLngLat([lng, lat]);
               sendLocation(lat, lng);
             });
-
+            
+            // Handle marker drag
             marker.on('dragend', function() {
               const lngLat = marker.getLngLat();
               sendLocation(lngLat.lat, lngLat.lng);
             });
-
+            
             function sendLocation(lat, lng) {
               if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -138,7 +162,8 @@ export default function MapPickerScreen() {
                 }));
               }
             }
-
+            
+            // Add navigation controls
             map.addControl(new mapboxgl.NavigationControl(), 'top-right');
           </script>
         </body>
@@ -146,6 +171,7 @@ export default function MapPickerScreen() {
     `;
   };
 
+  // If WebView is not available, show error message
   if (!WebView) {
     return (
       <View style={styles.container}>
@@ -162,7 +188,7 @@ export default function MapPickerScreen() {
           <Text style={styles.errorText}>
             Please install react-native-webview to use the interactive map.
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -183,16 +209,23 @@ export default function MapPickerScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      <WebView
-        ref={webViewRef}
-        style={styles.map}
-        source={{ html: getMapHTML() }}
-        onMessage={handleMapMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        scrollEnabled={false}
-        zoomEnabled={true}
-      />
+      {(isGeocoding && !selectedLocation) ? (
+        <View style={styles.mapLoading}>
+          <ActivityIndicator size="large" color="#30ACFF" />
+          <Text style={styles.mapLoadingText}>Locating address on map…</Text>
+        </View>
+      ) : (
+        <WebView
+          ref={webViewRef}
+          style={styles.map}
+          source={{ html: getMapHTML() }}
+          onMessage={handleMapMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          scrollEnabled={false}
+          zoomEnabled={true}
+        />
+      )}
 
       <View style={styles.footer}>
         {selectedLocation && (
@@ -203,12 +236,12 @@ export default function MapPickerScreen() {
             </Text>
           </View>
         )}
-        <TouchableOpacity
+        <TouchableOpacity 
           style={[
-            styles.confirmButton,
+            styles.confirmButton, 
             !selectedLocation && styles.confirmButtonDisabled,
             isConfirmPressed && styles.confirmButtonActive
-          ]}
+          ]} 
           onPress={handleConfirm}
           onPressIn={handleConfirmPressIn}
           onPressOut={handleConfirmPressOut}
@@ -303,6 +336,17 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  mapLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  mapLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
   footer: {
     padding: 20,
     backgroundColor: '#fff',
@@ -376,3 +420,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
