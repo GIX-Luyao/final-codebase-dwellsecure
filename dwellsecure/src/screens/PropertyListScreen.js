@@ -142,6 +142,7 @@ export default function PropertyListScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
+          <View style={styles.headerSpacer} />
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeTitle}>Welcome to</Text>
             <Text style={styles.appTitle}>Dwell Secure</Text>
@@ -205,14 +206,17 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerSpacer: {
+    width: 40,
   },
   headerTextContainer: {
     flex: 1,
     alignItems: 'center',
   },
   settingsButton: {
+    width: 40,
     padding: 8,
     marginTop: 5,
   },

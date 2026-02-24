@@ -11,6 +11,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getProperty, getShutoffs, getUtilities, getPeople, deleteProperty } from '../services/storage';
+import { getStreetAddress } from '../utils/addressUtils';
 
 export default function PropertyDetailScreen({ route }) {
   const navigation = useNavigation();
@@ -98,7 +99,7 @@ export default function PropertyDetailScreen({ route }) {
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{property?.address || '604 7th Ave'}</Text>
+          <Text style={styles.headerTitle}>{getStreetAddress(property) || property?.address || 'Address'}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => navigation.navigate('EditProperty')} style={styles.headerActionButton}>
               <Ionicons name="pencil" size={20} color="#333" />
