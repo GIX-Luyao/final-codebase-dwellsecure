@@ -34,6 +34,14 @@ const PROPERTY_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: 'storefront' },
 ];
 
+const MORE_PROPERTY_TYPES = [
+  { id: 'duplex-triplex-fourplex', label: 'Duplex/Triplex/Fourplex', icon: 'albums' },
+  { id: 'low-rise-apartment', label: 'Low-rise Apartment', icon: 'storefront' },
+  { id: 'high-rise-apartment', label: 'High-rise Apartment', icon: 'business' },
+  { id: 'villa', label: 'Villa', icon: 'home' },
+  { id: 'condo', label: 'Condo', icon: 'layers' },
+];
+
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
   const onboarding = useOnboarding();
@@ -54,6 +62,7 @@ export default function AddPropertyScreen({ route }) {
   const [moreOptionsPressed, setMoreOptionsPressed] = useState(false);
   const [isCompletePressed, setIsCompletePressed] = useState(false);
   const [pressedPropertyType, setPressedPropertyType] = useState(null);
+  const [cameFromMoreOptions, setCameFromMoreOptions] = useState(false);
   const [location, setLocation] = useState(
     property?.latitude && property?.longitude
       ? { latitude: property.latitude, longitude: property.longitude }
@@ -75,7 +84,7 @@ export default function AddPropertyScreen({ route }) {
           setState(property.state || '');
           setZipCode(property.zipCode || '');
           setCountry(property.country || 'USA');
-        } else if (property.address && step === 2) {
+        } else if (property.address && step === 3) {
           // Fallback: Try to parse the address if it's a combined string
           const addressParts = property.address.split(', ');
           if (addressParts.length >= 3) {
@@ -223,13 +232,24 @@ export default function AddPropertyScreen({ route }) {
 
   const handlePropertyTypeSelect = (type) => {
     setPropertyType(type);
+    setCameFromMoreOptions(false);
     // Show visual feedback
     setPressedPropertyType(type);
     // Add a short delay to let user see the blue selection state change
     setTimeout(() => {
-      setStep(2);
+      setStep(3);
       setPressedPropertyType(null);
     }, 300); // 300ms delay - very short but enough to see the visual feedback
+  };
+
+  const handleMorePropertyTypeSelect = (type) => {
+    setPropertyType(type);
+    setCameFromMoreOptions(true);
+    setPressedPropertyType(type);
+    setTimeout(() => {
+      setStep(3);
+      setPressedPropertyType(null);
+    }, 300);
   };
 
   const handleAddressSubmit = () => {
@@ -244,7 +264,7 @@ export default function AddPropertyScreen({ route }) {
         country.trim()
       ].filter(Boolean).join(', ');
       setAddress(fullAddress);
-      setStep(3);
+      setStep(4);
     }
   };
 
@@ -389,7 +409,7 @@ export default function AddPropertyScreen({ route }) {
             setMoreOptionsPressed(true);
             // Add a short delay to let user see the blue selection state change
             setTimeout(() => {
-              setStep(2);
+              setStep(2); // More options page
               setMoreOptionsPressed(false);
             }, 300); // 300ms delay - same as property type selection
           }}
@@ -405,7 +425,52 @@ export default function AddPropertyScreen({ route }) {
     </View>
   );
 
-  const renderStep2 = () => {
+  const renderStep2 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Add your property</Text>
+      <Text style={styles.stepSubtitle}>More property types</Text>
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.propertyTypesScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.propertyTypesContainer}>
+          {MORE_PROPERTY_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type.id}
+              style={[
+                styles.propertyTypeOption,
+                propertyType === type.id && styles.propertyTypeOptionSelected,
+                pressedPropertyType === type.id && styles.propertyTypeOptionPressed
+              ]}
+              onPress={() => handleMorePropertyTypeSelect(type.id)}
+              onPressIn={() => handlePropertyTypePressIn(type.id)}
+              onPressOut={handlePropertyTypePressOut}
+              activeOpacity={0.8}
+            >
+              <View style={styles.propertyIconContainer}>
+                <Ionicons 
+                  name={type.icon} 
+                  size={60} 
+                  color={pressedPropertyType === type.id ? "#fff" : (propertyType === type.id ? "#1095EE" : "#999")} 
+                />
+              </View>
+              <Text style={[
+                styles.propertyLabel,
+                propertyType === type.id && styles.propertyLabelSelected,
+                pressedPropertyType === type.id && styles.propertyLabelPressed
+              ]}>
+                {type.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+
+  const renderStep3 = () => {
     const isFormValid = addressLine1.trim() && city.trim() && state.trim() && zipCode.trim();
     
     return (
@@ -510,7 +575,7 @@ export default function AddPropertyScreen({ route }) {
     );
   };
 
-  const renderStep3 = () => {
+  const renderStep4 = () => {
     // Build the secondary address line (addressLine2, city, state, zipCode - no country)
     const secondaryAddressParts = [
       addressLine2.trim(),
@@ -613,7 +678,13 @@ export default function AddPropertyScreen({ route }) {
 
   const handleBack = () => {
     if (step > 1) {
-      setStep(step - 1);
+      if (step === 3) {
+        setStep(cameFromMoreOptions ? 2 : 1);
+      } else if (step === 4) {
+        setStep(3);
+      } else {
+        setStep(step - 1);
+      }
     } else {
       navigation.goBack();
     }
@@ -638,6 +709,7 @@ export default function AddPropertyScreen({ route }) {
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
+      {step === 4 && renderStep4()}
     </View>
   );
 }
@@ -678,6 +750,12 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginBottom: 16,
+  },
+  stepSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   addressHeader: {
     marginBottom: 16,
