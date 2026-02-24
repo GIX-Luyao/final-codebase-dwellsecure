@@ -1,7 +1,3 @@
-/**
- * Main screen (first tab). Shown as the default when user opens the app after onboarding.
- * Has the top-right gear → Settings → Reset Onboarding / Reset All Data.
- */
 import React, { useState } from 'react';
 import {
   View,
@@ -11,15 +7,17 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
-import ApiStatusIndicator from '../components/ApiStatusIndicator';
 import { getProperties, deleteProperty, resetOnboarding, resetAllData } from '../services/storage';
-import { requestShowOnboarding } from '../services/onboardingTrigger';
+import { useAuth } from '../contexts/AuthContext';
+import { colors, spacing, typography } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
+  const { signOut } = useAuth();
   const [properties, setProperties] = useState([]);
 
   useFocusEffect(
@@ -81,11 +79,24 @@ export default function PropertyListScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         {
+          text: 'Sign out',
+          onPress: async () => {
+            Alert.alert(
+              'Sign out',
+              'Are you sure you want to sign out?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign out', onPress: () => signOut() },
+              ]
+            );
+          },
+        },
+        {
           text: 'Reset Onboarding',
           onPress: async () => {
             Alert.alert(
               'Reset Onboarding',
-              'Do you want to go back to add your first property?',
+              'Do you want to go back to the onboarding screen?',
               [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -93,10 +104,9 @@ export default function PropertyListScreen() {
                   onPress: async () => {
                     try {
                       await resetOnboarding();
-                      setTimeout(() => {
-                        requestShowOnboarding();
-                        setTimeout(() => Alert.alert('Success', 'You will see the Welcome screen.', [{ text: 'OK' }]), 400);
-                      }, 150);
+                      Alert.alert('Success', 'Onboarding has been reset. You will be taken to the onboarding screen.', [
+                        { text: 'OK' }
+                      ]);
                     } catch (error) {
                       Alert.alert('Error', 'Failed to reset onboarding');
                     }
@@ -121,10 +131,9 @@ export default function PropertyListScreen() {
                   onPress: async () => {
                     try {
                       await resetAllData();
-                      setTimeout(() => {
-                        requestShowOnboarding();
-                        setTimeout(() => Alert.alert('Success', 'All data has been reset. You will see the Welcome screen.', [{ text: 'OK' }]), 400);
-                      }, 150);
+                      Alert.alert('Success', 'All data has been reset. You will be taken to the onboarding screen.', [
+                        { text: 'OK' }
+                      ]);
                     } catch (error) {
                       Alert.alert('Error', 'Failed to reset data');
                     }
@@ -139,7 +148,7 @@ export default function PropertyListScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerTextContainer}>
@@ -147,17 +156,17 @@ export default function PropertyListScreen() {
             <Text style={styles.appTitle}>Dwell Secure</Text>
             <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleSettingsPress}
             style={styles.settingsButton}
+            accessibilityLabel="Settings"
           >
-            <Ionicons name="settings-outline" size={24} color="#666" />
+            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ApiStatusIndicator />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {properties.length > 0 ? (
           <View style={styles.propertyContainer}>
             {properties.map((property) => (
@@ -168,40 +177,42 @@ export default function PropertyListScreen() {
                 onLongPress={() => handleLongPress(property)}
               />
             ))}
-            
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addPropertyBox}
               onPress={() => navigation.navigate('AddProperty')}
+              accessibilityLabel="Add property"
             >
-              <Ionicons name="add-circle-outline" size={40} color="#999" />
+              <Ionicons name="add-circle-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.addPropertyLabel}>Add another property</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.circleButton}
               onPress={() => navigation.navigate('AddProperty')}
+              accessibilityLabel="Add your first property"
             >
-              <Ionicons name="add" size={60} color="#999" />
+              <Ionicons name="add" size={60} color={colors.textMuted} />
             </TouchableOpacity>
             <Text style={styles.helperText}>Click to add a property</Text>
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
-    backgroundColor: '#fff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    backgroundColor: colors.background,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xxl,
   },
   headerTop: {
     flexDirection: 'row',
@@ -213,34 +224,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   settingsButton: {
-    padding: 8,
-    marginTop: 5,
+    padding: spacing.sm,
+    marginTop: 4,
   },
   welcomeTitle: {
-    fontSize: 20,
-    color: '#666',
-    marginBottom: 5,
+    fontSize: 18,
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
   appTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
   },
-  content: {
-    flex: 1,
-  },
+  content: { flex: 1 },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 100, // Space for bottom nav
+    padding: spacing.screenPadding,
+    paddingBottom: 120,
   },
-  propertyContainer: {
-    width: '100%',
-  },
+  propertyContainer: { width: '100%' },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -249,28 +256,33 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   circleButton: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#E8E8E8',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   helperText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
   },
   addPropertyBox: {
     width: '100%',
-    aspectRatio: 1.5,
+    minHeight: 140,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#C7C7CC',
+    borderColor: colors.border,
     borderStyle: 'dashed',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 15,
+    marginTop: spacing.lg,
+  },
+  addPropertyLabel: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 8,
   },
 });

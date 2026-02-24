@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
   const isVerified = shutoff.verification_status === 'verified';
@@ -11,14 +12,14 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
     switch (shutoffType) {
       case 'gas':
       case 'fire':
-        return { label: 'Gas', icon: 'flame-outline', color: '#ff6b35' };
+        return { label: 'Gas', icon: 'flame-outline', color: colors.accentGas };
       case 'electric':
       case 'power':
-        return { label: 'Electric', icon: 'flash-outline', color: '#ffc107' };
+        return { label: 'Electric', icon: 'flash-outline', color: colors.accentElectric };
       case 'water':
-        return { label: 'Water', icon: 'water-outline', color: '#2196f3' };
+        return { label: 'Water', icon: 'water-outline', color: colors.accentWater };
       default:
-        return { label: 'Utility', icon: 'construct-outline', color: '#666' };
+        return { label: 'Utility', icon: 'construct-outline', color: colors.textSecondary };
     }
   };
   
@@ -38,10 +39,10 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
           </View>
           <View style={styles.actions}>
             <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
-              <Ionicons name="pencil" size={20} color="#0066cc" />
+              <Ionicons name="pencil" size={20} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
-              <Ionicons name="trash" size={20} color="#ff4444" />
+              <Ionicons name="trash" size={20} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -49,12 +50,12 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
         <View style={styles.verificationRow}>
           {isVerified ? (
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#4caf50" />
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               <Text style={styles.verifiedText}>Verified</Text>
             </View>
           ) : (
             <View style={styles.unverifiedBadge}>
-              <Ionicons name="close-circle-outline" size={18} color="#ff9800" />
+              <Ionicons name="close-circle-outline" size={18} color={colors.warning} />
               <Text style={styles.unverifiedText}>Unverified</Text>
             </View>
           )}
@@ -62,14 +63,14 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
 
         {shutoff.location && (
           <View style={styles.infoRow}>
-            <Ionicons name="location" size={16} color="#666" />
+            <Ionicons name="location" size={16} color={colors.textSecondary} />
             <Text style={styles.infoText}>{shutoff.location}</Text>
           </View>
         )}
 
         {shutoff.contacts && shutoff.contacts.length > 0 && (
           <View style={styles.infoRow}>
-            <Ionicons name="person" size={16} color="#666" />
+            <Ionicons name="person" size={16} color={colors.textSecondary} />
             <Text style={styles.infoText}>
               {shutoff.contacts.map(c => c.name || c.role || 'Technician').join(', ')}
             </Text>
@@ -78,7 +79,7 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
 
         {shutoff.documentName && (
           <View style={styles.infoRow}>
-            <Ionicons name="document-attach" size={16} color="#666" />
+            <Ionicons name="document-attach" size={16} color={colors.textSecondary} />
             <Text style={styles.infoText}>{shutoff.documentName}</Text>
           </View>
         )}
@@ -89,101 +90,97 @@ export default function ShutoffCard({ shutoff, onEdit, onDelete }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
   },
   cardVerified: {
-    borderColor: '#4caf50',
-    backgroundColor: '#f1f8f4',
+    borderColor: colors.success,
+    backgroundColor: colors.successLight,
   },
   cardContent: {
-    padding: 15,
+    padding: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
   titleSection: {
     flex: 1,
-    marginRight: 10,
+    marginRight: spacing.sm,
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
     alignSelf: 'flex-start',
   },
   typeLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
-    marginLeft: 4,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
     textTransform: 'uppercase',
   },
   name: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   actions: {
     flexDirection: 'row',
   },
   actionButton: {
-    marginLeft: 10,
-    padding: 5,
+    marginLeft: spacing.sm,
+    padding: spacing.sm,
   },
   verificationRow: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e8f5e9',
-    paddingHorizontal: 10,
+    backgroundColor: colors.successLight,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     alignSelf: 'flex-start',
   },
   verifiedText: {
     marginLeft: 6,
     fontSize: 14,
     fontWeight: '600',
-    color: '#2e7d32',
+    color: colors.success,
   },
   unverifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff3e0',
-    paddingHorizontal: 10,
+    backgroundColor: colors.warningLight,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     alignSelf: 'flex-start',
   },
   unverifiedText: {
     marginLeft: 6,
     fontSize: 14,
     fontWeight: '600',
-    color: '#e65100',
+    color: colors.warning,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   infoText: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     flex: 1,
   },
 });

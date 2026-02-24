@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
@@ -28,7 +27,7 @@ const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom
 };
 
 export default function AddEditUtilityScreen({ route, navigation }) {
-  const { utility, propertyId } = route.params || {};
+  const { utility, propertyId, presetDescription } = route.params || {};
   const isEditing = !!utility;
 
   const [step, setStep] = useState(2); // Start from step 2
@@ -62,6 +61,13 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       loadUtilityData();
     }
   }, []);
+
+  useEffect(() => {
+    if (!isEditing && presetDescription && !description) {
+      setDescription(String(presetDescription));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetDescription, isEditing]);
 
   const checkMode = async () => {
     const inEmergency = await isEmergencyMode();
@@ -160,17 +166,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       setReminderId(data.reminderId || null);
     }
   };
-
-  // When returning from MapPicker, apply selected location
-  useFocusEffect(
-    React.useCallback(() => {
-      const selected = route.params?.selectedLocation;
-      if (selected && selected.latitude != null && selected.longitude != null) {
-        setLocationCoords(selected);
-        navigation.setParams({ selectedLocation: undefined });
-      }
-    }, [route.params?.selectedLocation, navigation])
-  );
 
   const pickImage = async () => {
     try {
@@ -886,7 +881,20 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>Location</Text>
                 <TouchableOpacity 
                   style={styles.locationButton}
-                  onPress={() => navigation.navigate('MapPicker', { returnScreen: 'AddEditUtility', returnParamKey: 'selectedLocation', initialLocation: locationCoords || undefined })}
+                  onPress={() => {
+                    navigation.navigate('MapPicker', {
+                      initialLocation: locationCoords,
+                      onConfirm: (selectedLocation) => {
+                        if (selectedLocation && selectedLocation.latitude && selectedLocation.longitude) {
+                          setLocationCoords({
+                            latitude: selectedLocation.latitude,
+                            longitude: selectedLocation.longitude,
+                          });
+                          setLocation(`${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`);
+                        }
+                      },
+                    });
+                  }}
                   activeOpacity={0.7}
                 >
                   {locationCoords ? (

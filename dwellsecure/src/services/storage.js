@@ -715,6 +715,24 @@ export const exportData = async (shutoffs) => {
 export const isOnboardingComplete = async () => {
   try {
     const value = await AsyncStorage.getItem(ONBOARDING_KEY);
+    // #region agent log
+    fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '6eea19',
+      },
+      body: JSON.stringify({
+        sessionId: '6eea19',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'src/services/storage.js:715',
+        message: 'isOnboardingComplete read from AsyncStorage',
+        data: { rawValue: value },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return value === 'true';
   } catch (error) {
     console.error('Error checking onboarding status:', error);
@@ -725,6 +743,24 @@ export const isOnboardingComplete = async () => {
 export const setOnboardingComplete = async () => {
   try {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    // #region agent log
+    fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '6eea19',
+      },
+      body: JSON.stringify({
+        sessionId: '6eea19',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'src/services/storage.js:725',
+        message: 'setOnboardingComplete wrote to AsyncStorage',
+        data: {},
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   } catch (error) {
     console.error('Error setting onboarding complete:', error);
     throw error;

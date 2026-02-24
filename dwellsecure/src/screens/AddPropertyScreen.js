@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
-import { useOnboarding } from '../contexts/OnboardingContext';
+import { geocodeAddress } from '../utils/geocode';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
 
@@ -36,11 +37,10 @@ const PROPERTY_TYPES = [
 
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
-  const onboarding = useOnboarding();
-  const { property, onboardingMode } = route?.params || {};
+  const { property, initialStep } = route?.params || {};
   const isEditing = !!property;
   
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep || 1);
   const [propertyType, setPropertyType] = useState(property?.propertyType || '');
   const [address, setAddress] = useState(property?.address || '');
   const [addressLine1, setAddressLine1] = useState('');
@@ -59,6 +59,32 @@ export default function AddPropertyScreen({ route }) {
       ? { latitude: property.latitude, longitude: property.longitude }
       : null
   );
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const geocodeTimeoutRef = useRef(null);
+  const [isPropertyTypeDropdownOpen, setIsPropertyTypeDropdownOpen] = useState(false);
+
+  // When the user enters a complete address, geocode and autolocate the pin on the map
+  useEffect(() => {
+    const line1 = (addressLine1 || '').trim();
+    const cityVal = (city || '').trim();
+    const stateVal = (state || '').trim();
+    const zipVal = (zipCode || '').trim();
+    if (!line1 || !cityVal || !stateVal || !zipVal) return;
+
+    if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
+    geocodeTimeoutRef.current = setTimeout(async () => {
+      const fullAddress = [line1, addressLine2.trim(), cityVal, `${stateVal} ${zipVal}`, (country || '').trim()].filter(Boolean).join(', ');
+      setIsGeocoding(true);
+      const coords = await geocodeAddress(fullAddress, MAPBOX_TOKEN);
+      setIsGeocoding(false);
+      if (coords) setLocation(coords);
+      geocodeTimeoutRef.current = null;
+    }, 600);
+
+    return () => {
+      if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
+    };
+  }, [addressLine1, addressLine2, city, state, zipCode, country]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -75,7 +101,15 @@ export default function AddPropertyScreen({ route }) {
           setState(property.state || '');
           setZipCode(property.zipCode || '');
           setCountry(property.country || 'USA');
-        } else if (property.address && step === 2) {
+        } else if (property.address && (property.city || property.state || property.zipCode || property.zip)) {
+          // Backwards compatibility: properties created during onboarding where fields were stored separately
+          setAddressLine1(property.address || '');
+          setAddressLine2(property.addressLine2 || '');
+          setCity(property.city || '');
+          setState(property.state || '');
+          setZipCode(property.zipCode || property.zip || '');
+          setCountry(property.country || 'USA');
+        } else if (property.address) {
           // Fallback: Try to parse the address if it's a combined string
           const addressParts = property.address.split(', ');
           if (addressParts.length >= 3) {
@@ -92,6 +126,13 @@ export default function AddPropertyScreen({ route }) {
             }
           }
         }
+        // Normalize legacy property types (e.g. from onboarding) to current IDs
+        if (property.propertyType) {
+          let normalizedType = property.propertyType;
+          if (normalizedType === 'house') normalizedType = 'single-family';
+          if (normalizedType === 'mobile') normalizedType = 'single-family';
+          setPropertyType(normalizedType);
+        }
         // Load location if editing
         if (property?.latitude && property?.longitude) {
           setLocation({
@@ -101,9 +142,11 @@ export default function AddPropertyScreen({ route }) {
         }
       }
       
+      // Check for location returned from MapPicker
       const selectedLocation = route?.params?.selectedLocation;
       if (selectedLocation) {
         setLocation(selectedLocation);
+        // Clear the param to avoid re-applying on next focus
         navigation.setParams({ selectedLocation: undefined });
       }
     }, [property?.id, property?.address, property?.latitude, property?.longitude, step, route?.params?.selectedLocation, navigation])
@@ -254,9 +297,9 @@ export default function AddPropertyScreen({ route }) {
 
   const handleMapPress = () => {
     navigation.navigate('MapPicker', {
-      returnScreen: route.name,
-      returnParamKey: 'selectedLocation',
-      initialLocation: location || undefined,
+      initialLocation: location,
+      address: address || `${addressLine1}, ${city}, ${state} ${zipCode}`,
+      onConfirm: handleLocationConfirm,
     });
   };
 
@@ -318,12 +361,7 @@ export default function AddPropertyScreen({ route }) {
     setTimeout(async () => {
       try {
         await saveProperty(propertyData);
-
-        if (onboardingMode && onboarding?.completeOnboarding) {
-          onboarding.completeOnboarding();
-          return;
-        }
-
+        
         // Navigate to Success screen instead of showing alert
         navigation.navigate('Success', {
           address: fullAddress,
@@ -407,6 +445,7 @@ export default function AddPropertyScreen({ route }) {
 
   const renderStep2 = () => {
     const isFormValid = addressLine1.trim() && city.trim() && state.trim() && zipCode.trim();
+    const selectedType = PROPERTY_TYPES.find((t) => t.id === propertyType);
     
     return (
       <ScrollView 
@@ -416,6 +455,52 @@ export default function AddPropertyScreen({ route }) {
       >
         <Text style={styles.stepTitle}>Add your property</Text>
         
+        <View style={styles.addressForm}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Property type</Text>
+            <TouchableOpacity
+              style={styles.dropdown}
+              activeOpacity={0.8}
+              onPress={() => setIsPropertyTypeDropdownOpen((open) => !open)}
+            >
+              <Text style={styles.dropdownText}>
+                {selectedType ? selectedType.label : 'Select property type'}
+              </Text>
+              <Ionicons
+                name={isPropertyTypeDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#8E8E93"
+              />
+            </TouchableOpacity>
+            {isPropertyTypeDropdownOpen && (
+              <View style={styles.dropdownOptionsContainer}>
+                {PROPERTY_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      styles.dropdownOption,
+                      propertyType === type.id && styles.dropdownOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setPropertyType(type.id);
+                      setIsPropertyTypeDropdownOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        propertyType === type.id && styles.dropdownOptionTextSelected,
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+
         <View style={styles.addressForm}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
@@ -535,8 +620,14 @@ export default function AddPropertyScreen({ route }) {
             style={styles.mapPlaceholder}
             onPress={handleMapPress}
             activeOpacity={0.7}
+            disabled={isGeocoding}
           >
-            {location ? (
+            {isGeocoding ? (
+              <View style={styles.mapGeocodingContainer}>
+                <ActivityIndicator size="large" color="#30ACFF" />
+                <Text style={styles.mapPlaceholderText}>Locating address…</Text>
+              </View>
+            ) : location ? (
               <View style={styles.mapThumbnailContainer}>
                 <Image
                   source={{ uri: getMapThumbnailUrl(location.latitude, location.longitude) }}
@@ -556,7 +647,7 @@ export default function AddPropertyScreen({ route }) {
             ) : (
               <>
                 <Ionicons name="location-outline" size={80} color="#ccc" />
-                <Text style={styles.mapPlaceholderText}>Tap to select location</Text>
+                <Text style={styles.mapPlaceholderText}>Enter address above or tap to select location</Text>
               </>
             )}
           </TouchableOpacity>
@@ -619,18 +710,12 @@ export default function AddPropertyScreen({ route }) {
     }
   };
 
-  const showBackButton = !onboardingMode || step > 1;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {showBackButton ? (
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 28 }} />
-        )}
+        <TouchableOpacity onPress={handleBack}>
+          <Ionicons name="chevron-back" size={28} color="#333" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Dwell Secure</Text>
         <View style={{ width: 28 }} />
       </View>
@@ -817,6 +902,46 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     marginTop: 8,
   },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#C7C7CC',
+    backgroundColor: '#F2F2F7',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#1E1E1E',
+    flex: 1,
+    marginRight: 8,
+  },
+  dropdownOptionsContainer: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7C7CC',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#E1F3FF',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#1E1E1E',
+  },
+  dropdownOptionTextSelected: {
+    color: '#1095EE',
+    fontWeight: '600',
+  },
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -860,6 +985,12 @@ const styles = StyleSheet.create({
     marginTop: 15,
     height: 200,
     position: 'relative',
+  },
+  mapGeocodingContainer: {
+    flex: 1,
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mapPlaceholderText: {
     marginTop: 12,

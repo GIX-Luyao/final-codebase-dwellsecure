@@ -23,6 +23,7 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGR
 // Generate Mapbox Static Images API URL for map thumbnail (satellite style)
 const getMapThumbnailUrl = (latitude, longitude, width = 120, height = 120, zoom = 15) => {
   if (!latitude || !longitude) return null;
+  // Use satellite-streets style to match MapPicker
   const styleId = 'mapbox/satellite-streets-v12';
   const markerColor = '1095EE'; // Blue color matching location button
   return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
@@ -58,66 +59,18 @@ export default function UtilityDetailScreen({ route }) {
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
   const [fullScreenImageUri, setFullScreenImageUri] = useState(null);
 
-  const maintenanceDateRef = useRef(null);
-  const maintenanceTimeRef = useRef(null);
-  const markCompleteRef = useRef(false);
-  const reminderRef = useRef(null);
-  const utilityRef = useRef(null);
-  const utilityIdRef = useRef(null);
-  useEffect(() => {
-    maintenanceDateRef.current = maintenanceDate;
-    maintenanceTimeRef.current = maintenanceTime;
-    markCompleteRef.current = markComplete;
-    reminderRef.current = reminder;
-    utilityRef.current = utility;
-    utilityIdRef.current = utilityId;
-  }, [maintenanceDate, maintenanceTime, markComplete, reminder, utility, utilityId]);
-
   useEffect(() => {
     if (isEditing) {
       loadUtilityData();
     }
   }, [utilityId]);
 
-  // Refresh reminder data when screen comes into focus; on blur, persist current reminder state
+  // Refresh reminder data when screen comes into focus (e.g., returning from Reminders page)
   useFocusEffect(
     React.useCallback(() => {
       if (isEditing && utilityId) {
         loadReminderData();
       }
-      return () => {
-        if (!utilityIdRef.current) return;
-        const mDate = maintenanceDateRef.current;
-        const mTime = maintenanceTimeRef.current;
-        const completed = markCompleteRef.current;
-        const rem = reminderRef.current;
-        const utilityData = utilityRef.current;
-        if (mDate && mTime) {
-          const reminderDate = new Date(mDate);
-          reminderDate.setHours(mTime.getHours(), mTime.getMinutes(), 0, 0);
-          const reminderToSave = {
-            ...(rem || {}),
-            id: rem?.id || `reminder-${Date.now()}`,
-            utilityId: utilityIdRef.current,
-            type: 'utility',
-            date: reminderDate.toISOString(),
-            completed: completed,
-            title: `Maintenance reminder for ${utilityData?.name || 'utility'}`,
-            description: `Maintenance reminder for ${utilityData?.description || utilityData?.name || 'utility'}`,
-            contacts: rem?.contacts || [],
-            notes: rem?.notes || '',
-            createdAt: rem?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          saveReminder(reminderToSave).then(() => {
-            if (utilityData) {
-              saveUtility({ ...utilityData, reminderId: reminderToSave.id }).catch(() => {});
-            }
-          }).catch(() => {});
-        } else if (rem?.id) {
-          deleteReminder(rem.id).catch(() => {});
-        }
-      };
     }, [utilityId, isEditing])
   );
 
@@ -398,12 +351,91 @@ export default function UtilityDetailScreen({ route }) {
     setVideos(videos.filter((_, i) => i !== index));
   };
 
-  const handleEdit = () => {
-    if (!utility) return;
-    navigation.navigate('AddEditUtility', {
-      utility: { ...utility },
-      propertyId: utility.propertyId,
-    });
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a name for the utility');
+      return;
+    }
+
+    const utilityData = {
+      id: isEditing ? utilityId : Date.now().toString(),
+      name: name.trim(),
+      description: name.trim(),
+      location: location.trim(),
+      photos: photos,
+      videos: videos,
+      latitude: locationCoords?.latitude || null,
+      longitude: locationCoords?.longitude || null,
+      locationCoords: locationCoords,
+      contact: contactName.trim() ? { name: contactName.trim(), phone: contactPhone.trim() } : null,
+      createdAt: isEditing ? utility?.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      propertyId: utility?.propertyId || null,
+    };
+
+    await saveUtility(utilityData);
+    
+    // Handle reminder: create, update, or delete based on current state
+    if (maintenanceDate && maintenanceTime) {
+      // Create or update reminder with current date, time, and completed status
+      try {
+        const reminderDate = new Date(maintenanceDate);
+        reminderDate.setHours(maintenanceTime.getHours());
+        reminderDate.setMinutes(maintenanceTime.getMinutes());
+        reminderDate.setSeconds(0);
+        reminderDate.setMilliseconds(0);
+        
+        const reminderToSave = {
+          ...(reminder || {}),
+          id: reminder?.id || `reminder-${Date.now()}`,
+          utilityId: utilityData.id,
+          type: 'utility',
+          date: reminderDate.toISOString(),
+          completed: markComplete || false, // Use current markComplete state
+          title: `Maintenance reminder for ${utilityData.name || 'utility'}`,
+          description: `Maintenance reminder for ${utilityData.description || utilityData.name || 'utility'}`,
+          contacts: reminder?.contacts || [],
+          notes: reminder?.notes || '',
+          createdAt: reminder?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        
+        await saveReminder(reminderToSave);
+        setReminder(reminderToSave);
+        utilityData.reminderId = reminderToSave.id;
+        console.log('[UtilityDetail] Reminder saved/updated with completed:', markComplete);
+      } catch (error) {
+        console.error('[UtilityDetail] Error saving reminder:', error);
+        Alert.alert('Error', 'Failed to save reminder');
+      }
+    } else if (reminder && reminder.id) {
+      // If date/time cleared (reset), delete the reminder
+      try {
+        await deleteReminder(reminder.id);
+        setReminder(null);
+        setMarkComplete(false);
+        console.log('[UtilityDetail] Reminder deleted (reset)');
+      } catch (error) {
+        console.error('[UtilityDetail] Error deleting reminder:', error);
+        Alert.alert('Error', 'Failed to delete reminder');
+      }
+    } else if (reminder && reminder.id && !maintenanceDate && !maintenanceTime) {
+      // If reminder exists but no date/time, delete it
+      try {
+        await deleteReminder(reminder.id);
+        setReminder(null);
+        setMarkComplete(false);
+        console.log('[UtilityDetail] Reminder deleted (no date/time)');
+      } catch (error) {
+        console.error('[UtilityDetail] Error deleting reminder:', error);
+      }
+    }
+    
+    // Update local state
+    setUtility(utilityData);
+    Alert.alert('Success', 'Utility saved successfully', [
+      { text: 'OK' }
+    ]);
   };
 
   // Copy renderCustomCalendar and renderCustomTimePicker from ShutoffDetailScreen
@@ -790,17 +822,11 @@ export default function UtilityDetailScreen({ route }) {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Header with back and Edit */}
+        {/* Header with back button */}
         <View style={styles.overviewHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={28} color="#333" />
           </TouchableOpacity>
-          {isEditing && utility && (
-            <TouchableOpacity onPress={handleEdit} style={styles.editButtonHeader}>
-              <Ionicons name="pencil" size={22} color="#1095EE" />
-              <Text style={styles.editButtonHeaderText}>Edit</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Hero Image Section */}
@@ -827,7 +853,45 @@ export default function UtilityDetailScreen({ route }) {
               <Text style={styles.sectionLabel}>Location</Text>
               <TouchableOpacity 
                 style={styles.locationButton}
-                onPress={() => {}}
+                onPress={() => {
+                  // Navigate to map picker to edit pin location
+                  navigation.navigate('MapPicker', {
+                    initialLocation: locationCoords,
+                    onConfirm: async (selectedLocation) => {
+                      if (selectedLocation && selectedLocation.latitude && selectedLocation.longitude) {
+                        const newLocationStr = `${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`;
+                        setLocationCoords({
+                          latitude: selectedLocation.latitude,
+                          longitude: selectedLocation.longitude,
+                        });
+                        setLocation(newLocationStr);
+                        // Persist the updated pin location
+                        try {
+                          const utilityData = {
+                            id: utilityId,
+                            name: name.trim(),
+                            description: (name || utility?.description || '').trim(),
+                            location: newLocationStr,
+                            photos: photos,
+                            videos: videos,
+                            latitude: selectedLocation.latitude,
+                            longitude: selectedLocation.longitude,
+                            locationCoords: { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude },
+                            contact: contactName.trim() ? { name: contactName.trim(), phone: contactPhone.trim() } : null,
+                            createdAt: utility?.createdAt || new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            propertyId: utility?.propertyId || null,
+                          };
+                          await saveUtility(utilityData);
+                          setUtility(utilityData);
+                        } catch (error) {
+                          console.error('[UtilityDetail] Error saving pin location:', error);
+                          Alert.alert('Error', 'Failed to save pin location. Please try again.');
+                        }
+                      }
+                    },
+                  });
+                }}
                 activeOpacity={0.7}
               >
                 {locationCoords && locationCoords.latitude && locationCoords.longitude ? (
@@ -842,6 +906,7 @@ export default function UtilityDetailScreen({ route }) {
                   </View>
                 )}
               </TouchableOpacity>
+              <Text style={styles.locationHint}>Tap to change pin location</Text>
             </View>
 
             <View style={styles.photoVideoSection}>
@@ -997,30 +1062,32 @@ export default function UtilityDetailScreen({ route }) {
 
           <View style={styles.formSection}>
             <Text style={styles.sectionLabel}>Contact</Text>
-            {utility?.contact && (utility.contact.name || utility.contact.phone) ? (
-              <View style={styles.contactDisplayCard}>
-                <Ionicons name="person-circle-outline" size={20} color="#666" />
-                <View style={styles.contactInfo}>
-                  <Text style={styles.contactDisplayName}>{utility.contact.name || 'Contact'}</Text>
-                  {utility.contact.phone && <Text style={styles.contactDisplayPhone}>{utility.contact.phone}</Text>}
-                </View>
+            <View style={styles.contactCard}>
+              <Ionicons name="person-circle-outline" size={24} color="#666" />
+              <View style={styles.contactInfo}>
+                <TextInput
+                  style={styles.contactName}
+                  value={contactName}
+                  onChangeText={setContactName}
+                  placeholder="Contact name"
+                  placeholderTextColor="#999"
+                />
+                <TextInput
+                  style={styles.contactPhone}
+                  value={contactPhone}
+                  onChangeText={setContactPhone}
+                  placeholder="Phone number"
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                />
               </View>
-            ) : (
-              <Text style={styles.optionalLabel}>No contact</Text>
-            )}
+            </View>
+            <TouchableOpacity style={styles.saveButtonIcon} onPress={handleSave}>
+              <Ionicons name="pencil" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Edit bar - always visible */}
-      {isEditing && utility && (
-        <View style={styles.bottomEditBar}>
-          <TouchableOpacity style={styles.bottomEditButton} onPress={handleEdit} activeOpacity={0.8}>
-            <Ionicons name="pencil" size={22} color="#fff" />
-            <Text style={styles.bottomEditButtonText}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Media Modal */}
       <Modal
@@ -1217,32 +1284,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 180, // Space for bottom nav + bottom Edit bar
-  },
-  bottomEditBar: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  bottomEditButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#1095EE',
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  bottomEditButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    paddingBottom: 100, // Space for bottom nav
   },
   // Header styles matching AddProperty/AddEditShutoff
   overviewHeader: {
@@ -1251,19 +1293,6 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  editButtonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  editButtonHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1095EE',
   },
   // Hero image section
   overviewHero: {
@@ -1331,6 +1360,11 @@ const styles = StyleSheet.create({
     borderColor: '#1095EE',
     borderStyle: 'dashed',
     overflow: 'hidden',
+  },
+  locationHint: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 6,
   },
   locationThumbnail: {
     width: '100%',
@@ -1506,25 +1540,6 @@ const styles = StyleSheet.create({
   contactInfo: {
     flex: 1,
     marginLeft: 12,
-  },
-  contactDisplayCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  contactDisplayName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  contactDisplayPhone: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
   },
   contactName: {
     fontSize: 16,

@@ -1,29 +1,24 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography } from '../constants/theme';
 
-export default function ShareScreen({ navigation }) {
+export default function ShareScreen() {
   const [email, setEmail] = useState('');
 
   const handleShare = () => {
-    // TODO: Implement share functionality
-    console.log('Share with:', email);
+    if (!email.trim()) return;
+    // TODO: Implement share API
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Share</Text>
+        <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.subtitle}>Share your property information with family members</Text>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
 
         <View style={styles.shareSection}>
           <Text style={styles.sectionLabel}>Add member</Text>
@@ -32,14 +27,14 @@ export default function ShareScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Email address"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
             />
             <TouchableOpacity style={styles.addButton} onPress={handleShare}>
-              <Ionicons name="add" size={24} color="#999" />
+              <Ionicons name="add" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -49,81 +44,74 @@ export default function ShareScreen({ navigation }) {
           
           <View style={styles.memberCard}>
             <View style={styles.memberAvatar}>
-              <Ionicons name="person" size={24} color="#999" />
+              <Ionicons name="person" size={24} color={colors.textMuted} />
             </View>
             <View style={styles.memberInfo}>
               <Text style={styles.memberName}>John Doe</Text>
               <Text style={styles.memberEmail}>john@example.com</Text>
             </View>
             <TouchableOpacity style={styles.removeButton}>
-              <Ionicons name="close" size={20} color="#999" />
+              <Ionicons name="close" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.memberCard}>
             <View style={styles.memberAvatar}>
-              <Ionicons name="person" size={24} color="#999" />
+              <Ionicons name="person" size={24} color={colors.textMuted} />
             </View>
             <View style={styles.memberInfo}>
               <Text style={styles.memberName}>Jane Smith</Text>
               <Text style={styles.memberEmail}>jane@example.com</Text>
             </View>
             <TouchableOpacity style={styles.removeButton}>
-              <Ionicons name="close" size={20} color="#999" />
+              <Ionicons name="close" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
   },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 120, // Space for bottom nav
-  },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 14,
-    color: '#999',
-    marginBottom: 32,
+    color: colors.textMuted,
+    marginTop: 6,
   },
-  shareSection: {
-    marginBottom: 32,
+  scrollView: { flex: 1 },
+  contentContainer: {
+    padding: spacing.screenPadding,
+    paddingBottom: 120,
   },
+  shareSection: { marginBottom: 28 },
   sectionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
     marginBottom: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8E8E8',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -131,45 +119,37 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: colors.text,
   },
-  addButton: {
-    padding: 4,
-  },
-  membersSection: {
-    marginBottom: 32,
-  },
+  addButton: { padding: 4 },
+  membersSection: { marginBottom: 28 },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8E8E8',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
   memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#D0D0D0',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  memberInfo: {
-    flex: 1,
-  },
+  memberInfo: { flex: 1 },
   memberName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
     marginBottom: 4,
   },
   memberEmail: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
   },
-  removeButton: {
-    padding: 4,
-  },
+  removeButton: { padding: 4 },
 });

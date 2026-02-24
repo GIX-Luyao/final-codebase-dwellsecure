@@ -1,19 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  PanResponder,
-  Dimensions,
-  Alert,
-} from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getReminders, saveReminder } from '../services/storage';
 import SwipeableReminderItem from '../components/SwipeableReminderItem';
+import { colors, spacing, typography } from '../constants/theme';
 
 export default function RemindersScreen() {
   const navigation = useNavigation();
@@ -68,9 +60,7 @@ export default function RemindersScreen() {
 
   const handleReminderPress = (reminder) => {
     if (reminder.type === 'shutoff' && reminder.shutoffId) {
-      navigation.navigate('Property', { screen: 'ShutoffDetail', params: { shutoffId: reminder.shutoffId } });
-    } else if (reminder.type === 'utility' && reminder.utilityId) {
-      navigation.navigate('Property', { screen: 'UtilityDetail', params: { utilityId: reminder.utilityId } });
+      navigation.navigate('ShutoffDetail', { shutoffId: reminder.shutoffId });
     }
   };
 
@@ -94,16 +84,17 @@ export default function RemindersScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Reminders</Text>
         <Text style={styles.subtitle}>Check all your upcoming alerts</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {reminders.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={60} color="#ccc" />
+            <Ionicons name="calendar-outline" size={56} color={colors.textMuted} />
             <Text style={styles.emptyText}>No reminders scheduled</Text>
+            <Text style={styles.emptySubtext}>Add maintenance reminders from shutoffs or utilities</Text>
           </View>
         ) : (
           reminders.map((section, index) => (
@@ -124,61 +115,58 @@ export default function RemindersScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 25,
-    backgroundColor: '#fff',
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xxl,
+    backgroundColor: colors.background,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#000',
+    color: colors.text,
     marginBottom: 6,
   },
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 150, // Space for bottom nav
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 140,
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#999',
-    letterSpacing: -0.28,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
-  reminderGroup: {
-    marginBottom: 32,
-  },
+  reminderGroup: { marginBottom: 28 },
   dateHeading: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
-    letterSpacing: -0.36,
+    color: colors.text,
     marginBottom: 12,
   },
-  reminderList: {
-    // Gap handled by SwipeableReminderItem marginBottom
-  },
+  reminderList: {},
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 16,
+    color: colors.textSecondary,
     marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 8,
   },
 });
