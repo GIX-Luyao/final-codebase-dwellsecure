@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw } from '../services/storage';
+import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
@@ -468,10 +468,16 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       return;
     }
 
-    // Validate propertyId - must exist for new shutoffs
-    const finalPropertyId = propertyId || (isEditing && shutoff?.propertyId) || null;
+    // Resolve propertyId: from params, existing shutoff when editing, or first property when adding
+    let finalPropertyId = propertyId || (isEditing && shutoff?.propertyId) || null;
     if (!isEditing && !finalPropertyId) {
-      Alert.alert('Error', 'Property ID is required. Please select a property first.');
+      const properties = await getProperties();
+      if (Array.isArray(properties) && properties.length > 0) {
+        finalPropertyId = properties[0].id;
+      }
+    }
+    if (!isEditing && !finalPropertyId) {
+      Alert.alert('Error', 'Property is required. Please add a property first (Properties tab), or add this shutoff from a property\'s detail screen.');
       return;
     }
 

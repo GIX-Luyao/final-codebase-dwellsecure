@@ -14,7 +14,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw } from '../services/storage';
+import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
@@ -387,9 +387,15 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       return;
     }
 
-    const finalPropertyId = propertyId || (isEditing && utility?.propertyId) || null;
+    let finalPropertyId = propertyId || (isEditing && utility?.propertyId) || null;
     if (!isEditing && !finalPropertyId) {
-      Alert.alert('Error', 'Property ID is required. Please select a property first.');
+      const properties = await getProperties();
+      if (Array.isArray(properties) && properties.length > 0) {
+        finalPropertyId = properties[0].id;
+      }
+    }
+    if (!isEditing && !finalPropertyId) {
+      Alert.alert('Error', 'Property is required. Please add a property first (Properties tab), or add this utility from a property\'s detail screen.');
       return;
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getUtilities, deleteUtility } from '../services/storage';
+import { getUtilities, deleteUtility, getProperties } from '../services/storage';
 import UtilityCard from '../components/UtilityCard';
 
 export default function UtilitiesListScreen({ navigation }) {
@@ -36,8 +36,10 @@ export default function UtilitiesListScreen({ navigation }) {
     }
   };
 
-  const handleAdd = () => {
-    navigation.navigate('AddEditUtility', { utility: null });
+  const handleAdd = async () => {
+    const properties = await getProperties();
+    const propertyId = Array.isArray(properties) && properties.length > 0 ? properties[0].id : undefined;
+    navigation.navigate('AddEditUtility', { utility: null, propertyId });
   };
 
   const handleEdit = (utility) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getShutoffs, deleteShutoff } from '../services/storage';
+import { getShutoffs, deleteShutoff, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 import ShutoffCard from '../components/ShutoffCard';
 import ApiStatusIndicator from '../components/ApiStatusIndicator';
@@ -45,12 +45,14 @@ export default function ShutoffsListScreen({ navigation }) {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (isInEmergencyMode) {
       Alert.alert('Emergency Mode', 'Cannot create shutoff records in Emergency Mode.');
       return;
     }
-    navigation.navigate('AddEditShutoff', { shutoff: null });
+    const properties = await getProperties();
+    const propertyId = Array.isArray(properties) && properties.length > 0 ? properties[0].id : undefined;
+    navigation.navigate('AddEditShutoff', { shutoff: null, propertyId });
   };
 
   const handleEdit = (shutoff) => {

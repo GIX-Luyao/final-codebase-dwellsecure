@@ -1,13 +1,27 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
+
+// #region agent log
+const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
+function debugLog(location, message, data, hypothesisId) {
+  const payload = { location, message, data: data || {}, timestamp: Date.now(), hypothesisId, runId: 'mongo-connect' };
+  fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+  try { fs.appendFileSync(DEBUG_LOG_PATH, JSON.stringify(payload) + '\n'); } catch (_) {}
+}
+// #endregion
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Middleware - production: set CORS_ORIGIN to comma-separated frontend URLs
+const corsOptions = process.env.CORS_ORIGIN
+  ? { origin: process.env.CORS_ORIGIN.split(',').map(s => s.trim()) }
+  : {};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Request logging middleware - MUST be before routes
@@ -49,14 +63,8 @@ const encodedPassword = encodeURIComponent(password);
 // Add database name to connection string
 const uri = process.env.MONGODB_URI || `mongodb+srv://sche753_db_user:${encodedPassword}@haven.ksoyo27.mongodb.net/dwellsecure?appName=Haven&retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: false, // Changed to false to avoid SSL issues
-    deprecationErrors: false, // Changed to false to avoid SSL issues
-  },
-  // Simplified TLS configuration
+  // Omit serverApi to use legacy wire protocol; can avoid TLS handshake path that triggers Atlas SSL alert 80 on Node 22/Windows
   tls: true,
-  // Connection timeout
   connectTimeoutMS: 30000,
   serverSelectionTimeoutMS: 30000,
 });
@@ -64,6 +72,14 @@ const client = new MongoClient(uri, {
 let db = null;
 
 async function connectDB() {
+  // #region agent log
+  debugLog('server/index.js:connectDB:entry', 'connectDB entry', {
+    nodeVersion: process.version,
+    uriSource: process.env.MONGODB_URI ? 'env' : 'default',
+    uriHasSrv: uri.includes('mongodb+srv'),
+    uriHost: uri.includes('@') ? uri.split('@')[1].split('/')[0].split('?')[0] : 'unknown',
+  }, 'A,B,C');
+  // #endregion
   try {
     console.log('🔌 Connecting to MongoDB...');
     console.log(`📡 URI: ${uri.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
@@ -73,9 +89,21 @@ async function connectDB() {
     
     // Add detailed error handling
     try {
+      // #region agent log
+      debugLog('server/index.js:connectDB:beforeConnect', 'about to client.connect()', {}, 'D');
+      // #endregion
       await client.connect();
       console.log('✅ MongoDB client connected');
     } catch (connectError) {
+      // #region agent log
+      debugLog('server/index.js:connectDB:connectError', 'MongoDB connect failed', {
+        errorName: connectError.name,
+        errorCode: connectError.code,
+        errorMessage: (connectError.message || '').substring(0, 400),
+        hasCause: !!connectError.cause,
+        causeMessage: connectError.cause ? String(connectError.cause).substring(0, 200) : undefined,
+      }, 'D,E');
+      // #endregion
       console.error('');
       console.error('='.repeat(60));
       console.error('❌ MongoDB Connection Failed!');
@@ -155,6 +183,15 @@ async function connectDB() {
 
 // Routes
 app.get('/health', (req, res) => {
+  // #region agent log
+  debugLog('server/index.js:/health', 'health endpoint hit', {
+    ip: req.ip,
+    userAgent: req.headers['user-agent'] || null,
+    method: req.method,
+    path: req.path,
+  }, 'H1');
+  // #endregion
+
   res.json({ 
     status: 'ok', 
     db: db ? 'connected' : 'disconnected',
@@ -711,43 +748,38 @@ app.delete('/api/reminders/:id', async (req, res) => {
   }
 });
 
-// Start server
+// Start server (MongoDB optional: if connection fails, server still starts and /health returns db: 'disconnected'; app uses AsyncStorage)
 async function startServer() {
+  console.log('='.repeat(60));
+  console.log('🚀 Starting DwellSecure API Server...');
+  console.log('='.repeat(60));
+  console.log(`📡 MongoDB URI: ${uri.replace(/:[^:@]+@/, ':****@')}`); // Hide password
+  console.log('🔌 Connecting to MongoDB...');
+
   try {
-    console.log('='.repeat(60));
-    console.log('🚀 Starting DwellSecure API Server...');
-    console.log('='.repeat(60));
-    console.log(`📡 MongoDB URI: ${uri.replace(/:[^:@]+@/, ':****@')}`); // Hide password
-    console.log('🔌 Connecting to MongoDB...');
-    
     await connectDB();
-    
     console.log('✅ Database connection established!');
     console.log(`📊 Using database: dwellsecure`);
     console.log(`📦 Collections available: shutoffs, utilities`);
-    
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log('='.repeat(60));
-      console.log(`✅ Server started successfully!`);
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📍 Health check: http://localhost:${PORT}/health`);
-      console.log(`🌐 Server listening on all interfaces (accessible from network)`);
-      console.log(`📊 Database status: ${db ? 'CONNECTED ✅' : 'DISCONNECTED ❌'}`);
-      console.log('='.repeat(60));
-      console.log('📝 Ready to receive requests...');
-      console.log('');
-    });
   } catch (error) {
-    console.error('='.repeat(60));
-    console.error('❌ Failed to start server!');
-    console.error('='.repeat(60));
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-    });
-    console.error('='.repeat(60));
-    process.exit(1);
+    db = null;
+    console.warn('='.repeat(60));
+    console.warn('⚠️ MongoDB connection failed — server will run without database.');
+    console.warn('   App will use local storage. Error:', error.message?.split('\n')[0] || error.message);
+    console.warn('='.repeat(60));
   }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('='.repeat(60));
+    console.log(`✅ Server started successfully!`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`🌐 Server listening on all interfaces (accessible from network)`);
+    console.log(`📊 Database status: ${db ? 'CONNECTED ✅' : 'DISCONNECTED ❌ (using local storage)'}`);
+    console.log('='.repeat(60));
+    console.log('📝 Ready to receive requests...');
+    console.log('');
+  });
 }
 
 // Graceful shutdown
