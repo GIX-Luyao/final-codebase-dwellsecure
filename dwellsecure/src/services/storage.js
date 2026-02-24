@@ -180,16 +180,6 @@ const getEmergencyModeShutoffs = (allShutoffs) => {
   return result;
 };
 
-/**
- * Get shutoffs filtered for Emergency Mode (most relevant per type)
- * Use this when you know you're in Emergency Mode - avoids mode timing issues
- */
-export const getShutoffsForEmergencyMode = async () => {
-  const allShutoffs = await getAllShutoffsRaw();
-  const safeShutoffs = Array.isArray(allShutoffs) ? allShutoffs : [];
-  return getEmergencyModeShutoffs(safeShutoffs);
-};
-
 export const getShutoff = async (id) => {
   try {
     // Try API first

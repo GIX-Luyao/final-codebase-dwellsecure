@@ -66,10 +66,10 @@ export default function BottomNav() {
     'AddPerson',
     'EditProperty',
     'EmergencyMode',
-    'MapPicker',
     'Success',
     'AddEditShutoff',
     'AddEditUtility',
+    'MapPicker',
   ];
   
   // Hide nav only on add/edit screens

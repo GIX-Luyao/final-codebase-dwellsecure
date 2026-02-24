@@ -68,7 +68,9 @@ export default function RemindersScreen() {
 
   const handleReminderPress = (reminder) => {
     if (reminder.type === 'shutoff' && reminder.shutoffId) {
-      navigation.navigate('ShutoffDetail', { shutoffId: reminder.shutoffId });
+      navigation.navigate('Property', { screen: 'ShutoffDetail', params: { shutoffId: reminder.shutoffId } });
+    } else if (reminder.type === 'utility' && reminder.utilityId) {
+      navigation.navigate('Property', { screen: 'UtilityDetail', params: { utilityId: reminder.utilityId } });
     }
   };
 

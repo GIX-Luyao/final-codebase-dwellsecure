@@ -1,3 +1,7 @@
+/**
+ * Main screen (first tab). Shown as the default when user opens the app after onboarding.
+ * Has the top-right gear → Settings → Reset Onboarding / Reset All Data.
+ */
 import React, { useState } from 'react';
 import {
   View,
@@ -10,7 +14,9 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
+import ApiStatusIndicator from '../components/ApiStatusIndicator';
 import { getProperties, deleteProperty, resetOnboarding, resetAllData } from '../services/storage';
+import { requestShowOnboarding } from '../services/onboardingTrigger';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
@@ -79,7 +85,7 @@ export default function PropertyListScreen() {
           onPress: async () => {
             Alert.alert(
               'Reset Onboarding',
-              'Do you want to go back to the onboarding screen?',
+              'Do you want to go back to add your first property?',
               [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -87,9 +93,10 @@ export default function PropertyListScreen() {
                   onPress: async () => {
                     try {
                       await resetOnboarding();
-                      Alert.alert('Success', 'Onboarding has been reset. You will be taken to the onboarding screen.', [
-                        { text: 'OK' }
-                      ]);
+                      setTimeout(() => {
+                        requestShowOnboarding();
+                        setTimeout(() => Alert.alert('Success', 'You will see the Welcome screen.', [{ text: 'OK' }]), 400);
+                      }, 150);
                     } catch (error) {
                       Alert.alert('Error', 'Failed to reset onboarding');
                     }
@@ -114,9 +121,10 @@ export default function PropertyListScreen() {
                   onPress: async () => {
                     try {
                       await resetAllData();
-                      Alert.alert('Success', 'All data has been reset. You will be taken to the onboarding screen.', [
-                        { text: 'OK' }
-                      ]);
+                      setTimeout(() => {
+                        requestShowOnboarding();
+                        setTimeout(() => Alert.alert('Success', 'All data has been reset. You will see the Welcome screen.', [{ text: 'OK' }]), 400);
+                      }, 150);
                     } catch (error) {
                       Alert.alert('Error', 'Failed to reset data');
                     }
@@ -134,6 +142,7 @@ export default function PropertyListScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
+          <View style={styles.headerSpacer} />
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeTitle}>Welcome to</Text>
             <Text style={styles.appTitle}>Dwell Secure</Text>
@@ -146,6 +155,7 @@ export default function PropertyListScreen() {
             <Ionicons name="settings-outline" size={24} color="#666" />
           </TouchableOpacity>
         </View>
+        <ApiStatusIndicator />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
@@ -196,14 +206,17 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerSpacer: {
+    width: 40,
   },
   headerTextContainer: {
     flex: 1,
     alignItems: 'center',
   },
   settingsButton: {
+    width: 40,
     padding: 8,
     marginTop: 5,
   },

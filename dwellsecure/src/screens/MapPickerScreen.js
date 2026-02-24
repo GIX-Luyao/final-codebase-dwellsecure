@@ -1,14 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { geocodeAddress } from '../utils/geocoding';
 
 // Try to import WebView, fallback to manual entry if not available
 let WebView = null;
@@ -21,32 +19,12 @@ try {
 export default function MapPickerScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { initialLocation, onConfirm, address } = route.params || {};
+  const { initialLocation, onConfirm, address, returnScreen, returnParamKey = 'selectedLocation' } = route.params || {};
   const webViewRef = useRef(null);
 
   const [selectedLocation, setSelectedLocation] = useState(
     initialLocation || null
   );
-  const [isGeocoding, setIsGeocoding] = useState(false);
-
-  // When we have address but no initialLocation, geocode to set pin position
-  useEffect(() => {
-    if (initialLocation || !address) return;
-    let cancelled = false;
-    const run = async () => {
-      setIsGeocoding(true);
-      try {
-        const coords = await geocodeAddress(address);
-        if (!cancelled && coords) setSelectedLocation(coords);
-      } catch (e) {
-        if (!cancelled) console.warn('[MapPicker] Geocoding failed:', e);
-      } finally {
-        if (!cancelled) setIsGeocoding(false);
-      }
-    };
-    run();
-    return () => { cancelled = true; };
-  }, [address, initialLocation]);
 
   const handleMapMessage = (event) => {
     try {
@@ -66,17 +44,19 @@ export default function MapPickerScreen() {
 
   const handleConfirm = () => {
     if (!selectedLocation) return;
-    
-    // Show visual feedback
+
     setIsConfirmPressed(true);
-    
-    // Short delay to show blue feedback
+
     setTimeout(() => {
       if (onConfirm) {
         onConfirm(selectedLocation);
+        navigation.goBack();
+      } else if (returnScreen) {
+        navigation.navigate(returnScreen, { [returnParamKey]: selectedLocation });
+      } else {
+        navigation.goBack();
       }
-      navigation.goBack();
-    }, 200); // Very short delay (200ms)
+    }, 200);
   };
 
   const handleConfirmPressIn = () => {
@@ -118,7 +98,7 @@ export default function MapPickerScreen() {
           <div id="map"></div>
           <script>
             mapboxgl.accessToken = '${MAPBOX_TOKEN}';
-            
+
             let map = new mapboxgl.Map({
               container: 'map',
               style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -126,33 +106,29 @@ export default function MapPickerScreen() {
               zoom: 15,
               attributionControl: false
             });
-            
-            // Create a marker element
+
             const el = document.createElement('div');
             el.className = 'marker';
-            
-            // Create marker
+
             let marker = new mapboxgl.Marker({
               element: el,
               draggable: true
             })
               .setLngLat([${lng}, ${lat}])
               .addTo(map);
-            
-            // Handle map click
+
             map.on('click', function(e) {
               const lng = e.lngLat.lng;
               const lat = e.lngLat.lat;
               marker.setLngLat([lng, lat]);
               sendLocation(lat, lng);
             });
-            
-            // Handle marker drag
+
             marker.on('dragend', function() {
               const lngLat = marker.getLngLat();
               sendLocation(lngLat.lat, lngLat.lng);
             });
-            
+
             function sendLocation(lat, lng) {
               if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -162,8 +138,7 @@ export default function MapPickerScreen() {
                 }));
               }
             }
-            
-            // Add navigation controls
+
             map.addControl(new mapboxgl.NavigationControl(), 'top-right');
           </script>
         </body>
@@ -171,7 +146,6 @@ export default function MapPickerScreen() {
     `;
   };
 
-  // If WebView is not available, show error message
   if (!WebView) {
     return (
       <View style={styles.container}>
@@ -188,7 +162,7 @@ export default function MapPickerScreen() {
           <Text style={styles.errorText}>
             Please install react-native-webview to use the interactive map.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -209,14 +183,7 @@ export default function MapPickerScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      {isGeocoding && !selectedLocation && (
-        <View style={styles.geocodingOverlay}>
-          <ActivityIndicator size="large" color="#30ACFF" />
-          <Text style={styles.geocodingText}>Finding address on map...</Text>
-        </View>
-      )}
       <WebView
-        key={selectedLocation ? `map-${selectedLocation.latitude}-${selectedLocation.longitude}` : 'map-default'}
         ref={webViewRef}
         style={styles.map}
         source={{ html: getMapHTML() }}
@@ -236,12 +203,12 @@ export default function MapPickerScreen() {
             </Text>
           </View>
         )}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.confirmButton, 
+            styles.confirmButton,
             !selectedLocation && styles.confirmButtonDisabled,
             isConfirmPressed && styles.confirmButtonActive
-          ]} 
+          ]}
           onPress={handleConfirm}
           onPressIn={handleConfirmPressIn}
           onPressOut={handleConfirmPressOut}
@@ -408,21 +375,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  geocodingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  geocodingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
-  },
 });
-

@@ -15,6 +15,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
@@ -23,23 +24,24 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGR
 // Generate Mapbox Static Images API URL for map thumbnail (satellite style)
 const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom = 15) => {
   if (!latitude || !longitude) return null;
-  // Use satellite-streets style to match MapPicker
   const styleId = 'mapbox/satellite-streets-v12';
   const markerColor = '1095EE'; // Blue color matching location button
   return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
 };
 
 export default function AddEditShutoffScreen({ route, navigation }) {
-  const { shutoff, type, propertyId } = route.params || {};
+  const { shutoff, type, propertyId, initialStep } = route.params || {};
   const isEditing = !!shutoff;
+  // When editing (from Detail), start at step 2 (main form). Add flow starts at step 1.
+  const startStep = initialStep != null ? initialStep : (isEditing ? 2 : 1);
   // Support both old types (fire, power) and new types (gas, electric) for backward compatibility
   const initialType = type || shutoff?.type || 'gas';
   // Normalize old types to new types
   const shutoffType = initialType === 'fire' ? 'gas' : initialType === 'power' ? 'electric' : initialType;
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(startStep);
   const [guideStep, setGuideStep] = useState(1); // Track which guide image (1 or 2)
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(shutoff?.description || shutoff?.name || '');
   const [location, setLocation] = useState('');
   const [locationCoords, setLocationCoords] = useState(null); // Store lat/lng for thumbnail
   const [floor, setFloor] = useState('');
@@ -152,7 +154,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     const allShutoffs = await getAllShutoffsRaw();
     const data = allShutoffs.find(s => s.id === shutoff.id);
     if (data) {
-      setDescription(data.description || '');
+      setDescription(data.description || data.name || '');
       setLocation(data.location || '');
       // Try to parse location string to extract coordinates, or use stored coordinates
       if (data.latitude && data.longitude) {
@@ -187,6 +189,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       setVerificationStatus(data.verification_status || 'unverified');
     }
   };
+
+  // When returning from MapPicker, apply selected location
+  useFocusEffect(
+    React.useCallback(() => {
+      const selected = route.params?.selectedLocation;
+      if (selected && selected.latitude != null && selected.longitude != null) {
+        setLocationCoords(selected);
+        navigation.setParams({ selectedLocation: undefined });
+      }
+    }, [route.params?.selectedLocation, navigation])
+  );
 
   const getShutoffTypeLabel = () => {
     const labels = {
@@ -463,13 +476,15 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     }
 
     const shutoffId = isEditing ? shutoff.id : Date.now().toString();
-    
+    const descriptionOrName = description.trim() || getShutoffTypeLabel() + ' shutoff';
+
     // Prepare shutoff data with all step2 information
     const shutoffData = {
       id: shutoffId,
       type: selectedType, // gas/electric/water from step selection
-      // Step 2 information
-      description: description.trim(),
+      // Step 2 information - name/description not required for add; use fallback for API compatibility
+      description: descriptionOrName,
+      name: descriptionOrName,
       location: location.trim(), // Location string
       latitude: locationCoords?.latitude || null, // Map coordinates
       longitude: locationCoords?.longitude || null, // Map coordinates
@@ -765,21 +780,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>Location</Text>
                 <TouchableOpacity 
                   style={styles.locationButton}
-                  onPress={() => {
-                    // Navigate to map picker
-                    navigation.navigate('MapPicker', {
-                      initialLocation: locationCoords,
-                      onConfirm: (selectedLocation) => {
-                        if (selectedLocation && selectedLocation.latitude && selectedLocation.longitude) {
-                          setLocationCoords({
-                            latitude: selectedLocation.latitude,
-                            longitude: selectedLocation.longitude,
-                          });
-                          setLocation(`${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`);
-                        }
-                      },
-                    });
-                  }}
+                  onPress={() => navigation.navigate('MapPicker', { returnScreen: 'AddEditShutoff', returnParamKey: 'selectedLocation', initialLocation: locationCoords || undefined })}
                   activeOpacity={0.7}
                 >
                   {locationCoords ? (
