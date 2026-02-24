@@ -10,6 +10,14 @@ const PROPERTY_TYPES = [
   { id: 'mobile', label: 'Mobile Home', icon: 'car' },
 ];
 
+const MORE_PROPERTY_TYPES = [
+  { id: 'duplex-triplex-fourplex', label: 'Duplex/Triplex/Fourplex', icon: 'business' },
+  { id: 'low-rise-apartment', label: 'Low-rise Apartment', icon: 'layers' },
+  { id: 'high-rise-apartment', label: 'High-rise Apartment', icon: 'layers' },
+  { id: 'villa', label: 'Villa', icon: 'home' },
+  { id: 'condo', label: 'Condo', icon: 'business' },
+];
+
 export default function OnboardingScreen({ onComplete }) {
   const [step, setStep] = useState(1);
   const [propertyType, setPropertyType] = useState('');
@@ -31,6 +39,15 @@ export default function OnboardingScreen({ onComplete }) {
   };
 
   const handleSkipPropertyType = () => {
+    setStep(3);
+  };
+
+  const handleMoreOptions = () => {
+    setStep(2.5);
+  };
+
+  const handleMorePropertyTypeSelect = (type) => {
+    setPropertyType(type);
     setStep(3);
   };
 
@@ -91,16 +108,56 @@ export default function OnboardingScreen({ onComplete }) {
             <View style={styles.propertyIconContainer}>
               <Ionicons name={type.icon} size={40} color="#999" />
             </View>
+            <Text style={styles.propertyTypeLabel}>{type.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
       
+      <TouchableOpacity 
+        style={styles.moreOptionsButton}
+        onPress={handleMoreOptions}
+      >
+        <Text style={styles.moreOptionsButtonText}>More options</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity 
         style={styles.skipButton}
         onPress={handleSkipPropertyType}
       >
         <Text style={styles.skipButtonText}>Skip</Text>
       </TouchableOpacity>
+    </View>
+  );
+
+  const renderStep2MoreOptions = () => (
+    <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => setStep(2)}
+      >
+        <Ionicons name="arrow-back" size={24} color="#333" />
+      </TouchableOpacity>
+      <Text style={styles.stepTitle}>More property types</Text>
+      <View style={styles.divider} />
+      
+      <ScrollView 
+        style={styles.moreOptionsScroll}
+        contentContainerStyle={styles.moreOptionsContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {MORE_PROPERTY_TYPES.map((type) => (
+          <TouchableOpacity
+            key={type.id}
+            style={styles.propertyTypeCard}
+            onPress={() => handleMorePropertyTypeSelect(type.id)}
+          >
+            <View style={styles.propertyIconContainer}>
+              <Ionicons name={type.icon} size={40} color="#999" />
+            </View>
+            <Text style={styles.propertyTypeLabel}>{type.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 
@@ -252,6 +309,7 @@ export default function OnboardingScreen({ onComplete }) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
+      {step === 2.5 && renderStep2MoreOptions()}
       {step === 3 && renderStep3()}
       {step === 4 && renderStep4()}
       {step === 5 && renderStep5()}
@@ -333,6 +391,38 @@ const styles = StyleSheet.create({
   },
   propertyIconContainer: {
     padding: 10,
+  },
+  propertyTypeLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginTop: 8,
+  },
+  moreOptionsButton: {
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  moreOptionsButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  moreOptionsScroll: {
+    flex: 1,
+  },
+  moreOptionsContent: {
+    paddingBottom: 40,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
   },
   skipButton: {
     backgroundColor: '#E8E8E8',

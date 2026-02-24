@@ -1,12 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { geocodeAddress } from '../utils/geocoding';
 
 // Try to import WebView, fallback to manual entry if not available
 let WebView = null;
@@ -25,7 +27,26 @@ export default function MapPickerScreen() {
   const [selectedLocation, setSelectedLocation] = useState(
     initialLocation || null
   );
-  // Force Mapbox usage - don't allow manual entry fallback
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  // When we have address but no initialLocation, geocode to set pin position
+  useEffect(() => {
+    if (initialLocation || !address) return;
+    let cancelled = false;
+    const run = async () => {
+      setIsGeocoding(true);
+      try {
+        const coords = await geocodeAddress(address);
+        if (!cancelled && coords) setSelectedLocation(coords);
+      } catch (e) {
+        if (!cancelled) console.warn('[MapPicker] Geocoding failed:', e);
+      } finally {
+        if (!cancelled) setIsGeocoding(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [address, initialLocation]);
 
   const handleMapMessage = (event) => {
     try {
@@ -188,7 +209,14 @@ export default function MapPickerScreen() {
         <View style={{ width: 28 }} />
       </View>
 
+      {isGeocoding && !selectedLocation && (
+        <View style={styles.geocodingOverlay}>
+          <ActivityIndicator size="large" color="#30ACFF" />
+          <Text style={styles.geocodingText}>Finding address on map...</Text>
+        </View>
+      )}
       <WebView
+        key={selectedLocation ? `map-${selectedLocation.latitude}-${selectedLocation.longitude}` : 'map-default'}
         ref={webViewRef}
         style={styles.map}
         source={{ html: getMapHTML() }}
@@ -379,6 +407,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  geocodingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  geocodingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
 });
 

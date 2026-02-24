@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
+import { geocodeAddress } from '../utils/geocoding';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
 
@@ -51,6 +53,7 @@ export default function AddPropertyScreen({ route }) {
   const [people, setPeople] = useState([]);
   const [moreOptionsPressed, setMoreOptionsPressed] = useState(false);
   const [isCompletePressed, setIsCompletePressed] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [pressedPropertyType, setPressedPropertyType] = useState(null);
   const [location, setLocation] = useState(
     property?.latitude && property?.longitude
@@ -232,20 +235,32 @@ export default function AddPropertyScreen({ route }) {
     }, 300); // 300ms delay - very short but enough to see the visual feedback
   };
 
-  const handleAddressSubmit = () => {
+  const handleAddressSubmit = async () => {
     // Validate required fields
-    if (addressLine1.trim() && city.trim() && state.trim() && zipCode.trim()) {
-      // Combine address fields into a single address string
-      const fullAddress = [
-        addressLine1.trim(),
-        addressLine2.trim(),
-        city.trim(),
-        `${state.trim()} ${zipCode.trim()}`,
-        country.trim()
-      ].filter(Boolean).join(', ');
-      setAddress(fullAddress);
-      setStep(3);
+    if (!addressLine1.trim() || !city.trim() || !state.trim() || !zipCode.trim()) return;
+
+    const fullAddress = [
+      addressLine1.trim(),
+      addressLine2.trim(),
+      city.trim(),
+      `${state.trim()} ${zipCode.trim()}`,
+      country.trim()
+    ].filter(Boolean).join(', ');
+    setAddress(fullAddress);
+
+    // Geocode address and set location pin automatically
+    setIsGeocoding(true);
+    try {
+      const coords = await geocodeAddress(fullAddress);
+      if (coords) {
+        setLocation(coords);
+      }
+    } catch (e) {
+      console.warn('[AddProperty] Geocoding failed:', e);
+    } finally {
+      setIsGeocoding(false);
     }
+    setStep(3);
   };
 
   const handleLocationConfirm = (selectedLocation) => {
@@ -492,12 +507,21 @@ export default function AddPropertyScreen({ route }) {
 
           <View style={styles.formActions}>
             <TouchableOpacity 
-              style={[styles.continueButton, !isFormValid && styles.continueButtonDisabled]}
+              style={[styles.continueButton, (!isFormValid || isGeocoding) && styles.continueButtonDisabled]}
               onPress={handleAddressSubmit}
-              disabled={!isFormValid}
+              disabled={!isFormValid || isGeocoding}
             >
-              <Text style={styles.continueButtonText}>Continue</Text>
-              <Text style={styles.arrow}>→</Text>
+              {isGeocoding ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.continueButtonText}>Finding location...</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.continueButtonText}>Continue</Text>
+                  <Text style={styles.arrow}>→</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
