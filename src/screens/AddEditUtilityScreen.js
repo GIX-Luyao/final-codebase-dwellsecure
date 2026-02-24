@@ -27,7 +27,7 @@ const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom
 };
 
 export default function AddEditUtilityScreen({ route, navigation }) {
-  const { utility, propertyId } = route.params || {};
+  const { utility, propertyId, presetDescription } = route.params || {};
   const isEditing = !!utility;
 
   const [step, setStep] = useState(2); // Start from step 2
@@ -61,6 +61,13 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       loadUtilityData();
     }
   }, []);
+
+  useEffect(() => {
+    if (!isEditing && presetDescription && !description) {
+      setDescription(String(presetDescription));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetDescription, isEditing]);
 
   const checkMode = async () => {
     const inEmergency = await isEmergencyMode();
