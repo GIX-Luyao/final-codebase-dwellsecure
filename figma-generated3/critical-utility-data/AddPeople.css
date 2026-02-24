@@ -1,0 +1,236 @@
+.add-people {
+  background: var(--white);
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.add-people-header {
+  position: relative;
+  padding: 26px 31px;
+}
+
+.close-page-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.close-x-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 49px;
+  height: 49px;
+}
+
+.close-x-line {
+  position: absolute;
+  background: var(--gray);
+  border-radius: 3px;
+}
+
+.close-x-line-1 {
+  width: 3px;
+  height: 49px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.close-x-line-2 {
+  width: 3px;
+  height: 49px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) rotate(135deg);
+}
+
+.add-people-title-section {
+  text-align: center;
+  padding: 20px 55px;
+}
+
+.add-people-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1E1E1E;
+  margin: 0 0 16px 0;
+}
+
+.add-people-underline {
+  width: 289px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--gray-2);
+  margin: 0 auto;
+}
+
+.add-people-content {
+  padding: 0 55px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E1E1E;
+  margin: 0 0 16px 0;
+}
+
+.profile-upload {
+  width: 231px;
+  height: 237px;
+  border-radius: 15px;
+  background: var(--blue-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-input {
+  display: none;
+}
+
+.upload-label {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--blue-1);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.upload-label:hover {
+  background: var(--blue-0);
+}
+
+.role-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-button {
+  width: 100%;
+  padding: 16px;
+  background: var(--gray-6);
+  border: 2px solid var(--gray-4);
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1E1E1E;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-button:hover {
+  background: var(--blue-3);
+  border-color: var(--blue-1);
+}
+
+.role-button.active {
+  background: var(--blue-1);
+  border-color: var(--blue-1);
+  color: var(--white);
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-0);
+}
+
+.form-input {
+  width: 100%;
+  padding: 16px;
+  background: var(--white);
+  border: 2px solid var(--gray-4);
+  border-radius: 12px;
+  font-size: 16px;
+  color: #1E1E1E;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--blue-1);
+}
+
+.form-input::placeholder {
+  color: var(--gray-2);
+}
+
+.form-actions {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.save-button {
+  width: 205px;
+  height: 70px;
+  background: var(--blue-1);
+  border: none;
+  border-radius: 2235px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-button:hover {
+  background: var(--blue-0);
+}
+
+.save-button:active {
+  transform: scale(0.98);
+}

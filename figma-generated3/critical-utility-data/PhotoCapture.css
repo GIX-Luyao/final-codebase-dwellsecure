@@ -1,0 +1,169 @@
+.photo-capture {
+  background: var(--white);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.capture-header {
+  position: absolute;
+  top: 26px;
+  left: 31px;
+  z-index: 10;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.close-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 49px;
+  height: 49px;
+}
+
+.close-line {
+  position: absolute;
+  background: var(--gray);
+  border-radius: 3px;
+}
+
+.close-line-1 {
+  width: 3px;
+  height: 49px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.close-line-2 {
+  width: 3px;
+  height: 49px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) rotate(135deg);
+}
+
+.camera-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 32px 200px;
+  background: var(--gray-5);
+}
+
+.camera-frame {
+  position: relative;
+  width: 100%;
+  max-width: 525px;
+  aspect-ratio: 525/410;
+  background: var(--gray-5);
+}
+
+.frame-corner {
+  position: absolute;
+  stroke: #000;
+  stroke-width: 3px;
+}
+
+.corner-tl {
+  top: 0;
+  left: 0;
+}
+
+.corner-tr {
+  top: 0;
+  right: 0;
+}
+
+.corner-bl {
+  bottom: 0;
+  left: 0;
+}
+
+.corner-br {
+  bottom: 0;
+  right: 0;
+}
+
+.camera-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-placeholder svg {
+  opacity: 0.3;
+}
+
+.capture-controls {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 0 32px;
+}
+
+.capture-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.capture-button-outer {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--blue-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(48, 172, 255, 0.3);
+}
+
+.capture-button-inner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--white);
+}
+
+.capture-button:active .capture-button-outer {
+  transform: scale(0.95);
+}
+
+.gallery-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gallery-button:active {
+  transform: scale(0.95);
+}
+
+.gallery-button svg {
+  display: block;
+}

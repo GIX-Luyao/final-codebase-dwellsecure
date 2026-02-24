@@ -1,0 +1,1 @@
+export { AddPropertyPeople } from './AddPropertyPeople';
