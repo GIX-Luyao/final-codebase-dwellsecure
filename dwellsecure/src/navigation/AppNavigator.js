@@ -26,7 +26,8 @@ import AddEditShutoffScreen from '../screens/AddEditShutoffScreen';
 import UtilitiesListScreen from '../screens/UtilitiesListScreen';
 import AddEditUtilityScreen from '../screens/AddEditUtilityScreen';
 import RemindersScreen from '../screens/RemindersScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
+import OnboardingWelcomeScreen from '../screens/OnboardingWelcomeScreen';
+import { OnboardingProvider } from '../contexts/OnboardingContext';
 import PropertyDetailScreen from '../screens/PropertyDetailScreen';
 import PropertyListScreen from '../screens/PropertyListScreen';
 import ShutoffDetailScreen from '../screens/ShutoffDetailScreen';
@@ -40,7 +41,7 @@ import ShareScreen from '../screens/ShareScreen';
 import MapPickerScreen from '../screens/MapPickerScreen';
 import SuccessScreen from '../screens/SuccessScreen';
 import BottomNav from '../components/BottomNav';
-import { isOnboardingComplete } from '../services/storage';
+import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 const Stack = createStackNavigator();
@@ -336,7 +337,12 @@ function MainStack() {
 export default function AppNavigator() {
   const { isSignedIn, isLoading: authLoading } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingPhase, setOnboardingPhase] = useState('welcome'); // 'welcome' | 'add-property'
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (showOnboarding) setOnboardingPhase('welcome');
+  }, [showOnboarding]);
 
   useEffect(() => {
     if (!isSignedIn) return;
@@ -406,7 +412,12 @@ export default function AppNavigator() {
     }
   };
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = async () => {
+    try {
+      await setOnboardingComplete();
+    } catch (e) {
+      console.warn('Failed to persist onboarding complete:', e);
+    }
     setShowOnboarding(false);
   };
 
@@ -433,7 +444,35 @@ export default function AppNavigator() {
   }
 
   if (showOnboarding) {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+    if (onboardingPhase === 'welcome') {
+      return (
+        <OnboardingProvider
+          completeOnboarding={handleOnboardingComplete}
+          goBackToWelcome={() => setOnboardingPhase('welcome')}
+        >
+          <OnboardingWelcomeScreen onAddProperty={() => setOnboardingPhase('add-property')} />
+        </OnboardingProvider>
+      );
+    }
+    return (
+      <OnboardingProvider
+        completeOnboarding={handleOnboardingComplete}
+        goBackToWelcome={() => setOnboardingPhase('welcome')}
+      >
+        <Stack.Navigator
+          screenOptions={{ headerShown: false }}
+          initialRouteName="AddPropertyOnboarding"
+        >
+          <Stack.Screen
+            name="AddPropertyOnboarding"
+            component={AddPropertyScreen}
+            initialParams={{ onboardingMode: true }}
+          />
+          <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+          <Stack.Screen name="Success" component={SuccessScreen} />
+        </Stack.Navigator>
+      </OnboardingProvider>
+    );
   }
 
   return (

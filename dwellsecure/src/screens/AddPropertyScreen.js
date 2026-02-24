@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
+import { useOnboarding } from '../contexts/OnboardingContext';
 import { geocodeAddress } from '../utils/geocode';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
@@ -45,7 +46,8 @@ const MORE_PROPERTY_TYPES = [
 
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
-  const { property, initialStep } = route?.params || {};
+  const onboarding = useOnboarding();
+  const { property, initialStep, onboardingMode } = route?.params || {};
   const isEditing = !!property;
   
   const [step, setStep] = useState(initialStep || 1);
@@ -381,7 +383,17 @@ export default function AddPropertyScreen({ route }) {
     setTimeout(async () => {
       try {
         await saveProperty(propertyData);
-        
+
+        if (onboardingMode && onboarding?.completeOnboarding) {
+          // Stay in onboarding stack and show Success; Success will call completeOnboarding on "Go home"
+          navigation.navigate('Success', {
+            address: fullAddress,
+            addressLine1: addressLine1.trim(),
+            onboardingMode: true,
+          });
+          return;
+        }
+
         // Navigate to Success screen instead of showing alert
         navigation.navigate('Success', {
           address: fullAddress,
@@ -777,7 +789,11 @@ export default function AddPropertyScreen({ route }) {
         setStep(step - 1);
       }
     } else {
-      navigation.goBack();
+      if (onboardingMode && onboarding?.goBackToWelcome) {
+        onboarding.goBackToWelcome();
+      } else {
+        navigation.goBack();
+      }
     }
   };
 

@@ -8,11 +8,13 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useOnboarding } from '../contexts/OnboardingContext';
 
 export default function SuccessScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { address, addressLine1 } = route.params || {};
+  const onboarding = useOnboarding();
+  const { address, addressLine1, onboardingMode } = route.params || {};
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -35,8 +37,11 @@ export default function SuccessScreen() {
   }, []);
 
   const handleGoHome = () => {
+    if (onboardingMode && onboarding?.completeOnboarding) {
+      onboarding.completeOnboarding();
+      return;
+    }
     // Navigate to PropertyList (home page - first tab in bottom nav)
-    // Reset PropertyStack navigation to PropertyList
     navigation.reset({
       index: 0,
       routes: [{ name: 'PropertyList' }],
