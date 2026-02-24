@@ -99,11 +99,11 @@ export default function PropertyDetailScreen({ route }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
+          <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{property?.address || '604 7th Ave'}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('EditProperty', { property })}
+              onPress={() => navigation.navigate('EditProperty', { property, initialStep: 2 })}
               style={styles.headerActionButton}
               disabled={!property}
             >
