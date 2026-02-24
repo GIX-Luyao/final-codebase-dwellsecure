@@ -1,0 +1,31 @@
+.address-input-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+.address-form {
+  flex: 1;
+  padding: 40px 86px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.arrow {
+  font-size: 30px;
+  margin-left: 8px;
+}
