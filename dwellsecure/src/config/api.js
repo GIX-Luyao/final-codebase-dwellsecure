@@ -9,7 +9,7 @@ const PRODUCTION_DEFAULT = 'https://dwellsecuregix.onrender.com';
 const DEV_WEB = 'https://dwellsecuregix.onrender.com';
 const DEV_ANDROID = 'https://dwellsecuregix.onrender.com';
 const DEV_IOS = 'https://dwellsecuregix.onrender.com';
-const DEV_FALLBACK = 'https://dwellsecuregix.onrender.com';
+const DEV_FALLBACK = 'http://localhost:3000';
 
 export function getApiBaseUrl() {
   if (!__DEV__) {
