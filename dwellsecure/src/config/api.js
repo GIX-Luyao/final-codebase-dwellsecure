@@ -5,11 +5,11 @@
 import { Platform } from 'react-native';
 
 // --- Base URL ---
-const PRODUCTION_DEFAULT = 'https://your-api-domain.com';
-const DEV_WEB = 'http://localhost:3000';
-const DEV_ANDROID = 'http://10.0.2.2:3000';
-const DEV_IOS = 'http://192.168.1.166:3000';
-const DEV_FALLBACK = 'http://localhost:3000';
+const PRODUCTION_DEFAULT = 'https://dwellsecuregix.onrender.com';
+const DEV_WEB = 'https://dwellsecuregix.onrender.com';
+const DEV_ANDROID = 'https://dwellsecuregix.onrender.com';
+const DEV_IOS = 'https://dwellsecuregix.onrender.com';
+const DEV_FALLBACK = 'https://dwellsecuregix.onrender.com';
 
 export function getApiBaseUrl() {
   if (!__DEV__) {
