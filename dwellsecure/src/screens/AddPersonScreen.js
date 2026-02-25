@@ -12,7 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { savePerson, getPerson } from '../services/data';
+import { savePerson, getPerson } from '../services/storage';
 
 export default function AddPersonScreen() {
   const navigation = useNavigation();
