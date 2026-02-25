@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { getAuthToken, getUser, setUser, setAuthToken, clearAuth } from '../services/authStorage';
-import { API_BASE_URL } from '../services/apiClient';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 async function authRequest(path, body) {
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
       throw new Error('Email and password are required');
     }
     try {
-      const { user: apiUser, token: apiToken } = await authRequest('/api/auth/login', { email, password });
+      const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.login, { email, password });
       await Promise.all([setAuthToken(apiToken), setUser(apiUser)]);
       setTokenState(apiToken);
       setUserState(apiUser);
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
       throw new Error('Email and password are required');
     }
     try {
-      const { user: apiUser, token: apiToken } = await authRequest('/api/auth/register', {
+      const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.register, {
         email,
         password,
         name: (name || '').trim() || undefined,

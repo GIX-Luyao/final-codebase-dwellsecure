@@ -1,41 +1,13 @@
 /**
  * API Client for backend communication
  * Falls back to AsyncStorage if API is unavailable
+ * Base URL and health settings come from config/api.js
  */
-
 import { Platform } from 'react-native';
+import { API_BASE_URL, HEALTH_PATH, HEALTH_TIMEOUT_MS } from '../config/api';
 
-// Determine the correct API URL based on platform
-const getApiBaseUrl = () => {
-  if (!__DEV__) {
-    // Production: use environment variable or default
-    return process.env.EXPO_PUBLIC_API_URL || 'https://your-api-domain.com';
-  }
-
-  // Development: platform-specific URLs
-  if (Platform.OS === 'web') {
-    return 'http://localhost:3000';
-  } else if (Platform.OS === 'android') {
-    // Android emulator uses 10.0.2.2 to access host machine's localhost
-    // For physical device, you'll need to set EXPO_PUBLIC_API_URL to your computer's IP
-    return process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000';
-  } else if (Platform.OS === 'ios') {
-    // iOS simulator: use computer's IP address (localhost/127.0.0.1 often doesn't work)
-    // For physical device, you'll need to set EXPO_PUBLIC_API_URL to your computer's IP
-    // Default to 192.168.1.166 (your main network IP) - change if needed
-    return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.166:3000';
-  }
-
-  // Fallback
-  return 'http://localhost:3000';
-};
-
-const API_BASE_URL = getApiBaseUrl();
-
-// Export for diagnostic purposes
 export { API_BASE_URL };
 
-// Log the API URL being used (helpful for debugging)
 console.log(`[API] Platform: ${Platform.OS}, API URL: ${API_BASE_URL}`);
 
 let isApiAvailable = true;
@@ -45,12 +17,12 @@ let isApiAvailable = true;
  */
 export const checkApiHealth = async () => {
   try {
-    console.log(`[API] Checking health at ${API_BASE_URL}/health`);
+    console.log(`[API] Checking health at ${API_BASE_URL}${HEALTH_PATH}`);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/health`, {
+      const response = await fetch(`${API_BASE_URL}${HEALTH_PATH}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +46,7 @@ export const checkApiHealth = async () => {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        throw new Error('Request timeout: Server did not respond within 5 seconds');
+        throw new Error(`Request timeout: Server did not respond within ${HEALTH_TIMEOUT_MS / 1000} seconds`);
       }
       throw fetchError;
     }

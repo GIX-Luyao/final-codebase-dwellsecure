@@ -9,26 +9,17 @@ Express.js backend server with MongoDB integration.
 npm install
 ```
 
-2. Configure MongoDB connection:
-   - Option 1: Create a `.env` file in the `server` directory:
+2. Configure MongoDB and server (all in `config.js`; env loaded via dotenv):
+   - **MONGODB_URI** – full connection string (preferred). Example:
      ```
-     MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?appName=Cluster0
+     MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/dwellsecure?appName=...
      ```
-   - Option 2: The connection string is hardcoded in `index.js` as a fallback
+   - **MONGODB_PASSWORD** – used only when `MONGODB_URI` is not set (default dev user/password in `config.js`).
+   - **PORT** – server port (default 3000).
+   - **CORS_ORIGIN** – comma-separated allowed origins (optional).
+   - Create a `.env` file in the project root (or `server`) for local overrides.
 
-3. Test MongoDB connection:
-```bash
-node test-mongodb-connection.js
-```
-
-This will:
-- Test the connection
-- Verify collections exist
-- Insert a test document
-- Verify the document was saved
-- Clean up the test document
-
-4. Start the server:
+3. Start the server:
 ```bash
 npm start
 ```
@@ -37,6 +28,16 @@ The server will:
 - Connect to MongoDB
 - Create collections if they don't exist
 - Start listening on port 3000
+
+## Deploy to AWS (Step 1 – independent backend)
+
+The backend is **independently deployable** (e.g. from the `server` folder only):
+
+- **Port**: `process.env.PORT || 3000` (AWS/App Runner sets `PORT`).
+- **Bind**: `app.listen(PORT, '0.0.0.0', ...)` so the server is reachable from the network.
+- **Health check**: `GET /health` returns `{ status: 'ok', db: 'connected'|'disconnected' }`.
+
+For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `CORS_ORIGIN` (comma-separated frontend URLs).
 
 ## API Endpoints
 
@@ -51,11 +52,6 @@ The server will:
 - `DELETE /api/utilities/:id` - Delete a utility
 
 ## Testing
-
-### Test MongoDB Connection
-```bash
-node test-mongodb-connection.js
-```
 
 ### Test API Health
 ```bash
@@ -79,12 +75,7 @@ Invoke-WebRequest -Uri http://localhost:3000/api/shutoffs -Method POST -ContentT
 
 ### Connection Issues
 
-1. **Test the connection:**
-   ```bash
-   node test-mongodb-connection.js
-   ```
-
-2. **Check MongoDB Atlas:**
+1. **Check MongoDB Atlas:**
    - Ensure your IP address is whitelisted
    - Verify the connection string is correct
    - Check database user permissions
@@ -107,7 +98,6 @@ Invoke-WebRequest -Uri http://localhost:3000/api/shutoffs -Method POST -ContentT
 
 3. **Verify database connection:**
    - Server should show "Database status: CONNECTED ✅"
-   - Run `node test-mongodb-connection.js` to verify
 
 4. **Check MongoDB Atlas:**
    - Refresh the collections view

@@ -9,6 +9,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { geocodeAddress } from '../utils/geocode';
+import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
 
 // Try to import WebView, fallback to manual entry if not available
 let WebView = null;
@@ -17,8 +18,6 @@ try {
 } catch (e) {
   console.log('WebView not available, using manual entry');
 }
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
 
 export default function MapPickerScreen() {
   const navigation = useNavigation();
@@ -37,7 +36,7 @@ export default function MapPickerScreen() {
     }
     let cancelled = false;
     setIsGeocoding(true);
-    geocodeAddress(address.trim(), MAPBOX_TOKEN)
+    geocodeAddress(address.trim(), MAPBOX_ACCESS_TOKEN)
       .then((coords) => {
         if (!cancelled && coords) setSelectedLocation(coords);
       })
@@ -90,8 +89,6 @@ export default function MapPickerScreen() {
   const getMapHTML = () => {
     const lat = selectedLocation?.latitude || initialLocation?.latitude || 37.78825;
     const lng = selectedLocation?.longitude || initialLocation?.longitude || -122.4324;
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
-
     return `
       <!DOCTYPE html>
       <html>
@@ -117,7 +114,7 @@ export default function MapPickerScreen() {
         <body>
           <div id="map"></div>
           <script>
-            mapboxgl.accessToken = '${MAPBOX_TOKEN}';
+            mapboxgl.accessToken = '${MAPBOX_ACCESS_TOKEN}';
             
             let map = new mapboxgl.Map({
               container: 'map',

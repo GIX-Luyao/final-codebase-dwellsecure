@@ -19,7 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
+import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
 
 // Generate Mapbox Static Images API URL for map thumbnail (satellite style)
 const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom = 15) => {
@@ -27,7 +27,7 @@ const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom
   // Use satellite-streets style to match MapPicker
   const styleId = 'mapbox/satellite-streets-v12';
   const markerColor = '1095EE'; // Blue color matching location button
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
+  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
 };
 
 export default function AddEditShutoffScreen({ route, navigation }) {

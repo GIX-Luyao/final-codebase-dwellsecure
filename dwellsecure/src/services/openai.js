@@ -1,9 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-
-const OPENAI_API_KEY = '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'; // TODO: Replace with your API key or use environment variable
-
-// For production, store API key securely (e.g., in environment variables or secure storage)
-// You can also create a config file or use expo-constants for environment variables
+import { OPENAI_API_KEY, OPENAI_CHAT_URL } from '../config/keys';
 
 export const identifyShutoffFromImage = async (imageUri, question = 'What type of shutoff is this? Help me identify this utility shutoff and provide key information about it.') => {
   try {
@@ -12,7 +8,7 @@ export const identifyShutoffFromImage = async (imageUri, question = 'What type o
       encoding: 'base64',
     });
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(OPENAI_CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +64,7 @@ export const identifyShutoffFromImage = async (imageUri, question = 'What type o
 
 export const askAboutShutoffs = async (question) => {
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(OPENAI_CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

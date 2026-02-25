@@ -12,7 +12,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getPerson, savePerson, deletePerson, saveReminder, deleteReminder } from '../services/storage';
+import { getPerson, savePerson, deletePerson, saveReminder, deleteReminder } from '../services/data';
 
 export default function PersonDetailScreen({ route }) {
   const navigation = useNavigation();

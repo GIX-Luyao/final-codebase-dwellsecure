@@ -18,7 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getUtility, saveUtility, getReminders, saveReminder, deleteReminder } from '../services/storage';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
+import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
 
 // Generate Mapbox Static Images API URL for map thumbnail (satellite style)
 const getMapThumbnailUrl = (latitude, longitude, width = 120, height = 120, zoom = 15) => {
@@ -26,7 +26,7 @@ const getMapThumbnailUrl = (latitude, longitude, width = 120, height = 120, zoom
   // Use satellite-streets style to match MapPicker
   const styleId = 'mapbox/satellite-streets-v12';
   const markerColor = '1095EE'; // Blue color matching location button
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
+  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
 };
 
 export default function UtilityDetailScreen({ route }) {

@@ -60,7 +60,11 @@ export default function RemindersScreen() {
 
   const handleReminderPress = (reminder) => {
     if (reminder.type === 'shutoff' && reminder.shutoffId) {
-      navigation.navigate('ShutoffDetail', { shutoffId: reminder.shutoffId });
+      // ShutoffDetail lives inside Property tab (PropertyStack); use nested navigate
+      navigation.navigate('Property', {
+        screen: 'ShutoffDetail',
+        params: { shutoffId: reminder.shutoffId },
+      });
     }
   };
 

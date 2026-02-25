@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-require('dotenv').config();
+const config = require('./config');
 
 // #region agent log
 const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
@@ -15,12 +15,8 @@ function debugLog(location, message, data, hypothesisId) {
 // #endregion
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const { PORT, mongoUri, corsOptions } = config;
 
-// Middleware - production: set CORS_ORIGIN to comma-separated frontend URLs
-const corsOptions = process.env.CORS_ORIGIN
-  ? { origin: process.env.CORS_ORIGIN.split(',').map(s => s.trim()) }
-  : {};
 app.use(cors(corsOptions));
 app.use(express.json());
 
@@ -56,13 +52,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// MongoDB connection
-// If password has special characters, encode it: encodeURIComponent('password')
-const password = 'jHTpcO0mULceeQtA';
-const encodedPassword = encodeURIComponent(password);
-// Add database name to connection string
-const uri = process.env.MONGODB_URI || `mongodb+srv://sche753_db_user:${encodedPassword}@haven.ksoyo27.mongodb.net/dwellsecure?appName=Haven&retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
+// MongoDB connection (uri from config)
+const client = new MongoClient(mongoUri, {
   // Omit serverApi to use legacy wire protocol; can avoid TLS handshake path that triggers Atlas SSL alert 80 on Node 22/Windows
   tls: true,
   connectTimeoutMS: 30000,
@@ -76,13 +67,13 @@ async function connectDB() {
   debugLog('server/index.js:connectDB:entry', 'connectDB entry', {
     nodeVersion: process.version,
     uriSource: process.env.MONGODB_URI ? 'env' : 'default',
-    uriHasSrv: uri.includes('mongodb+srv'),
-    uriHost: uri.includes('@') ? uri.split('@')[1].split('/')[0].split('?')[0] : 'unknown',
+    uriHasSrv: mongoUri.includes('mongodb+srv'),
+    uriHost: mongoUri.includes('@') ? mongoUri.split('@')[1].split('/')[0].split('?')[0] : 'unknown',
   }, 'A,B,C');
   // #endregion
   try {
     console.log('🔌 Connecting to MongoDB...');
-    console.log(`📡 URI: ${uri.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
+    console.log(`📡 URI: ${mongoUri.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
     console.log(`📡 Cluster: haven.ksoyo27.mongodb.net`);
     console.log(`📡 Database: dwellsecure`);
     console.log('');
@@ -753,7 +744,7 @@ async function startServer() {
   console.log('='.repeat(60));
   console.log('🚀 Starting DwellSecure API Server...');
   console.log('='.repeat(60));
-  console.log(`📡 MongoDB URI: ${uri.replace(/:[^:@]+@/, ':****@')}`); // Hide password
+  console.log(`📡 MongoDB URI: ${mongoUri.replace(/:[^:@]+@/, ':****@')}`); // Hide password
   console.log('🔌 Connecting to MongoDB...');
 
   try {
@@ -770,6 +761,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
+    console.log('listening', PORT); // AWS / App Runner: must bind to 0.0.0.0 and log listening port
     console.log('='.repeat(60));
     console.log(`✅ Server started successfully!`);
     console.log(`🚀 Server running on port ${PORT}`);

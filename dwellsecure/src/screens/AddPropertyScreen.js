@@ -18,15 +18,14 @@ import { saveProperty, getPeople } from '../services/storage';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { geocodeAddress } from '../utils/geocode';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
+import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
 
 // Generate Mapbox Static Images API URL for map thumbnail
 const getMapThumbnailUrl = (latitude, longitude, width = 400, height = 200, zoom = 15) => {
   if (!latitude || !longitude) return null;
-  // Format: https://api.mapbox.com/styles/v1/{style_id}/static/pin-s+{color}({lon},{lat})/{lon},{lat},{zoom}/{width}x{height}?access_token={token}
   const styleId = 'mapbox/streets-v12';
-  const markerColor = '30ACFF'; // Blue color matching app theme
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
+  const markerColor = '30ACFF';
+  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
 };
 
 const PROPERTY_TYPES = [
@@ -86,7 +85,7 @@ export default function AddPropertyScreen({ route }) {
     geocodeTimeoutRef.current = setTimeout(async () => {
       const fullAddress = [line1, addressLine2.trim(), cityVal, `${stateVal} ${zipVal}`, (country || '').trim()].filter(Boolean).join(', ');
       setIsGeocoding(true);
-      const coords = await geocodeAddress(fullAddress, MAPBOX_TOKEN);
+      const coords = await geocodeAddress(fullAddress, MAPBOX_ACCESS_TOKEN);
       setIsGeocoding(false);
       if (coords) setLocation(coords);
       geocodeTimeoutRef.current = null;
@@ -97,32 +96,45 @@ export default function AddPropertyScreen({ route }) {
     };
   }, [addressLine1, addressLine2, city, state, zipCode, country]);
 
+  // Sync step when entering edit mode with initialStep (e.g. from Property Detail)
+  useEffect(() => {
+    const stepFromParams = route?.params?.initialStep;
+    if (route?.params?.property && stepFromParams != null && stepFromParams >= 1 && stepFromParams <= 4) {
+      setStep(stepFromParams);
+    }
+  }, [route?.params?.property?.id, route?.params?.initialStep]);
+
   useFocusEffect(
     React.useCallback(() => {
-      if (property?.id) {
+      const params = route?.params || {};
+      const prop = params.property;
+      const stepParam = params.initialStep;
+
+      if (prop?.id) {
         loadPeople();
       }
-      // Initialize address fields if editing
-      if (property) {
+      // Initialize address fields if editing (use latest params so we don't rely on stale closure)
+      if (prop) {
+        if (stepParam != null && stepParam >= 1 && stepParam <= 4) {
+          setStep(stepParam);
+        }
         // Prefer structured address fields if available
-        if (property.addressLine1) {
-          setAddressLine1(property.addressLine1 || '');
-          setAddressLine2(property.addressLine2 || '');
-          setCity(property.city || '');
-          setState(property.state || '');
-          setZipCode(property.zipCode || '');
-          setCountry(property.country || 'USA');
-        } else if (property.address && (step === 3 || property.city || property.state || property.zipCode || property.zip)) {
-          // Backwards compatibility: properties created during onboarding where fields were stored separately
-          setAddressLine1(property.address || '');
-          setAddressLine2(property.addressLine2 || '');
-          setCity(property.city || '');
-          setState(property.state || '');
-          setZipCode(property.zipCode || property.zip || '');
-          setCountry(property.country || 'USA');
-        } else if (property.address) {
-          // Fallback: Try to parse the address if it's a combined string
-          const addressParts = property.address.split(', ');
+        if (prop.addressLine1) {
+          setAddressLine1(prop.addressLine1 || '');
+          setAddressLine2(prop.addressLine2 || '');
+          setCity(prop.city || '');
+          setState(prop.state || '');
+          setZipCode(prop.zipCode || '');
+          setCountry(prop.country || 'USA');
+        } else if (prop.address && (step === 3 || prop.city || prop.state || prop.zipCode || prop.zip)) {
+          setAddressLine1(prop.address || '');
+          setAddressLine2(prop.addressLine2 || '');
+          setCity(prop.city || '');
+          setState(prop.state || '');
+          setZipCode(prop.zipCode || prop.zip || '');
+          setCountry(prop.country || 'USA');
+        } else if (prop.address) {
+          const addressParts = prop.address.split(', ');
           if (addressParts.length >= 3) {
             setAddressLine1(addressParts[0] || '');
             setAddressLine2(addressParts[1] || '');
@@ -137,30 +149,26 @@ export default function AddPropertyScreen({ route }) {
             }
           }
         }
-        // Normalize legacy property types (e.g. from onboarding) to current IDs
-        if (property.propertyType) {
-          let normalizedType = property.propertyType;
+        if (prop.propertyType) {
+          let normalizedType = prop.propertyType;
           if (normalizedType === 'house') normalizedType = 'single-family';
           if (normalizedType === 'mobile') normalizedType = 'single-family';
           setPropertyType(normalizedType);
         }
-        // Load location if editing
-        if (property?.latitude && property?.longitude) {
-          setLocation({
-            latitude: property.latitude,
-            longitude: property.longitude,
-          });
+        if (prop?.latitude != null && prop?.longitude != null) {
+          setLocation({ latitude: prop.latitude, longitude: prop.longitude });
+        }
+        if (prop.imageUri != null) {
+          setImageUri(prop.imageUri);
         }
       }
-      
-      // Check for location returned from MapPicker
-      const selectedLocation = route?.params?.selectedLocation;
+
+      const selectedLocation = params.selectedLocation;
       if (selectedLocation) {
         setLocation(selectedLocation);
-        // Clear the param to avoid re-applying on next focus
         navigation.setParams({ selectedLocation: undefined });
       }
-    }, [property?.id, property?.address, property?.latitude, property?.longitude, step, route?.params?.selectedLocation, navigation])
+    }, [route?.params?.property?.id, route?.params?.property?.address, route?.params?.property?.latitude, route?.params?.property?.longitude, route?.params?.initialStep, route?.params?.selectedLocation, step, navigation])
   );
 
   const loadPeople = async () => {
