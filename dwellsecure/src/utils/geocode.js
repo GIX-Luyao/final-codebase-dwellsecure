@@ -1,26 +1,23 @@
-import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
+import { API_BASE_URL } from '../config/api';
 
 /**
- * Geocode an address string to coordinates using Mapbox Geocoding API.
- * @param {string} address - Full address (e.g. "123 Main St, City, ST 12345")
- * @param {string} accessToken - Optional Mapbox token override; otherwise uses config
- * @returns {Promise<{ latitude: number, longitude: number } | null>} Coordinates or null on failure
+ * Geocode an address via backend (Mapbox key stays on server).
+ * @param {string} address - Full address
+ * @param {string} _accessToken - Ignored; token is on server
+ * @returns {Promise<{ latitude: number, longitude: number } | null>}
  */
-export async function geocodeAddress(address, accessToken) {
+export async function geocodeAddress(address, _accessToken) {
   if (!address || typeof address !== 'string' || !address.trim()) {
     return null;
   }
-  const token = accessToken || MAPBOX_ACCESS_TOKEN;
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.trim())}.json?access_token=${token}&limit=1`;
   try {
+    const url = `${API_BASE_URL}/api/geocode?address=${encodeURIComponent(address.trim())}`;
     const res = await fetch(url);
     const data = await res.json();
-    const feature = data.features && data.features[0];
-    if (!feature || !feature.geometry || !feature.geometry.coordinates) {
-      return null;
+    if (data.latitude != null && data.longitude != null) {
+      return { latitude: data.latitude, longitude: data.longitude };
     }
-    const [lng, lat] = feature.geometry.coordinates;
-    return { latitude: lat, longitude: lng };
+    return null;
   } catch (e) {
     console.warn('[geocode] Failed:', e.message);
     return null;

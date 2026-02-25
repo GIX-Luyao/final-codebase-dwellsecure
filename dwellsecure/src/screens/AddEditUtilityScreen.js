@@ -17,15 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw, getProperties } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
-import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
-
-// Generate Mapbox Static Images API URL for map thumbnail (satellite style)
-const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom = 15) => {
-  if (!latitude || !longitude) return null;
-  const styleId = 'mapbox/satellite-streets-v12';
-  const markerColor = '1095EE';
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
-};
+import { getMapThumbnailUrl } from '../utils/mapStatic';
 
 export default function AddEditUtilityScreen({ route, navigation }) {
   const { utility, propertyId, presetDescription } = route.params || {};

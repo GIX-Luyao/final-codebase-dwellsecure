@@ -10,9 +10,8 @@
 
 修改后端地址或路径时只需改此文件。`apiClient.js` 与 `AuthContext` 均从此处读取配置。
 
-## `keys.js` – 第三方 API 密钥（前端）
+## `keys.js` – 第三方 API 密钥（可选/遗留）
 
-- **OpenAI**：`EXPO_PUBLIC_OPENAI_API_KEY`，`OPENAI_CHAT_URL`。
-- **Mapbox**：`EXPO_PUBLIC_MAPBOX_TOKEN`，`MAPBOX_ACCESS_TOKEN`（地图/地理编码）。
-
-`openai.js`、`geocode.js` 以及使用地图的页面均从 `keys.js` 读取，不在业务代码中硬编码密钥。
+发布时 **OpenAI 与 Mapbox 均由后端提供**，应用只需配置 `EXPO_PUBLIC_API_URL` 指向后端。  
+`openai.js`、`geocode.js`、地图缩略图与 MapPicker 均通过后端代理，不在前端使用密钥。  
+若仍有代码引用 `keys.js`，仅作兼容保留；新功能勿依赖前端环境变量中的密钥。

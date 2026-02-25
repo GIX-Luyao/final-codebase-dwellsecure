@@ -1,61 +1,25 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { OPENAI_API_KEY, OPENAI_CHAT_URL } from '../config/keys';
+import { API_BASE_URL } from '../config/api';
 
 export const identifyShutoffFromImage = async (imageUri, question = 'What type of shutoff is this? Help me identify this utility shutoff and provide key information about it.') => {
   try {
-    // Read the image file and convert to base64
     const base64Image = await FileSystem.readAsStringAsync(imageUri, {
       encoding: 'base64',
     });
 
-    const response = await fetch(OPENAI_CHAT_URL, {
+    const response = await fetch(`${API_BASE_URL}/api/ai/identify-shutoff`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful assistant that helps residents identify utility shutoffs (fire/gas, power/electrical, and water shutoffs) in their homes. 
-            
-            When analyzing images, help users identify:
-            1. What type of shutoff they're looking at (fire/gas, power/electrical, or water)
-            2. Key identifying features
-            3. Safety information
-            4. How to locate it in their home
-            
-            IMPORTANT: Respond in plain text only. Do NOT use markdown formatting like *, -, #, or bullet points. Write in clear, simple sentences. Be concise, helpful, and safety-focused.`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: question
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 500,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, question }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to identify shutoff');
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'Unable to identify the shutoff. Please try again.';
+    return data.text || 'Unable to identify the shutoff. Please try again.';
   } catch (error) {
     console.error('Error identifying shutoff:', error);
     throw error;
@@ -63,48 +27,30 @@ export const identifyShutoffFromImage = async (imageUri, question = 'What type o
 };
 
 export const askAboutShutoffs = async (question) => {
+  const url = `${API_BASE_URL}/api/ai/ask`;
   try {
-    const response = await fetch(OPENAI_CHAT_URL, {
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful assistant that helps residents find and identify utility shutoffs (fire/gas, power/electrical, and water shutoffs) in their homes.
-            
-            Provide helpful, concise, and safety-focused answers about:
-            - How to locate different types of shutoffs (fire/gas, power, water)
-            - How to identify shutoffs by appearance
-            - Safety information
-            - Common locations for shutoffs
-            - What to look for
-            
-            IMPORTANT: Respond in plain text only. Do NOT use markdown formatting like *, -, #, or bullet points. Write in clear, simple sentences. Keep responses clear, practical, and as concise as possible.`
-          },
-          {
-            role: 'user',
-            content: question
-          }
-        ],
-        max_tokens: 500,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to get response');
+      const data = await response.json().catch(() => ({}));
+      // #region agent log
+      console.warn('[DEBUG] ask API failed', { url, status: response.status, apiBase: API_BASE_URL });
+      fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'openai.js:askAboutShutoffs', message: 'ask API non-OK', data: { url, status: response.status, statusText: response.statusText, apiBase: API_BASE_URL }, timestamp: Date.now(), hypothesisId: '404-cause' }) }).catch(() => {});
+      // #endregion
+      throw new Error(data.error || `Request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'Unable to answer your question. Please try again.';
+    return data.text || 'Unable to answer your question. Please try again.';
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'openai.js:askAboutShutoffs:catch', message: 'ask failed', data: { url, apiBase: API_BASE_URL, errorMessage: error.message }, timestamp: Date.now(), hypothesisId: '404-cause' }) }).catch(() => {});
+    // #endregion
     console.error('Error asking about shutoffs:', error);
     throw error;
   }
 };
-

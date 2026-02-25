@@ -18,16 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getUtility, saveUtility, getReminders, saveReminder, deleteReminder } from '../services/storage';
 
-import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
-
-// Generate Mapbox Static Images API URL for map thumbnail (satellite style)
-const getMapThumbnailUrl = (latitude, longitude, width = 120, height = 120, zoom = 15) => {
-  if (!latitude || !longitude) return null;
-  // Use satellite-streets style to match MapPicker
-  const styleId = 'mapbox/satellite-streets-v12';
-  const markerColor = '1095EE'; // Blue color matching location button
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
-};
+import { getMapThumbnailUrl } from '../utils/mapStatic';
 
 export default function UtilityDetailScreen({ route }) {
   const navigation = useNavigation();

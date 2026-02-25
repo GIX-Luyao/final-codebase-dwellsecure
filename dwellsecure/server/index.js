@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const config = require('./config');
+const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
 
 // #region agent log
 const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
@@ -469,8 +470,9 @@ app.get('/api/properties', async (req, res) => {
     }
     const collection = db.collection('properties');
     const properties = await collection.find({}).toArray();
+    const decrypted = properties.map(decryptAddressFields);
     console.log(`[API] GET /api/properties - Found ${properties.length} properties`);
-    res.json(properties);
+    res.json(decrypted);
   } catch (error) {
     console.error('Error fetching properties:', error);
     res.status(500).json({ error: 'Failed to fetch properties', details: error.message });
@@ -487,7 +489,7 @@ app.get('/api/properties/:id', async (req, res) => {
     if (!property) {
       return res.status(404).json({ error: 'Property not found' });
     }
-    res.json(property);
+    res.json(decryptAddressFields(property));
   } catch (error) {
     console.error('Error fetching property:', error);
     res.status(500).json({ error: 'Failed to fetch property', details: error.message });
@@ -513,13 +515,13 @@ app.post('/api/properties', async (req, res) => {
     console.log(`[${requestId}] Received property data:`, {
       id: property.id,
       name: property.name,
-      address: property.address,
-      addressLine1: property.addressLine1,
-      addressLine2: property.addressLine2,
-      city: property.city,
-      state: property.state,
-      zipCode: property.zipCode,
-      country: property.country,
+      address: property.address ? '***' : property.address,
+      addressLine1: property.addressLine1 ? '***' : property.addressLine1,
+      addressLine2: property.addressLine2 ? '***' : property.addressLine2,
+      city: property.city ? '***' : property.city,
+      state: property.state ? '***' : property.state,
+      zipCode: property.zipCode ? '***' : property.zipCode,
+      country: property.country ? '***' : property.country,
       propertyType: property.propertyType,
       imageUri: property.imageUri ? (property.imageUri.substring(0, 50) + '...') : null,
       latitude: property.latitude,
@@ -532,13 +534,15 @@ app.post('/api/properties', async (req, res) => {
     }
     property.updatedAt = new Date().toISOString();
     
+    const toSave = encryptAddressFields(property);
+    
     console.log(`[${requestId}] Saving to MongoDB collection: properties`);
     console.log(`[${requestId}] Property ID: ${property.id}`);
     
-    // Upsert: update if exists, insert if not
+    // Upsert: update if exists, insert if not (address fields stored encrypted)
     const result = await collection.updateOne(
-      { id: property.id },
-      { $set: property },
+      { id: toSave.id },
+      { $set: toSave },
       { upsert: true }
     );
     
@@ -550,13 +554,13 @@ app.post('/api/properties', async (req, res) => {
     });
     
     // Verify the document was saved
-    const saved = await collection.findOne({ id: property.id });
+    const saved = await collection.findOne({ id: toSave.id });
     if (saved) {
-      console.log(`[${requestId}] ✅ VERIFIED: Document exists in MongoDB with ID: ${property.id}`);
+      console.log(`[${requestId}] ✅ VERIFIED: Document exists in MongoDB with ID: ${toSave.id}`);
       console.log(`[${requestId}] Document preview:`, {
         id: saved.id,
         name: saved.name,
-        address: saved.address,
+        address: '(encrypted)',
         imageUri: saved.imageUri ? (saved.imageUri.substring(0, 50) + '...') : null,
         latitude: saved.latitude,
         longitude: saved.longitude,
@@ -737,6 +741,156 @@ app.delete('/api/reminders/:id', async (req, res) => {
     console.error('Error deleting reminder:', error);
     res.status(500).json({ error: 'Failed to delete reminder', details: error.message });
   }
+});
+
+// --- AI & Mapbox proxy (keys only on server) ---
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
+const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || process.env.MAPBOX_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
+
+app.post('/api/ai/identify-shutoff', async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ error: 'OpenAI API key not configured on server' });
+    }
+    const { imageBase64, question } = req.body || {};
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'imageBase64 required' });
+    }
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that helps residents identify utility shutoffs (fire/gas, power/electrical, and water shutoffs) in their homes. When analyzing images, help users identify: 1) What type of shutoff they're looking at 2) Key identifying features 3) Safety information 4) How to locate it in their home. IMPORTANT: Respond in plain text only. Do NOT use markdown. Write in clear, simple sentences. Be concise and safety-focused.`
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: question || 'What type of shutoff is this? Help me identify this utility shutoff.' },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } }
+            ]
+          }
+        ],
+        max_tokens: 500,
+      }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ error: err.error?.message || 'OpenAI request failed' });
+    }
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || 'Unable to identify. Please try again.';
+    res.json({ text });
+  } catch (error) {
+    console.error('Error /api/ai/identify-shutoff:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+app.post('/api/ai/ask', async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ error: 'OpenAI API key not configured on server' });
+    }
+    const { question } = req.body || {};
+    if (!question) {
+      return res.status(400).json({ error: 'question required' });
+    }
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that helps residents find and identify utility shutoffs (fire/gas, power/electrical, water) in their homes. Provide helpful, concise, safety-focused answers. Respond in plain text only. Do NOT use markdown. Write in clear, simple sentences.`
+          },
+          { role: 'user', content: question }
+        ],
+        max_tokens: 500,
+      }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ error: err.error?.message || 'OpenAI request failed' });
+    }
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || 'Unable to answer. Please try again.';
+    res.json({ text });
+  } catch (error) {
+    console.error('Error /api/ai/ask:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+app.get('/api/geocode', async (req, res) => {
+  try {
+    if (!MAPBOX_TOKEN) {
+      return res.status(503).json({ error: 'Mapbox token not configured on server' });
+    }
+    const address = req.query.address;
+    if (!address || typeof address !== 'string' || !address.trim()) {
+      return res.status(400).json({ error: 'address query required' });
+    }
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.trim())}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const feature = data.features && data.features[0];
+    if (!feature?.geometry?.coordinates) {
+      return res.json({ latitude: null, longitude: null });
+    }
+    const [lng, lat] = feature.geometry.coordinates;
+    res.json({ latitude: lat, longitude: lng });
+  } catch (error) {
+    console.error('Error /api/geocode:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+app.get('/api/map-static', async (req, res) => {
+  try {
+    if (!MAPBOX_TOKEN) {
+      return res.status(503).send('Mapbox not configured');
+    }
+    const lat = req.query.lat;
+    const lng = req.query.lng;
+    const width = req.query.width || 120;
+    const height = req.query.height || 120;
+    const zoom = req.query.zoom || 15;
+    if (lat == null || lng == null) {
+      return res.status(400).send('lat and lng required');
+    }
+    const styleId = 'mapbox/satellite-streets-v12';
+    const markerColor = '1095EE';
+    const mapUrl = `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${lng},${lat})/${lng},${lat},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
+    const imageResponse = await fetch(mapUrl);
+    if (!imageResponse.ok) {
+      return res.status(imageResponse.status).send('Map image failed');
+    }
+    const contentType = imageResponse.headers.get('content-type') || 'image/png';
+    res.set('Content-Type', contentType);
+    res.send(Buffer.from(await imageResponse.arrayBuffer()));
+  } catch (error) {
+    console.error('Error /api/map-static:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+app.get('/api/mapbox-token', (req, res) => {
+  if (!MAPBOX_TOKEN) {
+    return res.status(503).json({ error: 'Mapbox token not configured on server' });
+  }
+  res.json({ token: MAPBOX_TOKEN });
 });
 
 // Start server (MongoDB optional: if connection fails, server still starts and /health returns db: 'disconnected'; app uses AsyncStorage)

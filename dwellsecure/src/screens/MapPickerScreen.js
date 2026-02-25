@@ -9,7 +9,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { geocodeAddress } from '../utils/geocode';
-import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
+import { API_BASE_URL } from '../config/api';
 
 // Try to import WebView, fallback to manual entry if not available
 let WebView = null;
@@ -27,8 +27,19 @@ export default function MapPickerScreen() {
 
   const [selectedLocation, setSelectedLocation] = useState(initialLocation || null);
   const [isGeocoding, setIsGeocoding] = useState(!!(address && !initialLocation));
+  const [mapboxToken, setMapboxToken] = useState(null);
 
-  // When address is passed (e.g. from property form), geocode and place the pin at that location
+  // Fetch Mapbox token from backend (key stays on server)
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/api/mapbox-token`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('No token')))
+      .then((data) => { if (!cancelled) setMapboxToken(data.token || ''); })
+      .catch(() => { if (!cancelled) setMapboxToken(''); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // When address is passed (e.g. from property form), geocode via backend and place the pin
   useEffect(() => {
     if (!address || !address.trim()) {
       setIsGeocoding(false);
@@ -36,7 +47,7 @@ export default function MapPickerScreen() {
     }
     let cancelled = false;
     setIsGeocoding(true);
-    geocodeAddress(address.trim(), MAPBOX_ACCESS_TOKEN)
+    geocodeAddress(address.trim())
       .then((coords) => {
         if (!cancelled && coords) setSelectedLocation(coords);
       })
@@ -89,6 +100,7 @@ export default function MapPickerScreen() {
   const getMapHTML = () => {
     const lat = selectedLocation?.latitude || initialLocation?.latitude || 37.78825;
     const lng = selectedLocation?.longitude || initialLocation?.longitude || -122.4324;
+    const token = mapboxToken || '';
     return `
       <!DOCTYPE html>
       <html>
@@ -114,7 +126,7 @@ export default function MapPickerScreen() {
         <body>
           <div id="map"></div>
           <script>
-            mapboxgl.accessToken = '${MAPBOX_ACCESS_TOKEN}';
+            mapboxgl.accessToken = '${token.replace(/'/g, "\\'")}';
             
             let map = new mapboxgl.Map({
               container: 'map',
@@ -167,6 +179,41 @@ export default function MapPickerScreen() {
       </html>
     `;
   };
+
+  // Wait for Mapbox token from backend before showing map
+  if (mapboxToken === null) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+            <Ionicons name="close" size={28} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Select Location</Text>
+          <View style={{ width: 28 }} />
+        </View>
+        <View style={styles.mapLoading}>
+          <ActivityIndicator size="large" color="#30ACFF" />
+          <Text style={styles.mapLoadingText}>Loading map…</Text>
+        </View>
+      </View>
+    );
+  }
+  if (mapboxToken === '') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+            <Ionicons name="close" size={28} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Select Location</Text>
+          <View style={{ width: 28 }} />
+        </View>
+        <View style={styles.mapLoading}>
+          <Text style={styles.mapLoadingText}>Map unavailable. Ensure backend is running and MAPBOX_ACCESS_TOKEN is set.</Text>
+        </View>
+      </View>
+    );
+  }
 
   // If WebView is not available, show error message
   if (!WebView) {

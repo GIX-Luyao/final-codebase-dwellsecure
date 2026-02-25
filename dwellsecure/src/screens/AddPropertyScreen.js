@@ -17,16 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { geocodeAddress } from '../utils/geocode';
-
-import { MAPBOX_ACCESS_TOKEN } from '../config/keys';
-
-// Generate Mapbox Static Images API URL for map thumbnail
-const getMapThumbnailUrl = (latitude, longitude, width = 400, height = 200, zoom = 15) => {
-  if (!latitude || !longitude) return null;
-  const styleId = 'mapbox/streets-v12';
-  const markerColor = '30ACFF';
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-s+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_ACCESS_TOKEN}`;
-};
+import { getMapThumbnailUrl } from '../utils/mapStatic';
 
 const PROPERTY_TYPES = [
   { id: 'single-family', label: 'Single family house', icon: 'home' },
@@ -85,7 +76,7 @@ export default function AddPropertyScreen({ route }) {
     geocodeTimeoutRef.current = setTimeout(async () => {
       const fullAddress = [line1, addressLine2.trim(), cityVal, `${stateVal} ${zipVal}`, (country || '').trim()].filter(Boolean).join(', ');
       setIsGeocoding(true);
-      const coords = await geocodeAddress(fullAddress, MAPBOX_ACCESS_TOKEN);
+      const coords = await geocodeAddress(fullAddress);
       setIsGeocoding(false);
       if (coords) setLocation(coords);
       geocodeTimeoutRef.current = null;
@@ -715,7 +706,7 @@ export default function AddPropertyScreen({ route }) {
             ) : location ? (
               <View style={styles.mapThumbnailContainer}>
                 <Image
-                  source={{ uri: getMapThumbnailUrl(location.latitude, location.longitude) }}
+                  source={{ uri: getMapThumbnailUrl(location.latitude, location.longitude, 400, 200) }}
                   style={styles.mapThumbnail}
                   resizeMode="cover"
                 />

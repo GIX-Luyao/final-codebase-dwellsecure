@@ -227,7 +227,7 @@ export default function AIAssistanceScreen() {
       let errorMessage = 'Sorry, I encountered an error. Please try again.';
       
       if (error.message.includes('API key')) {
-        errorMessage = 'OpenAI API key is not configured. Please add your API key to src/services/openai.js';
+        errorMessage = 'AI is not configured. Set OPENAI_API_KEY on the backend server (e.g. Render env).';
       } else if (error.message.includes('rate limit')) {
         errorMessage = 'Rate limit exceeded. Please try again later.';
       } else if (error.message.includes('insufficient_quota')) {

@@ -17,6 +17,7 @@ web-build/
 *.log
 *.tmp
 
-# Environment variables
+# Environment variables (never commit files that contain secrets)
 .env
 .env.local
+dwellsecuregix.env
