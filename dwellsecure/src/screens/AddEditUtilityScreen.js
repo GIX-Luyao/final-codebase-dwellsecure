@@ -17,18 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
+
+import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
-
-// Generate Mapbox Static Images API URL for map thumbnail (satellite style)
-const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom = 17) => {
-  if (!latitude || !longitude) return null;
-  // Use satellite-streets style to match MapPicker; pin-l for larger marker
-  const styleId = 'mapbox/satellite-streets-v12';
-  const markerColor = '1095EE'; // Blue color matching location button
-  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-l+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
-};
 
 export default function AddEditUtilityScreen({ route, navigation }) {
   const { utility, propertyId, presetDescription } = route.params || {};
@@ -69,6 +60,13 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isEditing && presetDescription && !description) {
+      setDescription(String(presetDescription));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetDescription, isEditing]);
+
   // Default location to property position when creating new utility
   useEffect(() => {
     if (isEditing || locationCoords) return;
@@ -88,7 +86,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         setLocationCoords({ latitude: property.latitude, longitude: property.longitude });
         setLocation(`${property.latitude.toFixed(6)}, ${property.longitude.toFixed(6)}`);
       } else if (property.address) {
-        const coords = await geocodeAddress(property.address, MAPBOX_TOKEN);
+        const coords = await geocodeAddress(property.address);
         if (!cancelled && coords) {
           setLocationCoords(coords);
           setLocation(`${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`);
@@ -98,13 +96,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     loadDefaultLocation();
     return () => { cancelled = true; };
   }, [isEditing, propertyId]);
-
-  useEffect(() => {
-    if (!isEditing && presetDescription && !description) {
-      setDescription(String(presetDescription));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetDescription, isEditing]);
 
   const checkMode = async () => {
     const inEmergency = await isEmergencyMode();
@@ -917,6 +908,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>Enter utility</Text>
+            <View style={styles.progressIndicator} />
           </View>
 
           {/* Description Input */}
@@ -925,7 +917,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               style={[styles.textInput, styles.textInputMultiline]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Please describe how to find it..."
+              placeholder="Description...."
               placeholderTextColor="#999"
               multiline
               numberOfLines={3}
@@ -1015,7 +1007,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                       </TouchableOpacity>
                       {showFloorDropdown && (
                         <View style={styles.floorDropdownList}>
-                          {['B', '1', '2'].map((floorOption) => (
+                          {['B', 'L1', 'L2'].map((floorOption) => (
                             <TouchableOpacity
                               key={floorOption}
                               style={[
@@ -1111,17 +1103,17 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             </View>
           </View>
 
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-forward" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-        {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
-          <TouchableOpacity 
-            style={styles.continueButton}
-            onPress={handleNext}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-forward" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
       </View>
     );
   };
@@ -1137,10 +1129,11 @@ export default function AddEditUtilityScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView style={styles.stepContent} contentContainerStyle={styles.step2ContentContainer}>
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>Enter utility</Text>
+            <View style={styles.progressIndicator} />
           </View>
 
           <View style={styles.maintenanceSection}>
@@ -1222,11 +1215,12 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         </View>
 
         <View style={styles.notesSquare}>
+          <Text style={styles.inputLabel}>Notes</Text>
           <TextInput
             style={[styles.textInput, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Enter maintenance notes..."
+            placeholder="Enter notes..."
             placeholderTextColor="#999"
             multiline
           />
@@ -1262,17 +1256,16 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             <Text style={styles.addContactText}>Add Contact</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-        {/* Fixed Action Buttons */}
         <View style={styles.fixedActionButtons}>
-          <TouchableOpacity 
-            style={styles.continueButton}
-            onPress={handleSave}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="checkmark" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={handleSave}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkmark" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+      </ScrollView>
 
       {/* Floating Calendar Overlay */}
       {showCustomCalendar && (
@@ -1390,7 +1383,7 @@ const styles = StyleSheet.create({
   step2ContentContainer: {
     padding: 30,
     paddingTop: 20,
-    paddingBottom: 120,
+    paddingBottom: 40,
     flexGrow: 1,
   },
   progressIndicatorContainer: {
@@ -1403,6 +1396,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E1E1E',
     textAlign: 'center',
+  },
+  progressIndicator: {
+    width: 289,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#E0E0E0',
   },
   inputRect: {
     backgroundColor: '#fff',
@@ -1611,7 +1610,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     maxWidth: 400,
-    marginTop: 40,
     marginBottom: 20,
   },
   fixedActionButtons: {
@@ -1715,7 +1713,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   notesInput: {
-    minHeight: 60,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   contactSection: {
