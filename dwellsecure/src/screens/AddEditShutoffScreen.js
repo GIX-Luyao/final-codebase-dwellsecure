@@ -19,9 +19,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
-
-import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Fha3Vtb3JhIiwiYSI6ImNtbDY0M2NvZTBiOGYzY29jNGRmdGFzdXkifQ.wg1qiR8XJsRxOKVIVKMYmQ';
+
+// Generate Mapbox Static Images API URL for map thumbnail (satellite style)
+const getMapThumbnailUrl = (latitude, longitude, width = 220, height = 152, zoom = 17) => {
+  if (!latitude || !longitude) return null;
+  // Use satellite-streets style to match MapPicker; pin-l for larger marker
+  const styleId = 'mapbox/satellite-streets-v12';
+  const markerColor = '1095EE'; // Blue color matching location button
+  return `https://api.mapbox.com/styles/v1/${styleId}/static/pin-l+${markerColor}(${longitude},${latitude})/${longitude},${latitude},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`;
+};
 
 export default function AddEditShutoffScreen({ route, navigation }) {
   const { shutoff, type, propertyId } = route.params || {};
@@ -107,7 +116,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         setLocationCoords({ latitude: property.latitude, longitude: property.longitude });
         setLocation(`${property.latitude.toFixed(6)}, ${property.longitude.toFixed(6)}`);
       } else if (property.address) {
-        const coords = await geocodeAddress(property.address);
+        const coords = await geocodeAddress(property.address, MAPBOX_TOKEN);
         if (!cancelled && coords) {
           setLocationCoords(coords);
           setLocation(`${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`);
@@ -463,6 +472,19 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     }
   };
 
+  const handleBack = () => {
+    if (step === 1 && guideStep > 1) {
+      // If on guide step 2, go back to guide step 1
+      setGuideStep(1);
+    } else if (step > 1) {
+      setStep(step - 1);
+      // Reset guide step when going back to step 1
+      setGuideStep(1);
+    } else {
+      navigation.goBack();
+    }
+  };
+
   const handleAddContact = () => {
     setNewContactName('');
     setNewContactPhone('');
@@ -478,19 +500,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     setShowAddContactModal(false);
     setNewContactName('');
     setNewContactPhone('');
-  };
-
-  const handleBack = () => {
-    if (step === 1 && guideStep > 1) {
-      // If on guide step 2, go back to guide step 1
-      setGuideStep(1);
-    } else if (step > 1) {
-      setStep(step - 1);
-      // Reset guide step when going back to step 1
-      setGuideStep(1);
-    } else {
-      navigation.goBack();
-    }
   };
 
   const handleSave = async () => {
@@ -736,29 +745,26 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={styles.progressBars}>
             {progressBars}
           </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.helpButton}
-              onPress={() => {
-                // TODO: Navigate to help screen or show help modal
-                Alert.alert('Help', 'Help information will be available here.');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.helpButtonText}>Need help finding it?</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.helpButton}
+            onPress={() => {
+              Alert.alert('Help', 'Help information will be available here.');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.helpButtonText}>Need help finding it?</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -791,7 +797,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
-            <View style={styles.progressIndicator} />
           </View>
 
           {/* Description Input */}
@@ -800,7 +805,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               style={[styles.textInput, styles.textInputMultiline]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Description...."
+              placeholder="Please describe how to find it..."
               placeholderTextColor="#999"
               multiline
               numberOfLines={3}
@@ -891,7 +896,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                       </TouchableOpacity>
                       {showFloorDropdown && (
                         <View style={styles.floorDropdownList}>
-                          {['B', 'L1', 'L2'].map((floorOption) => (
+                          {['B', '1', '2'].map((floorOption) => (
                             <TouchableOpacity
                               key={floorOption}
                               style={[
@@ -987,17 +992,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Action Buttons - Must be inside ScrollView */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -1412,11 +1417,10 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.step2ContentContainer}>
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
-            <View style={styles.progressIndicator} />
           </View>
 
           <View style={styles.maintenanceSection}>
@@ -1499,12 +1503,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         </View>
 
         <View style={styles.notesSquare}>
-          <Text style={styles.inputLabel}>Notes</Text>
           <TextInput
             style={[styles.textInput, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Enter notes..."
+            placeholder="Enter maintenance notes..."
             placeholderTextColor="#999"
             multiline
           />
@@ -1540,16 +1543,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             <Text style={styles.addContactText}>Add Contact</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.fixedActionButtons}>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleSave}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="checkmark" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
       </ScrollView>
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleSave}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
 
       {/* Floating Calendar Overlay */}
@@ -1673,7 +1677,7 @@ const styles = StyleSheet.create({
   step1ContentContainer: {
     padding: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 120,
     alignItems: 'center',
     flexGrow: 1,
   },
@@ -1876,6 +1880,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     maxWidth: 400,
+    marginTop: 40,
     marginBottom: 20,
   },
   fixedActionButtons: {
@@ -2081,7 +2086,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   notesInput: {
-    minHeight: 100,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   contactSection: {
@@ -2316,7 +2321,7 @@ const styles = StyleSheet.create({
   step2ContentContainer: {
     padding: 30,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 120,
     flexGrow: 1,
   },
   progressIndicatorContainer: {
@@ -2329,12 +2334,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E1E1E',
     textAlign: 'center',
-  },
-  progressIndicator: {
-    width: 289,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E0E0E0',
   },
   formSection: {
     width: '100%',
