@@ -11,15 +11,17 @@ import {
   Platform,
   Animated,
   FlatList,
+  Modal,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties } from '../services/storage';
+import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
+import { geocodeAddress } from '../utils/geocode';
 
 export default function AddEditShutoffScreen({ route, navigation }) {
   const { shutoff, type, propertyId } = route.params || {};
@@ -51,6 +53,9 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const [notes, setNotes] = useState('');
   const [contacts, setContacts] = useState([]);
   const [showContactDropdown, setShowContactDropdown] = useState(false);
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
   const [showFloorDropdown, setShowFloorDropdown] = useState(false);
   const [showFloorInput, setShowFloorInput] = useState(false);
   const [reminderId, setReminderId] = useState(null);
@@ -82,6 +87,36 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       loadShutoffData();
     }
   }, []);
+
+  // Default location to property position when creating new shutoff
+  useEffect(() => {
+    if (isEditing || locationCoords) return;
+    let cancelled = false;
+    const loadDefaultLocation = async () => {
+      let finalPropertyId = propertyId || shutoff?.propertyId;
+      if (!finalPropertyId) {
+        const properties = await getProperties();
+        if (Array.isArray(properties) && properties.length > 0) {
+          finalPropertyId = properties[0].id;
+        }
+      }
+      if (!finalPropertyId) return;
+      const property = await getProperty(finalPropertyId);
+      if (!property || cancelled) return;
+      if (property.latitude != null && property.longitude != null) {
+        setLocationCoords({ latitude: property.latitude, longitude: property.longitude });
+        setLocation(`${property.latitude.toFixed(6)}, ${property.longitude.toFixed(6)}`);
+      } else if (property.address) {
+        const coords = await geocodeAddress(property.address);
+        if (!cancelled && coords) {
+          setLocationCoords(coords);
+          setLocation(`${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`);
+        }
+      }
+    };
+    loadDefaultLocation();
+    return () => { cancelled = true; };
+  }, [isEditing, propertyId]);
 
   useEffect(() => {
     // Auto-scroll to current year when year picker is shown
@@ -426,6 +461,23 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         slideAnim.setValue(0);
       });
     }
+  };
+
+  const handleAddContact = () => {
+    setNewContactName('');
+    setNewContactPhone('');
+    setShowAddContactModal(true);
+  };
+
+  const handleConfirmAddContact = () => {
+    const name = newContactName.trim();
+    const phone = newContactPhone.trim();
+    if (name || phone) {
+      setContacts(prev => [...prev, { name: name || 'Unknown', phone: phone || '' }]);
+    }
+    setShowAddContactModal(false);
+    setNewContactName('');
+    setNewContactPhone('');
   };
 
   const handleBack = () => {
@@ -1472,16 +1524,23 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           </TouchableOpacity>
           {showContactDropdown && (
             <View style={styles.dropdownList}>
-              {/* Contact list would go here */}
-              <Text style={styles.dropdownItem}>No contacts available</Text>
+              {contacts.length > 0 ? (
+                contacts.map((c, i) => (
+                  <Text key={i} style={styles.dropdownItem}>
+                    {c.name}{c.phone ? ` - ${c.phone}` : ''}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.dropdownItem}>No contacts available</Text>
+              )}
             </View>
           )}
-          <TouchableOpacity style={styles.addContactButton}>
+          <TouchableOpacity style={styles.addContactButton} onPress={handleAddContact} activeOpacity={0.7}>
             <Ionicons name="add-circle-outline" size={24} color="#666" />
             <Text style={styles.addContactText}>Add Contact</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.actionButtons}>
+        <View style={styles.fixedActionButtons}>
             <TouchableOpacity 
               style={styles.continueButton}
               onPress={handleSave}
@@ -1520,6 +1579,56 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           </View>
         </>
       )}
+
+      {/* Add Contact Modal */}
+      <Modal
+        visible={showAddContactModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddContactModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowAddContactModal(false)}
+          />
+          <View style={styles.addContactModalContent}>
+            <Text style={styles.addContactModalTitle}>Add Contact</Text>
+            <TextInput
+              style={styles.addContactInput}
+              placeholder="Name"
+              placeholderTextColor="#999"
+              value={newContactName}
+              onChangeText={setNewContactName}
+            />
+            <TextInput
+              style={styles.addContactInput}
+              placeholder="Phone number"
+              placeholderTextColor="#999"
+              value={newContactPhone}
+              onChangeText={setNewContactPhone}
+              keyboardType="phone-pad"
+            />
+            <View style={styles.addContactModalButtons}>
+              <TouchableOpacity
+                style={styles.addContactCancelButton}
+                onPress={() => setShowAddContactModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addContactCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addContactConfirmButton}
+                onPress={handleConfirmAddContact}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addContactConfirmText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       </View>
     );
   };
@@ -1769,6 +1878,17 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     marginBottom: 20,
   },
+  fixedActionButtons: {
+    flexDirection: 'column',
+    gap: 20,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+    paddingHorizontal: 30,
+    paddingBottom: 80,
+    paddingTop: 20,
+    backgroundColor: '#fff',
+  },
   helpButton: {
     width: '100%',
     paddingVertical: 14,
@@ -2008,6 +2128,68 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  addContactModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  addContactModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E1E1E',
+    marginBottom: 20,
+  },
+  addContactInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 15,
+  },
+  addContactModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  addContactCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+  addContactCancelText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  addContactConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#1095EE',
+    alignItems: 'center',
+  },
+  addContactConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   verificationButtons: {
     flexDirection: 'row',
