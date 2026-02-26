@@ -736,29 +736,26 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={styles.progressBars}>
             {progressBars}
           </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.helpButton}
-              onPress={() => {
-                // TODO: Navigate to help screen or show help modal
-                Alert.alert('Help', 'Help information will be available here.');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.helpButtonText}>Need help finding it?</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.helpButton}
+            onPress={() => {
+              Alert.alert('Help', 'Help information will be available here.');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.helpButtonText}>Need help finding it?</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -791,7 +788,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
-            <View style={styles.progressIndicator} />
           </View>
 
           {/* Description Input */}
@@ -800,7 +796,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               style={[styles.textInput, styles.textInputMultiline]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Description...."
+              placeholder="Please describe how to find it..."
               placeholderTextColor="#999"
               multiline
               numberOfLines={3}
@@ -891,7 +887,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                       </TouchableOpacity>
                       {showFloorDropdown && (
                         <View style={styles.floorDropdownList}>
-                          {['B', 'L1', 'L2'].map((floorOption) => (
+                          {['B', '1', '2'].map((floorOption) => (
                             <TouchableOpacity
                               key={floorOption}
                               style={[
@@ -986,18 +982,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               )}
             </View>
           </View>
-
-          {/* Action Buttons - Must be inside ScrollView */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -1412,11 +1407,10 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.step2ContentContainer}>
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
-            <View style={styles.progressIndicator} />
           </View>
 
           <View style={styles.maintenanceSection}>
@@ -1499,12 +1493,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         </View>
 
         <View style={styles.notesSquare}>
-          <Text style={styles.inputLabel}>Notes</Text>
           <TextInput
             style={[styles.textInput, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Enter notes..."
+            placeholder="Enter maintenance notes..."
             placeholderTextColor="#999"
             multiline
           />
@@ -1540,17 +1533,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             <Text style={styles.addContactText}>Add Contact</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.fixedActionButtons}>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={handleSave}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="checkmark" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
       </ScrollView>
-
+        {/* Fixed Action Buttons */}
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleSave}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
       {/* Floating Calendar Overlay */}
       {showCustomCalendar && (
@@ -1673,7 +1666,7 @@ const styles = StyleSheet.create({
   step1ContentContainer: {
     padding: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 120,
     alignItems: 'center',
     flexGrow: 1,
   },
@@ -2081,7 +2074,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   notesInput: {
-    minHeight: 100,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   contactSection: {
@@ -2316,7 +2309,7 @@ const styles = StyleSheet.create({
   step2ContentContainer: {
     padding: 30,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 120,
     flexGrow: 1,
   },
   progressIndicatorContainer: {
