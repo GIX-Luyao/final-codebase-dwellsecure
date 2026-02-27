@@ -44,8 +44,6 @@ export default function ShutoffDetailScreen({ route }) {
   const hourPickerScrollRef = useRef(null);
   const minutePickerScrollRef = useRef(null);
   const [markComplete, setMarkComplete] = useState(false);
-  const [contactName, setContactName] = useState('Mark Plumber');
-  const [contactPhone, setContactPhone] = useState('123-456-7890');
   const [shutoff, setShutoff] = useState(null);
   const [reminder, setReminder] = useState(null);
   const [locationCoords, setLocationCoords] = useState(null);
@@ -59,11 +57,11 @@ export default function ShutoffDetailScreen({ route }) {
     }
   }, [shutoffId]);
 
-  // Refresh reminder data when screen comes into focus (e.g., returning from Reminders page)
+  // Refresh data when screen comes into focus (e.g., returning from AddEdit or Reminders page)
   useFocusEffect(
     React.useCallback(() => {
       if (isEditing && shutoffId) {
-        loadReminderData();
+        loadShutoffData(); // Reload full data including photos/videos
       }
     }, [shutoffId, isEditing])
   );
@@ -89,13 +87,6 @@ export default function ShutoffDetailScreen({ route }) {
           latitude: data.latitude,
           longitude: data.longitude,
         });
-      }
-      
-      // Load contacts from shutoff data
-      if (data.contacts && data.contacts.length > 0) {
-        const firstContact = data.contacts[0];
-        setContactName(firstContact.name || '');
-        setContactPhone(firstContact.phone || '');
       }
       
       // Load reminder data (will be called separately via useFocusEffect for refresh)
@@ -201,12 +192,6 @@ export default function ShutoffDetailScreen({ route }) {
       setMarkComplete(false);
       // Don't clear date/time if user has set them locally (they might be editing)
       // Only clear if there's truly no reminder and no local values
-    }
-  };
-
-  const handleEdit = () => {
-    if (shutoff) {
-      navigation.navigate('AddEditShutoff', { shutoff });
     }
   };
 
@@ -515,9 +500,13 @@ export default function ShutoffDetailScreen({ route }) {
   const renderShutoffTab = () => (
     <View style={styles.tabContent}>
       {/* Location and Photo/Video side by side */}
-      <View style={styles.locationPhotoRow}>
-        <View style={styles.locationSection}>
-          <Text style={styles.sectionLabel}>Location</Text>
+      <View style={styles.locationPhotoBlock}>
+        <View style={styles.locationPhotoLabelsRow}>
+          <View style={styles.locationLabelCell}><Text style={styles.sectionLabel}>Location</Text></View>
+          <View style={styles.photoLabelCell}><Text style={styles.sectionLabel}>Photo/Video</Text></View>
+        </View>
+        <View style={styles.locationPhotoRow}>
+          <View style={styles.locationSection}>
           <TouchableOpacity 
             style={styles.locationButton}
             onPress={() => {
@@ -547,8 +536,7 @@ export default function ShutoffDetailScreen({ route }) {
                         profile: profile.trim(),
                         role: role.trim(),
                         maintenanceDate: maintenanceDate ? maintenanceDate.toISOString() : null,
-                        contactName: contactName.trim(),
-                        contactPhone: contactPhone.trim(),
+                        contacts: shutoff?.contacts || [],
                         createdAt: isEditing ? shutoff?.createdAt : new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         type: shutoff?.type || 'gas',
@@ -578,169 +566,92 @@ export default function ShutoffDetailScreen({ route }) {
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.locationHint}>Tap to change pin location</Text>
-        </View>
+          </View>
 
         <View style={styles.photoVideoSection}>
-          <Text style={styles.sectionLabel}>Photo/Video</Text>
           <TouchableOpacity 
             style={styles.mediaContainer}
-            onPress={() => setShowMediaModal(true)}
+            onPress={() => { if (photos.length + videos.length > 0) setShowMediaModal(true); }}
             activeOpacity={0.7}
           >
             <View style={styles.mediaThumbnailGrid}>
-              {/* Left: Photo */}
-              <View style={styles.mediaThumbnailContainer}>
-                {photos.length > 0 ? (
-                  <Image source={{ uri: photos[0] }} style={styles.mediaThumbnailImage} resizeMode="cover" />
-                ) : (
-                  <View style={styles.mediaThumbnailPlaceholder}>
-                    <Ionicons name="image-outline" size={16} color="#ccc" />
-                  </View>
-                )}
-              </View>
-              
-              {/* Right: Video */}
-              <View style={styles.mediaThumbnailContainer}>
-                {videos.length > 0 ? (
-                  <>
-                    {(() => {
-                      const video = videos[0];
-                      const thumbnailUri = typeof video === 'object' && video.thumbnailUri ? video.thumbnailUri : (typeof video === 'string' ? video : video.uri);
-                      return thumbnailUri ? (
-                        <Image source={{ uri: thumbnailUri }} style={styles.mediaThumbnailImage} resizeMode="cover" />
+              {(() => {
+                const items = [
+                  ...photos.map(uri => ({ uri, isVideo: false })),
+                  ...videos.map(v => ({
+                    uri: typeof v === 'string' ? v : v.uri,
+                    thumbnailUri: typeof v === 'object' && v.thumbnailUri ? v.thumbnailUri : (typeof v === 'string' ? v : v.uri),
+                    isVideo: true,
+                  })),
+                ];
+                return [0, 1, 2, 3].map((i) => {
+                  const item = items[i];
+                  return (
+                    <View key={i} style={styles.mediaThumbnailCell}>
+                      {item ? (
+                        <>
+                          <Image
+                            source={{ uri: item.isVideo ? item.thumbnailUri : item.uri }}
+                            style={styles.mediaThumbnailImage}
+                            resizeMode="cover"
+                          />
+                          {item.isVideo && (
+                            <View style={styles.mediaThumbnailPlayOverlay}>
+                              <Ionicons name="play-circle" size={16} color="#fff" />
+                            </View>
+                          )}
+                        </>
                       ) : (
                         <View style={styles.mediaThumbnailPlaceholder}>
-                          <Ionicons name="videocam" size={16} color="#999" />
+                          <Ionicons name="image-outline" size={16} color="#ccc" />
                         </View>
-                      );
-                    })()}
-                    <View style={styles.mediaThumbnailPlayOverlay}>
-                      <Ionicons name="play-circle" size={16} color="#fff" />
+                      )}
                     </View>
-                  </>
-                ) : (
-                  <View style={styles.mediaThumbnailPlaceholder}>
-                    <Ionicons name="videocam" size={16} color="#ccc" />
-                  </View>
-                )}
-              </View>
+                  );
+                });
+              })()}
             </View>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {isEditing && shutoff?.contacts && shutoff.contacts.length > 0 && (
-        <View style={styles.formSection}>
-          <Text style={styles.sectionLabel}>Technician</Text>
-          {shutoff.contacts.map((contact, index) => (
-            <View key={index} style={styles.contactDisplayCard}>
-              <Ionicons name="person-circle-outline" size={20} color="#666" />
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactDisplayName}>
-                  {contact.name || contact.role || 'Technician'}
-                </Text>
-                {contact.phone && (
-                  <Text style={styles.contactDisplayPhone}>{contact.phone}</Text>
-                )}
-                {contact.role && (
-                  <Text style={styles.contactDisplayRole}>{contact.role}</Text>
-                )}
-              </View>
-            </View>
-          ))}
         </View>
-      )}
+      </View>
 
       <View style={styles.formSection}>
         <View style={styles.maintenanceSection}>
           <View style={styles.sectionTitleRow}>
             <Text style={styles.sectionTitle}>Maintenance Reminder</Text>
           </View>
-          <Text style={styles.optionalLabel}>Optional</Text>
-          <View style={styles.dateTimeRow}>
-            <View style={styles.dateTimeInput}>
-              <Text style={styles.inputLabel}>Date</Text>
+          <View style={styles.reminderSingleLine}>
+            <Ionicons name="calendar-outline" size={20} color={maintenanceDate ? "#1095EE" : "#999"} />
+            <Text style={[styles.reminderDateText, !maintenanceDate && styles.reminderDateTextDisabled]}>
+              {maintenanceDate && maintenanceTime
+                ? `${maintenanceDate.getFullYear()} - ${String(maintenanceDate.getMonth() + 1).padStart(2, '0')} - ${String(maintenanceDate.getDate()).padStart(2, '0')}  ${maintenanceTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                : maintenanceDate
+                  ? `${maintenanceDate.getFullYear()} - ${String(maintenanceDate.getMonth() + 1).padStart(2, '0')} - ${String(maintenanceDate.getDate()).padStart(2, '0')}`
+                  : 'No date set'}
+            </Text>
+            {(maintenanceDate && maintenanceTime && reminder) && (
               <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => {
-                  // If date is null, set to current date with 9am
-                  if (!maintenanceDate) {
-                    const newDate = new Date();
-                    newDate.setHours(9, 0, 0, 0);
-                    setMaintenanceDate(newDate);
-                    setMaintenanceTime(new Date(newDate));
-                    setMarkComplete(false); // Ensure incomplete when initializing
-                  }
-                  setShowCustomCalendar(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={styles.pickerButtonContent}>
-                  <Ionicons name="calendar-outline" size={20} color={maintenanceDate ? "#1095EE" : "#999"} />
-                  <Text style={[styles.pickerButtonText, !maintenanceDate && styles.pickerButtonTextDisabled]}>
-                    {maintenanceDate 
-                      ? maintenanceDate.toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      : 'Select date...'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.dateTimeInput}>
-              <Text style={styles.inputLabel}>Time</Text>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => {
-                  // If time is null, set to current time
-                  if (!maintenanceTime) {
-                    setMaintenanceTime(new Date());
-                  }
-                  setShowTimePicker(true);
-                }}
-                activeOpacity={0.7}
-                disabled={!maintenanceDate}
-              >
-                <View style={styles.pickerButtonContent}>
-                  <Ionicons name="time-outline" size={20} color={maintenanceDate ? "#1095EE" : "#999"} />
-                  <Text style={[styles.pickerButtonText, !maintenanceDate && styles.pickerButtonTextDisabled]}>
-                    {maintenanceTime 
-                      ? maintenanceTime.toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Select time...'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          {/* Bottom row: Reset (left) and Mark Complete (right) - Only show if date and time are set AND pickers are closed */}
-          {(maintenanceDate && maintenanceTime && !showCustomCalendar && !showTimePicker) && (
-            <View style={styles.reminderActionRow}>
-              <TouchableOpacity
-                style={styles.resetButtonSquare}
-                onPress={() => {
-                  // Just update local state, don't save to database yet
-                  setMaintenanceDate(null);
-                  setMaintenanceTime(null);
-                  setMarkComplete(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.resetButtonText}>Reset</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.markCompleteButtonSquare, markComplete && styles.markCompleteButtonActive]}
-                onPress={() => {
-                  // Just update local state, don't save to database yet
+                style={[styles.markCompleteInline, markComplete && styles.markCompleteButtonActive]}
+                onPress={async () => {
                   const newCompleteStatus = !markComplete;
                   setMarkComplete(newCompleteStatus);
+                  try {
+                    const reminderDate = new Date(maintenanceDate);
+                    reminderDate.setHours(maintenanceTime.getHours(), maintenanceTime.getMinutes(), 0, 0);
+                    const reminderToSave = {
+                      ...reminder,
+                      date: reminderDate.toISOString(),
+                      completed: newCompleteStatus,
+                      updatedAt: new Date().toISOString(),
+                    };
+                    await saveReminder(reminderToSave);
+                    setReminder(reminderToSave);
+                  } catch (error) {
+                    console.error('[ShutoffDetail] Error saving mark complete:', error);
+                    setMarkComplete(!newCompleteStatus);
+                    Alert.alert('Error', 'Failed to update reminder');
+                  }
                 }}
                 activeOpacity={0.7}
               >
@@ -749,36 +660,33 @@ export default function ShutoffDetailScreen({ route }) {
                   Mark complete
                 </Text>
               </TouchableOpacity>
+            )}
+          </View>
+          {reminder?.notes ? (
+            <View style={styles.reminderNotesBox}>
+              <Text style={styles.reminderNotesText}>{reminder.notes}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
 
       <View style={styles.formSection}>
-        <Text style={styles.sectionLabel}>Contact</Text>
+        <Text style={styles.sectionLabel}>Technician / Professional</Text>
         <View style={styles.contactCard}>
           <Ionicons name="person-circle-outline" size={24} color="#666" />
           <View style={styles.contactInfo}>
-            <TextInput
-              style={styles.contactName}
-              value={contactName}
-              onChangeText={setContactName}
-              placeholder="Contact name"
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.contactPhone}
-              value={contactPhone}
-              onChangeText={setContactPhone}
-              placeholder="Phone number"
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-            />
+            {shutoff?.contacts && shutoff.contacts.length > 0 ? (
+              <>
+                <Text style={styles.contactName}>{shutoff.contacts[0].name || 'Unknown'}</Text>
+                {shutoff.contacts[0].phone ? (
+                  <Text style={styles.contactPhone}>{shutoff.contacts[0].phone}</Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.contactNoContact}>No contact</Text>
+            )}
           </View>
         </View>
-        <TouchableOpacity style={styles.saveButtonIcon} onPress={handleSave}>
-          <Ionicons name="pencil" size={24} color="#fff" />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -1215,53 +1123,45 @@ export default function ShutoffDetailScreen({ route }) {
   
   const typeInfo = getTypeInfo();
 
-  // Get first photo for hero image
-  const heroImageUri = photos && photos.length > 0 
-    ? photos[0] 
-    : null;
-
-  // Get title: shutoff type first, then description if available
-  const getTitle = () => {
-    if (shutoff?.description) {
-      return shutoff.description;
-    }
-    return typeInfo.label;
-  };
+  // Get title: shutoff type (Gas, Electric, Water, etc.)
+  const getTitle = () => typeInfo.label;
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Header with back button */}
+        {/* Header with back button and delete */}
         <View style={styles.overviewHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={28} color="#333" />
           </TouchableOpacity>
-        </View>
-
-        {/* Hero Image Section */}
-        <View style={styles.overviewHero}>
-          {heroImageUri ? (
-            <Image source={{ uri: heroImageUri }} style={styles.heroImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="image-outline" size={40} color="#ccc" />
-            </View>
-          )}
-          <TouchableOpacity onPress={handleEdit} style={styles.editPhotoButton}>
-            <View style={styles.editPhotoButtonCircle}>
-              <Ionicons name="pencil" size={30} color="#333" />
-            </View>
+          <TouchableOpacity onPress={handleDelete} style={styles.headerDeleteButton}>
+            <Ionicons name="trash-outline" size={24} color="#ff4444" />
           </TouchableOpacity>
         </View>
 
         {/* Title */}
         <View style={styles.addressSection}>
           <Text style={styles.addressTitle}>{getTitle()}</Text>
+          <View style={styles.descriptionBox}>
+            <Text style={styles.descriptionText} numberOfLines={3} ellipsizeMode="tail">
+              {shutoff?.description || ''}
+            </Text>
+          </View>
         </View>
 
         {/* Shutoff Details */}
         {renderShutoffTab()}
       </ScrollView>
+
+      {/* Fixed Edit Button */}
+      <View style={styles.editButtonFixed}>
+        <TouchableOpacity 
+          style={styles.saveButtonIcon} 
+          onPress={() => shutoff && navigation.navigate('AddEditShutoff', { shutoff })}
+        >
+          <Ionicons name="pencil" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       {/* Media Modal */}
       <Modal
@@ -1297,17 +1197,6 @@ export default function ShutoffDetailScreen({ route }) {
                         >
                           <Image source={{ uri }} style={styles.mediaModalImage} resizeMode="cover" />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.mediaModalRemoveButton}
-                          onPress={() => {
-                            removePhoto(index);
-                            if (photos.length === 1 && videos.length === 0) {
-                              setShowMediaModal(false);
-                            }
-                          }}
-                        >
-                          <Ionicons name="trash-outline" size={20} color="#ff4444" />
-                        </TouchableOpacity>
                       </View>
                     ))}
                   </ScrollView>
@@ -1342,17 +1231,6 @@ export default function ShutoffDetailScreen({ route }) {
                               <Ionicons name="play-circle" size={40} color="#fff" />
                             </View>
                           </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.mediaModalRemoveButton}
-                            onPress={() => {
-                              removeVideo(index);
-                              if (photos.length === 0 && videos.length === 1) {
-                                setShowMediaModal(false);
-                              }
-                            }}
-                          >
-                            <Ionicons name="trash-outline" size={20} color="#ff4444" />
-                          </TouchableOpacity>
                         </View>
                       );
                     })}
@@ -1360,30 +1238,6 @@ export default function ShutoffDetailScreen({ route }) {
                 </View>
               )}
             </ScrollView>
-
-            {/* Add Buttons - Fixed at bottom */}
-            <View style={styles.mediaModalAddButtons}>
-              <TouchableOpacity 
-                style={styles.mediaModalAddButton} 
-                onPress={pickImage}
-                disabled={photos.length + videos.length >= 4}
-              >
-                <Ionicons name="image-outline" size={24} color={photos.length + videos.length >= 4 ? "#ccc" : "#1095EE"} />
-                <Text style={[styles.mediaModalAddButtonText, photos.length + videos.length >= 4 && styles.mediaModalAddButtonTextDisabled]}>
-                  Add Photo
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.mediaModalAddButton} 
-                onPress={pickVideo}
-                disabled={photos.length + videos.length >= 4}
-              >
-                <Ionicons name="videocam-outline" size={24} color={photos.length + videos.length >= 4 ? "#ccc" : "#1095EE"} />
-                <Text style={[styles.mediaModalAddButtonText, photos.length + videos.length >= 4 && styles.mediaModalAddButtonTextDisabled]}>
-                  Add Video
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>
@@ -1458,7 +1312,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Space for bottom nav
+    paddingBottom: 215, // Space for fixed edit button (135 + 50) and bottom nav
   },
   // Header styles matching AddProperty/AddEditShutoff
   overviewHeader: {
@@ -1467,39 +1321,10 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  // Hero image section
-  overviewHero: {
-    width: '100%',
-    height: 200,
-    position: 'relative',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editPhotoButton: {
-    position: 'absolute',
-    top: 6,
-    right: 31,
-    background: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-  },
-  editPhotoButtonCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(229, 229, 234, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerDeleteButton: {
+    padding: 4,
   },
   // Address section
   addressSection: {
@@ -1513,6 +1338,26 @@ const styles = StyleSheet.create({
     color: '#1E1E1E',
     textAlign: 'center',
   },
+  descriptionBox: {
+    marginTop: 12,
+    width: '100%',
+    height: 80,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    paddingLeft: 20,
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'left',
+    textAlignVertical: 'top',
+    lineHeight: 22,
+  },
   tabContent: {
     flex: 1,
     paddingHorizontal: 20,
@@ -1523,16 +1368,31 @@ const styles = StyleSheet.create({
   formSection: {
     marginTop: 15,
   },
+  locationPhotoBlock: {
+    marginTop: 15,
+  },
+  locationPhotoLabelsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  locationLabelCell: {
+    flex: 1,
+  },
+  photoLabelCell: {
+    flex: 1,
+  },
   locationPhotoRow: {
     flexDirection: 'row',
     gap: 16,
-    marginTop: 15,
+    alignItems: 'flex-start',
   },
   locationSection: {
     flex: 1,
   },
   photoVideoSection: {
     flex: 1,
+    marginTop: -8,
   },
   sectionLabel: {
     fontSize: 18,
@@ -1546,9 +1406,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1095EE',
-    borderStyle: 'dashed',
     overflow: 'hidden',
   },
   locationHint: {
@@ -1628,26 +1485,21 @@ const styles = StyleSheet.create({
     color: '#AEAEB2',
     marginTop: 4,
   },
-  // Media container with dashed border
   mediaContainer: {
-    borderWidth: 2,
-    borderColor: '#1095EE',
-    borderStyle: 'dashed',
     borderRadius: 15,
     padding: 8,
-    aspectRatio: 220 / 152,
+    aspectRatio: 4 / 3,
     overflow: 'hidden',
   },
   mediaThumbnailGrid: {
     flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    height: '100%',
-  },
-  mediaThumbnailContainer: {
+    flexWrap: 'wrap',
     flex: 1,
-    aspectRatio: 1,
+    gap: 4,
+  },
+  mediaThumbnailCell: {
+    width: '48%',
+    aspectRatio: 4 / 3,
     position: 'relative',
     borderRadius: 6,
     overflow: 'hidden',
@@ -1674,7 +1526,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
+    borderRadius: 6,
   },
   // Media Modal
   mediaModalOverlay: {
@@ -2118,6 +1970,44 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     minHeight: 50,
   },
+  reminderSingleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  reminderDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    flex: 1,
+  },
+  reminderDateTextDisabled: {
+    color: '#999',
+    fontWeight: '400',
+  },
+  markCompleteInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+  },
+  reminderNotesBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  reminderNotesText: {
+    fontSize: 15,
+    color: '#64748b',
+    lineHeight: 22,
+  },
   pickerButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2138,6 +2028,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   maintenanceSection: {
+    marginTop: 20,
     marginBottom: 20,
   },
   sectionTitleRow: {
@@ -2299,6 +2190,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  contactNoContact: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+  },
   displayText: {
     fontSize: 16,
     color: '#333',
@@ -2328,6 +2224,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontStyle: 'italic',
+  },
+  editButtonFixed: {
+    position: 'absolute',
+    bottom: 135,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveButtonIcon: {
     width: 120,
