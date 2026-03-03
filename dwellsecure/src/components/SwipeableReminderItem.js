@@ -8,9 +8,9 @@ const SNAP_THRESHOLD = -40; // snap open if dragged past this point
 const getReminderColors = (reminder) => {
   const type = reminder.type || 'shutoff';
   if (type === 'utility') {
-    return { backgroundColor: '#CBE4F4', iconColor: '#FAD157' };
+    return { backgroundColor: '#CBE4F4', iconColor: '#FAD157', completeButtonColor: '#E1F3FF' };
   }
-  return { backgroundColor: '#CBE4F4', iconColor: '#F8A459' };
+  return { backgroundColor: '#76C8FF', iconColor: '#F8A459', completeButtonColor: '#ADE0FF' };
 };
 
 export default function SwipeableReminderItem({ reminder, onPress, onComplete, completed = false }) {
@@ -92,7 +92,7 @@ export default function SwipeableReminderItem({ reminder, onPress, onComplete, c
   return (
     <View style={styles.wrapper}>
       {/* Complete button — always rendered behind the card */}
-      <TouchableOpacity style={styles.completeButton} onPress={handleComplete} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.completeButton, { backgroundColor: colors.completeButtonColor }]} onPress={handleComplete} activeOpacity={0.8}>
         <Ionicons name="checkmark" size={30} color="#8E8E93" />
       </TouchableOpacity>
 
@@ -122,12 +122,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 12,
     overflow: 'hidden',
-    borderRadius: 24,
+    borderRadius: 20,
   },
   reminderItem: {
     width: '100%',
     minHeight: 85,
-    borderRadius: 24,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
@@ -170,7 +170,6 @@ const styles = StyleSheet.create({
     width: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E1F3FF',
     borderRadius: 36,
   },
 });
