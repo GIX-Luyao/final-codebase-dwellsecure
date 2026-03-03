@@ -789,8 +789,8 @@ export default function UtilityDetailScreen({ route }) {
     );
   };
 
-  // Get title: utility name
-  const getTitle = () => utility?.name || 'Utility';
+  // Get title: prefer user-entered title, fall back to name or default
+  const getTitle = () => utility?.title || utility?.name || 'Utility';
 
   const handleDelete = () => {
     Alert.alert(
