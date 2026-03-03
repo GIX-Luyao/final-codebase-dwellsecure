@@ -803,6 +803,20 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             />
           </View>
 
+          {/* Voice Note Button */}
+          <View style={styles.voiceNoteContainer}>
+            <TouchableOpacity
+              style={styles.voiceNoteButton}
+              onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available soon.')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="mic" size={28} color="#1095EE" />
+            </TouchableOpacity>
+            <Text style={styles.voiceNoteHint}>
+              Record a voice note about the location & usage — we'll write the description for you.
+            </Text>
+          </View>
+
           {/* Location and Floor Row */}
           <View style={styles.formSection}>
             <View style={styles.sectionRow}>
@@ -1422,12 +1436,13 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 if (maintenanceDate) {
                   setMaintenanceDate(null);
                   setMaintenanceTime(null);
+                  setNotes('');
                 }
               }}
               activeOpacity={0.7}
               disabled={!maintenanceDate}
             >
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <Text style={styles.resetButtonText}>Clear</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.optionalLabel}>Optional</Text>
@@ -1504,7 +1519,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         </View>
 
         <View style={styles.contactSection}>
-          <Text style={styles.sectionTitle}>Contact</Text>
+          <Text style={styles.sectionTitle}>Technician / Professional</Text>
           <Text style={styles.optionalLabel}>Optional</Text>
           <TouchableOpacity
             style={styles.contactDropdown}
@@ -1922,9 +1937,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 15,
-    marginBottom: 35,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  voiceNoteContainer: {
+    alignItems: 'center',
+    marginBottom: 28,
+    gap: 8,
+  },
+  voiceNoteButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E1F3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1095EE',
+  },
+  voiceNoteHint: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 17,
   },
   inputLabel: {
     fontSize: 14,
