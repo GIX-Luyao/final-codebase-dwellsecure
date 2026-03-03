@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  Keyboard,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -692,7 +693,12 @@ export default function ShutoffDetailScreen({ route }) {
   );
 
   const renderAddPeopleTab = () => (
-    <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentContainer}>
+    <ScrollView
+      style={styles.tabContent}
+      contentContainerStyle={styles.tabContentContainer}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       <View style={styles.formSection}>
         <Text style={styles.sectionLabel}>Profile</Text>
         <View style={styles.profileRow}>
@@ -705,6 +711,9 @@ export default function ShutoffDetailScreen({ route }) {
             onChangeText={setProfile}
             placeholder="Enter name"
             placeholderTextColor="#999"
+            returnKeyType="done"
+            blurOnSubmit={true}
+            onSubmitEditing={() => Keyboard.dismiss()}
           />
         </View>
       </View>
@@ -719,6 +728,9 @@ export default function ShutoffDetailScreen({ route }) {
             placeholder="Enter role"
             placeholderTextColor="#999"
             multiline
+            returnKeyType="done"
+            blurOnSubmit={true}
+            onSubmitEditing={() => Keyboard.dismiss()}
           />
         </View>
       </View>
