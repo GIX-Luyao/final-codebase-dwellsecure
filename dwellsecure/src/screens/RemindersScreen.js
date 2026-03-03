@@ -60,10 +60,14 @@ export default function RemindersScreen() {
 
   const handleReminderPress = (reminder) => {
     if (reminder.type === 'shutoff' && reminder.shutoffId) {
-      // ShutoffDetail lives inside Property tab (PropertyStack); use nested navigate
       navigation.navigate('Property', {
         screen: 'ShutoffDetail',
         params: { shutoffId: reminder.shutoffId },
+      });
+    } else if (reminder.type === 'utility' && reminder.utilityId) {
+      navigation.navigate('Property', {
+        screen: 'UtilityDetail',
+        params: { utilityId: reminder.utilityId },
       });
     }
   };
@@ -93,7 +97,7 @@ export default function RemindersScreen() {
         <Text style={styles.headerTitle}>Reminders</Text>
         <Text style={styles.subtitle}>Check all your upcoming alerts</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false} disableScrollViewPanResponder>
         {reminders.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={56} color={colors.textMuted} />
