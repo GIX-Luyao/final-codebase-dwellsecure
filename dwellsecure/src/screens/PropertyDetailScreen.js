@@ -133,7 +133,9 @@ export default function PropertyDetailScreen({ route }) {
             </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>My Home</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {getStreetAddress(property) || 'My Home'}
+            </Text>
           </View>
           <View style={[styles.headerSide, styles.headerActions]}>
             <TouchableOpacity
@@ -167,11 +169,6 @@ export default function PropertyDetailScreen({ route }) {
                   <Ionicons name="image-outline" size={52} color="#ccc" />
                 </View>
               )}
-              <View style={styles.imageOverlay} pointerEvents="none">
-                <Text style={styles.imageOverlayText} numberOfLines={2}>
-                  {addressText}
-                </Text>
-              </View>
             </View>
           </TouchableOpacity>
         </View>
@@ -182,61 +179,127 @@ export default function PropertyDetailScreen({ route }) {
           </View>
           <View style={styles.utilitiesShutoffsRowWrap}>
             <View style={styles.utilitiesShutoffsRow}>
-              {utilityTypes.map((t) => {
-                const utility = findUtilityForType(t.key);
-                const firstPhoto =
-                  utility?.photos && Array.isArray(utility.photos) && utility.photos.length > 0 ? utility.photos[0] : null;
+              {[
+                { type: 'gas', icon: 'flame-outline', label: 'Gas' },
+                { type: 'electric', icon: 'flash-outline', label: 'Electricity' },
+                { type: 'water', icon: 'water-outline', label: 'Water' },
+              ].map(({ type, icon, label }) => {
+                const shutoff = Array.isArray(shutoffs)
+                  ? shutoffs.find(s => {
+                      const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
+                      return normalizedType === type;
+                    })
+                  : null;
+                const firstPhoto = shutoff?.photos && Array.isArray(shutoff.photos) && shutoff.photos.length > 0
+                  ? shutoff.photos[0]
+                  : null;
 
                 return (
-                  <TouchableOpacity
-                    key={t.key}
-                    style={styles.utilityShutoffColumn}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (utility?.id) {
-                        navigation.navigate('UtilityDetail', { utilityId: utility.id });
-                        return;
-                      }
-                      navigation.navigate('AddEditUtility', {
-                        utility: null,
-                        propertyId,
-                        presetDescription: t.label,
-                      });
-                    }}
-                  >
-                    <View style={styles.utilityShutoffTop}>
-                      <View style={styles.utilityShutoffIconWrap}>
-                        <Ionicons name={t.icon} size={20} color={colors.text} />
-                      </View>
-                      <Text style={styles.utilityShutoffTitle}>{t.label}</Text>
-                      <Text style={styles.utilityShutoffSubtitle}>{utility?.id ? 'View details' : 'Tap to add'}</Text>
-                    </View>
-                    <View style={styles.utilityShutoffBox}>
-                      {firstPhoto ? (
-                        <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
-                      ) : (
-                        <View style={styles.utilityShutoffBoxPlaceholder}>
-                          <Text style={styles.utilityShutoffAddText}>Add</Text>
-                          <View style={styles.utilityShutoffAddCircle}>
-                            <Ionicons name="add" size={16} color="#1095EE" />
-                          </View>
+                  <View key={type} style={styles.utilityShutoffColumnWrap}>
+                    <Text style={styles.utilityShutoffLabel}>{label}</Text>
+                    <TouchableOpacity
+                      style={styles.utilityShutoffColumn}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        if (shutoff?.id) {
+                          navigation.navigate('ShutoffDetail', { shutoffId: shutoff.id });
+                          return;
+                        }
+                        navigation.navigate('AddEditShutoff', {
+                          shutoff: null,
+                          type,
+                          propertyId,
+                        });
+                      }}
+                    >
+                      <View style={styles.utilityShutoffTop}>
+                        <View style={styles.utilityShutoffIconWrap}>
+                          <Ionicons name={icon} size={20} color={colors.text} />
                         </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
+                        {shutoff?.id && (
+                          <Text style={styles.utilityShutoffSubtitle}>View details</Text>
+                        )}
+                      </View>
+                      <View style={styles.utilityShutoffBox}>
+                        {firstPhoto ? (
+                          <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
+                        ) : !shutoff?.id ? (
+                          <View style={styles.utilityShutoffBoxPlaceholder}>
+                            <Text style={styles.utilityShutoffAddText}>Add</Text>
+                            <View style={styles.utilityShutoffAddCircle}>
+                              <Ionicons name="add" size={16} color="#1095EE" />
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </View>
-            <TouchableOpacity
-              style={styles.addUtilityShutoffButton}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate('AddEditUtility', { utility: null, propertyId })
-              }
-            >
-              <Ionicons name="add-circle-outline" size={20} color={colors.text} />
-              <Text style={styles.addUtilityShutoffButtonText}>Add another utility shutoff</Text>
-            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Other Utilities</Text>
+          </View>
+          <View style={styles.utilitiesShutoffsRowWrap}>
+            <View style={styles.otherUtilitiesRow}>
+              {utilities.map((utility) => {
+                const firstPhoto =
+                  utility?.photos && Array.isArray(utility.photos) && utility.photos.length > 0
+                    ? utility.photos[0]
+                    : null;
+                return (
+                  <View key={utility.id} style={styles.otherUtilityItemWrap}>
+                    <TouchableOpacity
+                      style={styles.utilityShutoffColumn}
+                      activeOpacity={0.8}
+                      onPress={() => navigation.navigate('UtilityDetail', { utilityId: utility.id })}
+                    >
+                      <View style={styles.utilityShutoffTop}>
+                        <View style={styles.utilityShutoffIconWrap}>
+                          <Ionicons
+                            name={utility?.utilityIcon || 'apps-outline'}
+                            size={20}
+                            color={utility?.utilityIcon ? '#1095EE' : colors.textSecondary || '#999'}
+                          />
+                        </View>
+                        <Text style={styles.utilityShutoffSubtitle}>View details</Text>
+                      </View>
+                      <View style={styles.utilityShutoffBox}>
+                        {firstPhoto && (
+                          <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              {/* Add button card */}
+              <View style={styles.otherUtilityItemWrap}>
+                <TouchableOpacity
+                  style={styles.utilityShutoffColumn}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('AddEditUtility', { utility: null, propertyId })}
+                >
+                  <View style={styles.utilityShutoffTop}>
+                    <View style={styles.utilityShutoffIconWrap}>
+                      <Ionicons name="apps-outline" size={20} color={colors.textSecondary || '#999'} />
+                    </View>
+                  </View>
+                  <View style={styles.utilityShutoffBox}>
+                    <View style={[styles.utilityShutoffBoxPlaceholder, { marginTop: -20 }]}>
+                      <Text style={styles.utilityShutoffAddText}>Add</Text>
+                      <View style={styles.utilityShutoffAddCircle}>
+                        <Ionicons name="add" size={16} color="#1095EE" />
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -273,80 +336,6 @@ export default function PropertyDetailScreen({ route }) {
                 <Ionicons name="add" size={30} color="#1095EE" />
               </View>
               <Text style={styles.addPersonText}>Add Person</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Utility Equipments</Text>
-          </View>
-          <View style={styles.utilitiesShutoffsRowWrap}>
-            <View style={styles.utilitiesShutoffsRow}>
-              {[
-                { type: 'gas', icon: 'flame-outline', label: 'Gas' },
-                { type: 'electric', icon: 'flash-outline', label: 'Electricity' },
-                { type: 'water', icon: 'water-outline', label: 'Water' },
-              ].map(({ type, icon, label }) => {
-                const shutoff = Array.isArray(shutoffs)
-                  ? shutoffs.find(s => {
-                      const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
-                      return normalizedType === type;
-                    })
-                  : null;
-                const firstPhoto = shutoff?.photos && Array.isArray(shutoff.photos) && shutoff.photos.length > 0
-                  ? shutoff.photos[0]
-                  : null;
-
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.utilityShutoffColumn}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (shutoff?.id) {
-                        navigation.navigate('ShutoffDetail', { shutoffId: shutoff.id });
-                        return;
-                      }
-                      navigation.navigate('AddEditShutoff', {
-                        shutoff: null,
-                        type,
-                        propertyId,
-                      });
-                    }}
-                  >
-                    <View style={styles.utilityShutoffTop}>
-                      <View style={styles.utilityShutoffIconWrap}>
-                        <Ionicons name={icon} size={20} color={colors.text} />
-                      </View>
-                      <Text style={styles.utilityShutoffTitle}>{label}</Text>
-                      <Text style={styles.utilityShutoffSubtitle}>{shutoff?.id ? 'View details' : 'Tap to add'}</Text>
-                    </View>
-                    <View style={styles.utilityShutoffBox}>
-                      {firstPhoto ? (
-                        <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
-                      ) : (
-                        <View style={styles.utilityShutoffBoxPlaceholder}>
-                          <Text style={styles.utilityShutoffAddText}>Add</Text>
-                          <View style={styles.utilityShutoffAddCircle}>
-                            <Ionicons name="add" size={16} color="#1095EE" />
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity
-              style={styles.addUtilityShutoffButton}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate('AddEditShutoff', { shutoff: null, type: null, propertyId })
-              }
-            >
-              <Ionicons name="add-circle-outline" size={20} color={colors.text} />
-              <Text style={styles.addUtilityShutoffButtonText}>Add another utility equipment</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -419,7 +408,7 @@ const styles = StyleSheet.create({
   },
   propertyImageWrap: {
     width: '100%',
-    height: 120,
+    aspectRatio: 2,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#e0e0e0',
@@ -431,6 +420,7 @@ const styles = StyleSheet.create({
   },
   placeholderImage: {
     width: '100%',
+    height: '100%',
     backgroundColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -495,9 +485,32 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 14,
   },
-  utilityShutoffColumn: {
+  otherUtilitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  otherUtilityItemWrap: {
+    flexBasis: '30%',
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: '32%',
+    gap: 6,
+  },
+  utilityShutoffColumnWrap: {
     flex: 1,
-    marginHorizontal: 4,
+    gap: 6,
+  },
+  utilityShutoffLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  utilityShutoffColumn: {
+    width: '100%',
+    aspectRatio: 1,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border || '#ddd',
@@ -519,6 +532,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.border,
+    marginTop: 10,
     marginBottom: 10,
   },
   utilityShutoffTitle: {
@@ -527,7 +541,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   utilityShutoffSubtitle: {
-    marginTop: 4,
+    marginTop: 9,
     fontSize: 12,
     color: colors.textSecondary || '#666',
   },
@@ -552,6 +566,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    marginTop: -20,
   },
   utilityShutoffAddText: {
     fontSize: 14,
