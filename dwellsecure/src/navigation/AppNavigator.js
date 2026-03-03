@@ -329,7 +329,11 @@ function MainStack() {
           accessibilityLabel="Open emergency mode"
           accessible={true}
         >
-          <Ionicons name="alert" size={28} color="#fff" />
+          <Image
+            source={require('../../assets/emergency icon.png')}
+            style={styles.emergencyFabIcon}
+            resizeMode="contain"
+          />
         </View>
       </Animated.View>
 
@@ -572,6 +576,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.fab,
+  },
+  emergencyFabIcon: {
+    width: 42,
+    height: 42,
+    marginBottom: 2,
   },
   modalOverlay: {
     flex: 1,

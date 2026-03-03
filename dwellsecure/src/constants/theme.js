@@ -20,7 +20,7 @@ export const colors = {
   successLight: '#dcfce7',
   warning: '#ea580c',
   warningLight: '#fff7ed',
-  emergency: '#b91c1c',
+  emergency: '#CA4B4B',
   emergencyLight: '#fef2f2',
   white: '#ffffff',
   black: '#000000',

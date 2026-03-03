@@ -4,23 +4,27 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   Linking,
   Platform,
   SafeAreaView,
+  ImageBackground,
 } from 'react-native';
+
+const ITEM_HEIGHT = 120;
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getProperties, getShutoffs } from '../services/storage';
 import { setAppMode, NORMAL_MODE, EMERGENCY_MODE } from '../services/modeService';
 
 export default function EmergencyModeScreen({ navigation }) {
-  const [step, setStep] = useState(0); // 0: choose shutoff, 1: instructions, 2: confirmation, 3: call 911
+  const [step, setStep] = useState(0); // -1: select property, 0: choose shutoff, 1: instructions, 2: confirmation, 3: call 911, 4: success
   const [selectedShutoffType, setSelectedShutoffType] = useState(null);
   const [selectedShutoff, setSelectedShutoff] = useState(null);
   const [currentInstructionIndex, setCurrentInstructionIndex] = useState(0);
   const [properties, setProperties] = useState([]);
   const [shutoffs, setShutoffs] = useState([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const scrollViewRef = useRef(null);
 
@@ -50,8 +54,16 @@ export default function EmergencyModeScreen({ navigation }) {
   const loadData = async () => {
     const props = await getProperties();
     const shuts = await getShutoffs();
-    setProperties(props);
-    setShutoffs(shuts);
+    setProperties(Array.isArray(props) ? props : []);
+    setShutoffs(Array.isArray(shuts) ? shuts : []);
+
+    // Auto-select property if only one exists, otherwise show property selection
+    if (Array.isArray(props) && props.length === 1) {
+      setSelectedPropertyId(props[0].id);
+      setStep(0);
+    } else if (Array.isArray(props) && props.length > 1) {
+      setStep(-1);
+    }
   };
 
   const getShutoffTypeLabel = (type) => {
@@ -163,65 +175,45 @@ export default function EmergencyModeScreen({ navigation }) {
   };
 
   const handleClose = async () => {
-    // SYSTEM BEHAVIOR: Reset to Normal Mode when exiting Emergency Mode
     await setAppMode(NORMAL_MODE);
     setStep(0);
     setSelectedShutoffType(null);
     setSelectedShutoff(null);
+    setSelectedPropertyId(null);
     setCurrentInstructionIndex(0);
     setIsConfirmed(false);
     navigation.goBack();
   };
 
   const handleSelectShutoff = (type) => {
-    // SYSTEM BEHAVIOR: Emergency Mode retrieval returns only most relevant per type
-    // Find shutoff of this type (getShutoffs already filters to most relevant per type in Emergency Mode)
     const shutoff = shutoffs.find(s => {
-      // Normalize type for comparison
       const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
-      return normalizedType === type;
+      const matchesType = normalizedType === type;
+      const matchesProperty = selectedPropertyId ? s.propertyId === selectedPropertyId : true;
+      return matchesType && matchesProperty;
     });
     setSelectedShutoffType(type);
     setSelectedShutoff(shutoff || null);
-    setStep(1); // Go to instructions
+    setStep(1);
     setCurrentInstructionIndex(0);
   };
 
   const handleNextInstruction = () => {
     const instructions = getInstructions();
     if (currentInstructionIndex < instructions.length - 1) {
-      setCurrentInstructionIndex(currentInstructionIndex + 1);
-      // Scroll to next instruction
-      setTimeout(() => {
-        if (scrollViewRef.current) {
-          const itemHeight = 140;
-          const scrollPosition = (currentInstructionIndex + 1) * itemHeight;
-          scrollViewRef.current.scrollTo({
-            y: scrollPosition,
-            animated: true,
-          });
-        }
-      }, 100);
+      const newIndex = currentInstructionIndex + 1;
+      setCurrentInstructionIndex(newIndex);
+      scrollViewRef.current?.scrollToOffset({ offset: newIndex * ITEM_HEIGHT, animated: true });
     } else {
-      // All instructions complete, go to confirmation
       setStep(2);
     }
   };
 
   const handlePreviousInstruction = () => {
     if (currentInstructionIndex > 0) {
-      setCurrentInstructionIndex(currentInstructionIndex - 1);
-      // Scroll to previous instruction
-      setTimeout(() => {
-        if (scrollViewRef.current) {
-          const itemHeight = 140;
-          const scrollPosition = (currentInstructionIndex - 1) * itemHeight;
-          scrollViewRef.current.scrollTo({
-            y: scrollPosition,
-            animated: true,
-          });
-        }
-      }, 100);
+      const newIndex = currentInstructionIndex - 1;
+      setCurrentInstructionIndex(newIndex);
+      scrollViewRef.current?.scrollToOffset({ offset: newIndex * ITEM_HEIGHT, animated: true });
     }
   };
 
@@ -253,9 +245,26 @@ export default function EmergencyModeScreen({ navigation }) {
     Linking.openURL(url).catch(err => console.error('Error calling 911:', err));
   };
 
+  const handleBack = () => {
+    // On instructions (step 1), go back to shutoff selection
+    if (step === 1) {
+      setStep(0);
+      setSelectedShutoffType(null);
+      setSelectedShutoff(null);
+      setCurrentInstructionIndex(0);
+      return;
+    }
+    // On shutoff selection (step 0), go back to property selection if multiple properties exist
+    if (step === 0 && properties.length > 1) {
+      setStep(-1);
+      return;
+    }
+    handleClose();
+  };
+
   const renderHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+      <TouchableOpacity onPress={handleBack} style={styles.closeButton}>
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Emergency mode</Text>
@@ -275,6 +284,49 @@ export default function EmergencyModeScreen({ navigation }) {
     </View>
   );
 
+  // Screen -1: Select property
+  const renderPropertySelection = () => {
+    return (
+      <View style={styles.content}>
+        <Text style={styles.questionText}>Which property do you need help with?</Text>
+        <View style={styles.utilitiesContainer}>
+          {properties.map((property) => {
+            const streetAddress = property.addressLine1
+              ? property.addressLine1.trim()
+              : property.address
+                ? property.address.split(',')[0].trim()
+                : 'Unknown Property';
+            const isSelected = selectedPropertyId === property.id;
+            return (
+              <TouchableOpacity
+                key={property.id}
+                style={[styles.propertyCard, isSelected && styles.selectedCard]}
+                onPress={() => {
+                  setSelectedPropertyId(property.id);
+                  setStep(0);
+                }}
+                activeOpacity={0.8}
+              >
+                <ImageBackground
+                  source={property.imageUri ? { uri: property.imageUri } : null}
+                  style={styles.propertyCardBg}
+                  imageStyle={styles.propertyCardBgImage}
+                >
+                  <View style={styles.propertyCardOverlay}>
+                    {!property.imageUri && (
+                      <Ionicons name="home" size={36} color="#fff" style={{ marginBottom: 8 }} />
+                    )}
+                    <Text style={styles.propertyCardLabel}>{streetAddress}</Text>
+                  </View>
+                </ImageBackground>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
   // Screen 0: Choose shutoff type
   const renderChooseShutoff = () => {
     // SYSTEM BEHAVIOR: Always show all 3 utility types, even if no records exist
@@ -284,11 +336,12 @@ export default function EmergencyModeScreen({ navigation }) {
       { type: 'water', label: 'Water', icon: 'water-outline' },
     ];
 
-    // Get shutoff info for each type
     const getShutoffForType = (type) => {
       return shutoffs.find(s => {
         const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
-        return normalizedType === type;
+        const matchesType = normalizedType === type;
+        const matchesProperty = selectedPropertyId ? s.propertyId === selectedPropertyId : true;
+        return matchesType && matchesProperty;
       });
     };
 
@@ -319,68 +372,84 @@ export default function EmergencyModeScreen({ navigation }) {
     );
   };
 
-  // Screen 1: Instructions with scrolling and highlighting
+  // Screen 1: Instructions — snap-scroll drum-roll window
   const renderInstructions = () => {
     const instructions = getInstructions();
     const title = `To locate your ${getShutoffTypeLabel(selectedShutoffType).toLowerCase()} shutoff:`;
+    const isLast = currentInstructionIndex === instructions.length - 1;
 
     return (
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsTitle}>{title}</Text>
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.instructionsScroll}
-          contentContainerStyle={styles.instructionsContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {instructions.map((instruction, index) => {
-            const isActive = index === currentInstructionIndex;
-            return (
-              <View key={index} style={styles.instructionStepContainer}>
-                {index > 0 && (
-                  <View style={[styles.instructionConnector, isActive && styles.connectorActive]} />
-                )}
-                <View
-                  style={[
-                    styles.instructionStep,
-                    isActive && styles.instructionStepActive,
-                  ]}
-                >
+
+        {/* Fixed highlight window with scrolling drum-roll list */}
+        <View style={styles.instructionWindowWrap}>
+          {/* Dark highlight frame — sits behind the list at the center slot */}
+          <View style={styles.instructionWindowFrame} pointerEvents="none" />
+
+          <FlatList
+            ref={scrollViewRef}
+            data={instructions}
+            keyExtractor={(_, i) => `step-${i}`}
+            renderItem={({ item, index }) => {
+              const isActive = index === currentInstructionIndex;
+              return (
+                <View style={styles.instructionSnapItem}>
                   <Text
                     style={[
-                      styles.instructionText,
-                      isActive && styles.instructionTextActive,
+                      styles.instructionSnapText,
+                      isActive ? styles.instructionSnapTextActive : styles.instructionSnapTextDim,
                     ]}
+                    numberOfLines={3}
                   >
-                    {instruction}
+                    {item}
                   </Text>
                 </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-        <View style={styles.instructionButtons}>
-          <TouchableOpacity
-            style={[styles.navButton, currentInstructionIndex === 0 && styles.navButtonDisabled]}
-            onPress={handlePreviousInstruction}
-            disabled={currentInstructionIndex === 0}
-          >
-            <Ionicons name="chevron-back" size={24} color={currentInstructionIndex === 0 ? "#999" : "#333"} />
-          </TouchableOpacity>
-          <Text style={styles.stepIndicator}>
-            {currentInstructionIndex + 1} / {instructions.length}
-          </Text>
-          <TouchableOpacity
-            style={[styles.navButton, currentInstructionIndex === instructions.length - 1 && styles.navButtonComplete]}
-            onPress={handleNextInstruction}
-          >
-            {currentInstructionIndex === instructions.length - 1 ? (
-              <Ionicons name="checkmark" size={24} color="#333" />
-            ) : (
-              <Ionicons name="chevron-forward" size={24} color="#333" />
-            )}
-          </TouchableOpacity>
+              );
+            }}
+            snapToInterval={ITEM_HEIGHT}
+            decelerationRate="fast"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: ITEM_HEIGHT }}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+              setCurrentInstructionIndex(Math.max(0, Math.min(idx, instructions.length - 1)));
+            }}
+            onScrollEndDrag={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+              setCurrentInstructionIndex(Math.max(0, Math.min(idx, instructions.length - 1)));
+            }}
+            getItemLayout={(_, index) => ({
+              length: ITEM_HEIGHT,
+              offset: ITEM_HEIGHT * index,
+              index,
+            })}
+          />
+
         </View>
+
+        {/* Step counter — bottom-right of window, 10px below */}
+        <Text style={styles.snapStepIndicator}>
+          {currentInstructionIndex + 1} / {instructions.length}
+        </Text>
+
+        {/* Tap zone — from below window to top of Call 911 bar */}
+        <TouchableOpacity
+          style={styles.tapNextZone}
+          onPress={handleNextInstruction}
+          activeOpacity={0.6}
+        >
+          {isLast && (
+            <View style={styles.foundItWrap}>
+              <Text style={styles.tapNextText}>I've found it</Text>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={22}
+                color="rgba(255,255,255,0.75)"
+              />
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     );
   };
@@ -464,6 +533,7 @@ export default function EmergencyModeScreen({ navigation }) {
   };
 
   const renderContent = () => {
+    if (step === -1) return renderPropertySelection();
     if (step === 0) return renderChooseShutoff();
     if (step === 1) return renderInstructions();
     if (step === 2) return renderConfirmation();
@@ -532,6 +602,37 @@ const styles = StyleSheet.create({
     gap: 15,
     width: '100%',
   },
+  propertyCard: {
+    width: '100%',
+    height: 150,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  propertyCardBg: {
+    flex: 1,
+    backgroundColor: 'rgba(180,60,60,0.6)',
+  },
+  propertyCardBgImage: {
+    borderRadius: 18,
+  },
+  propertyCardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  propertyCardLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
   utilityCard: {
     backgroundColor: 'transparent',
     borderRadius: 20,
@@ -562,85 +663,95 @@ const styles = StyleSheet.create({
   },
   instructionsContainer: {
     flex: 1,
-    paddingBottom: 70, // Space for fixed call 911 button
+    paddingBottom: 70,
   },
   instructionsTitle: {
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 30,
-    paddingHorizontal: 20,
-  },
-  instructionsScroll: {
-    flex: 1,
-  },
-  instructionsContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-  },
-  instructionStepContainer: {
-    position: 'relative',
     marginBottom: 20,
-  },
-  instructionConnector: {
-    position: 'absolute',
-    left: 30,
-    top: -20,
-    width: 3,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  connectorActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  instructionStep: {
-    backgroundColor: 'transparent',
-    borderRadius: 20,
-    padding: 20,
-    minHeight: 100,
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  instructionStepActive: {
-    backgroundColor: '#8B0000',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  instructionText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    paddingLeft: 60,
-  },
-  instructionTextActive: {
-    color: '#FFFFFF',
-  },
-  instructionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 10,
   },
-  navButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Snap window
+  instructionWindowWrap: {
+    height: ITEM_HEIGHT * 3,
+    marginHorizontal: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    borderRadius: 20,
+  },
+  instructionWindowFrame: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: ITEM_HEIGHT,
+    height: ITEM_HEIGHT,
+    backgroundColor: 'rgba(90, 10, 10, 0.45)',
+    borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#E8E8E8',
+    borderColor: 'rgba(255,255,255,0.7)',
   },
-  navButtonDisabled: {
-    opacity: 0.5,
+  instructionSnapItem: {
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  navButtonComplete: {
-    backgroundColor: '#fff',
-  },
-  stepIndicator: {
-    fontSize: 16,
+  instructionSnapText: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#fff',
+    lineHeight: 32,
+  },
+  instructionSnapTextActive: {},
+  instructionSnapTextDim: {
+    opacity: 0.85,
+  },
+  instructionFadeTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    backgroundColor: '#CA4B4B',
+    opacity: 0.55,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  instructionFadeBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    backgroundColor: '#CA4B4B',
+    opacity: 0.55,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  snapStepIndicator: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+    letterSpacing: 1,
+    alignSelf: 'flex-end',
+    marginRight: 30,
+    marginTop: -110,
+  },
+  tapNextZone: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 0,
+    paddingTop: 24,
+  },
+  foundItWrap: {
+    alignItems: 'center',
+    marginTop: 150,
+    gap: 6,
+  },
+  tapNextText: {
+    fontSize: 20,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
   },
   confirmationContainer: {

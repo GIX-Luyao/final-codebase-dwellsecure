@@ -26,6 +26,9 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   const isEditing = !!utility;
 
   const [step, setStep] = useState(2); // Start from step 2
+  const [title, setTitle] = useState('');
+  const [utilityIcon, setUtilityIcon] = useState(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [locationCoords, setLocationCoords] = useState(null);
@@ -59,13 +62,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       loadUtilityData();
     }
   }, []);
-
-  useEffect(() => {
-    if (!isEditing && presetDescription && !description) {
-      setDescription(String(presetDescription));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetDescription, isEditing]);
 
   // Default location to property position when creating new utility
   useEffect(() => {
@@ -163,6 +159,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     const allUtilities = await getAllUtilitiesRaw();
     const data = allUtilities.find(u => u.id === utility.id);
     if (data) {
+      setTitle(data.title || '');
+      setUtilityIcon(data.utilityIcon || null);
       setDescription(data.description || '');
       setLocation(data.location || '');
       if (data.latitude && data.longitude) {
@@ -444,6 +442,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     const utilityData = {
       id: utilityId,
       // Step 2 information
+      title: title.trim(),
+      utilityIcon: utilityIcon || null,
       description: description.trim(),
       location: location.trim(),
       latitude: locationCoords?.latitude || null,
@@ -910,6 +910,75 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             <Text style={styles.progressTitle}>Enter utility</Text>
           </View>
 
+          {/* Title + Icon Row */}
+          <View style={styles.titleRow}>
+            <TouchableOpacity
+              style={styles.iconPickerButton}
+              onPress={() => setShowIconPicker(!showIconPicker)}
+              activeOpacity={0.7}
+            >
+              {utilityIcon ? (
+                <Ionicons name={utilityIcon} size={26} color="#1095EE" />
+              ) : (
+                <Ionicons name="add" size={26} color="#AEAEB2" />
+              )}
+            </TouchableOpacity>
+            <View style={[styles.inputRect, styles.titleInput]}>
+              <TextInput
+                style={styles.textInput}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Title"
+                placeholderTextColor="#999"
+              />
+            </View>
+          </View>
+
+          {/* Icon Picker */}
+          {showIconPicker && (
+            <View style={styles.iconPickerPanel}>
+              {[
+                { name: 'flame', label: 'Gas' },
+                { name: 'water', label: 'Water' },
+                { name: 'flash', label: 'Electric' },
+                { name: 'thermometer', label: 'Heating' },
+                { name: 'snow', label: 'Cooling' },
+                { name: 'wifi', label: 'Internet' },
+                { name: 'bulb', label: 'Lighting' },
+                { name: 'leaf', label: 'Garden' },
+                { name: 'construct', label: 'Plumbing' },
+                { name: 'shield-checkmark', label: 'Security' },
+                { name: 'tv', label: 'Cable' },
+                { name: 'hammer', label: 'Tools' },
+              ].map((icon) => (
+                <TouchableOpacity
+                  key={icon.name}
+                  style={[
+                    styles.iconPickerItem,
+                    utilityIcon === icon.name && styles.iconPickerItemSelected,
+                  ]}
+                  onPress={() => {
+                    setUtilityIcon(utilityIcon === icon.name ? null : icon.name);
+                    setShowIconPicker(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={icon.name}
+                    size={24}
+                    color={utilityIcon === icon.name ? '#1095EE' : '#555'}
+                  />
+                  <Text style={[
+                    styles.iconPickerLabel,
+                    utilityIcon === icon.name && styles.iconPickerLabelSelected,
+                  ]}>
+                    {icon.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {/* Description Input */}
           <View style={styles.inputRect}>
             <TextInput
@@ -921,6 +990,20 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               multiline
               numberOfLines={3}
             />
+          </View>
+
+          {/* Voice Note Button */}
+          <View style={styles.voiceNoteContainer}>
+            <TouchableOpacity
+              style={styles.voiceNoteButton}
+              onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available soon.')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="mic" size={28} color="#1095EE" />
+            </TouchableOpacity>
+            <Text style={styles.voiceNoteHint}>
+              Record a voice note about the location & usage — we'll write the description for you.
+            </Text>
           </View>
 
           {/* Location and Floor Row */}
@@ -1142,12 +1225,13 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 if (maintenanceDate) {
                   setMaintenanceDate(null);
                   setMaintenanceTime(null);
+                  setNotes('');
                 }
               }}
               activeOpacity={0.7}
               disabled={!maintenanceDate}
             >
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <Text style={styles.resetButtonText}>Clear</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.optionalLabel}>Optional</Text>
@@ -1223,7 +1307,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         </View>
 
         <View style={styles.contactSection}>
-          <Text style={styles.sectionTitle}>Contact</Text>
+          <Text style={styles.sectionTitle}>Technician / Professional</Text>
           <Text style={styles.optionalLabel}>Optional</Text>
           <TouchableOpacity
             style={styles.contactDropdown}
@@ -1404,9 +1488,90 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 15,
-    marginBottom: 35,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  iconPickerButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  titleInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  iconPickerPanel: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: 10,
+    marginBottom: 16,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  iconPickerItem: {
+    width: '22%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+  },
+  iconPickerItemSelected: {
+    backgroundColor: '#E1F3FF',
+    borderWidth: 1,
+    borderColor: '#1095EE',
+  },
+  iconPickerLabel: {
+    fontSize: 10,
+    color: '#555',
+    marginTop: 4,
+  },
+  iconPickerLabelSelected: {
+    color: '#1095EE',
+    fontWeight: '600',
+  },
+  voiceNoteContainer: {
+    alignItems: 'center',
+    marginBottom: 28,
+    gap: 8,
+  },
+  voiceNoteButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E1F3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1095EE',
+  },
+  voiceNoteHint: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 17,
   },
   textInput: {
     fontSize: 16,

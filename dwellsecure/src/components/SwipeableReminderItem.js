@@ -1,123 +1,110 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, PanResponder, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Animated, PanResponder, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SWIPE_THRESHOLD = -80;
+const OPEN_POSITION = -95;
+const SNAP_THRESHOLD = -40; // snap open if dragged past this point
 
-// Get colors based on reminder type
 const getReminderColors = (reminder) => {
   const type = reminder.type || 'shutoff';
-  if (type === 'shutoff') {
-    return {
-      backgroundColor: '#CBE4F4', // Light blue
-      iconColor: '#F8A459', // Orange
-    };
-  } else if (type === 'utility') {
-    return {
-      backgroundColor: '#CBE4F4', // Light blue
-      iconColor: '#FAD157', // Yellow
-    };
+  if (type === 'utility') {
+    return { backgroundColor: '#CBE4F4', iconColor: '#FAD157', completeButtonColor: '#E1F3FF' };
   }
-  return {
-    backgroundColor: '#CBE4F4', // Light blue
-    iconColor: '#F8A459',
-  };
+  return { backgroundColor: '#76C8FF', iconColor: '#F8A459', completeButtonColor: '#ADE0FF' };
 };
 
 export default function SwipeableReminderItem({ reminder, onPress, onComplete, completed = false }) {
   const translateX = useRef(new Animated.Value(0)).current;
-  const [swiped, setSwiped] = useState(false);
+  const isOpen = useRef(false);
   const colors = getReminderColors(reminder);
-  
+
+  const snapTo = (toValue, cb) => {
+    Animated.spring(translateX, {
+      toValue,
+      useNativeDriver: true,
+      bounciness: 0,
+      speed: 15,
+    }).start(cb);
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10;
+      // Never steal gesture on initial touch — let scroll decide first
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+
+      // Take over when clearly horizontal: left swipe always, right swipe only when open
+      onMoveShouldSetPanResponder: (_, { dx, dy }) => {
+        if (completed) return false;
+        const isHorizontal = Math.abs(dx) > Math.abs(dy) * 2 && Math.abs(dx) > 8;
+        return isHorizontal && (dx < 0 || isOpen.current);
       },
-      onPanResponderMove: (_, gestureState) => {
-        // Only allow left swipe (negative dx)
-        if (gestureState.dx < 0) {
-          translateX.setValue(gestureState.dx);
-          if (gestureState.dx < SWIPE_THRESHOLD && !swiped) {
-            setSwiped(true);
-          } else if (gestureState.dx >= SWIPE_THRESHOLD && swiped) {
-            setSwiped(false);
-          }
-        }
+      // Once we own the gesture, refuse to give it back to the ScrollView
+      onPanResponderTerminateRequest: () => false,
+
+      onPanResponderGrant: () => {
+        // Anchor animation to current open/closed position so dragging from open works
+        translateX.setOffset(isOpen.current ? OPEN_POSITION : 0);
+        translateX.setValue(0);
       },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < SWIPE_THRESHOLD) {
-          // Swipe threshold reached, show complete button
-          Animated.spring(translateX, {
-            toValue: -70,
-            useNativeDriver: true,
-          }).start();
-          setSwiped(true);
+
+      onPanResponderMove: (_, { dx }) => {
+        // Allow drag left (to open) and right (to close), clamp between OPEN_POSITION and 0
+        const clamped = Math.min(0, Math.max(OPEN_POSITION, dx));
+        translateX.setValue(clamped);
+      },
+
+      onPanResponderRelease: (_, { dx, vx }) => {
+        translateX.flattenOffset();
+        const currentVal = isOpen.current ? OPEN_POSITION + dx : dx;
+
+        // Snap open: dragged past threshold OR fast leftward flick
+        if (currentVal < SNAP_THRESHOLD || vx < -0.5) {
+          snapTo(OPEN_POSITION);
+          isOpen.current = true;
         } else {
-          // Reset position
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-          setSwiped(false);
+          snapTo(0);
+          isOpen.current = false;
         }
+      },
+
+      // If another responder takes over (e.g. scroll), snap back to stable position
+      onPanResponderTerminate: () => {
+        translateX.flattenOffset();
+        snapTo(isOpen.current ? OPEN_POSITION : 0);
       },
     })
   ).current;
 
   const handleComplete = () => {
-    onComplete(reminder);
-    // Reset position after completing
-    Animated.spring(translateX, {
-      toValue: 0,
-      useNativeDriver: true,
-    }).start();
-    setSwiped(false);
+    snapTo(0, () => {
+      isOpen.current = false;
+      onComplete(reminder);
+    });
   };
 
   const getIconName = () => {
-    if (reminder.icon) {
-      return reminder.icon;
-    }
-    const type = reminder.type || 'shutoff';
-    if (type === 'shutoff') {
-      return 'flame-outline';
-    } else if (type === 'utility') {
-      return 'build-outline';
-    }
-    return 'alert-circle-outline';
+    if (reminder.icon) return reminder.icon;
+    if (reminder.type === 'utility') return 'build-outline';
+    return 'flame-outline';
   };
 
   return (
-    <View style={styles.reminderItemWrapper}>
-      {/* Complete button - shown when swiped */}
-      {swiped && (
-        <TouchableOpacity
-          style={styles.completeButton}
-          onPress={handleComplete}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="checkmark" size={30} color="#8E8E93" />
-        </TouchableOpacity>
-      )}
+    <View style={styles.wrapper}>
+      {/* Complete button — always rendered behind the card */}
+      <TouchableOpacity style={[styles.completeButton, { backgroundColor: colors.completeButtonColor }]} onPress={handleComplete} activeOpacity={0.8}>
+        <Ionicons name="checkmark" size={30} color="#8E8E93" />
+      </TouchableOpacity>
 
-      {/* Main reminder card */}
+      {/* Swipeable card */}
       <Animated.View
         style={[
           styles.reminderItem,
-          {
-            backgroundColor: colors.backgroundColor,
-            transform: [{ translateX }],
-          },
+          { backgroundColor: colors.backgroundColor, transform: [{ translateX }] },
         ]}
-        {...(!completed ? panResponder.panHandlers : {})}
+        {...panResponder.panHandlers}
       >
-        <TouchableOpacity
-          style={styles.touchableContent}
-          onPress={onPress}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.touchableContent} onPress={onPress} activeOpacity={0.7}>
           <View style={[styles.reminderIcon, { backgroundColor: colors.iconColor }]}>
             <View style={styles.iconBackground}>
               <Ionicons name={getIconName()} size={28} color="#fff" />
@@ -131,16 +118,16 @@ export default function SwipeableReminderItem({ reminder, onPress, onComplete, c
 }
 
 const styles = StyleSheet.create({
-  reminderItemWrapper: {
+  wrapper: {
     position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+    borderRadius: 20,
   },
   reminderItem: {
     width: '100%',
     minHeight: 85,
-    borderRadius: 12,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
@@ -160,7 +147,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
   iconBackground: {
     width: 28,
@@ -178,14 +164,12 @@ const styles = StyleSheet.create({
   },
   completeButton: {
     position: 'absolute',
-    right: 0,
-    width: 70,
-    height: 70,
-    borderRadius: 22,
-    backgroundColor: '#E1F3FF',
+    right: 5,
+    top: 0,
+    bottom: 0,
+    width: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
+    borderRadius: 36,
   },
 });
-
