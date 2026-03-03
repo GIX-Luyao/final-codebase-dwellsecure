@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
   },
   foundItWrap: {
     alignItems: 'center',
-    marginTop: 250,
+    marginTop: 150,
     gap: 6,
   },
   tapNextText: {
