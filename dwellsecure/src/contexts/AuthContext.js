@@ -21,6 +21,7 @@ export const AuthContext = createContext({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  updateProfile: async () => {},
 });
 
 export function AuthProvider({ children }) {
@@ -102,6 +103,13 @@ export function AuthProvider({ children }) {
     setUserState(null);
   }, []);
 
+  const updateProfile = useCallback(async (updates) => {
+    if (!user) return;
+    const nextUser = { ...user, ...updates };
+    await setUser(nextUser);
+    setUserState(nextUser);
+  }, [user]);
+
   const value = {
     user,
     token,
@@ -110,6 +118,7 @@ export function AuthProvider({ children }) {
     signIn,
     signUp,
     signOut,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,6 +4,7 @@ import {
   Text,
   Animated,
   ActivityIndicator,
+  Image,
   StyleSheet,
   TouchableOpacity,
   PanResponder,
@@ -18,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../contexts/AuthContext';
+import FeatureTourContext from '../contexts/FeatureTourContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -40,8 +42,11 @@ import EmergencyModeScreen from '../screens/EmergencyModeScreen';
 import ShareScreen from '../screens/ShareScreen';
 import MapPickerScreen from '../screens/MapPickerScreen';
 import SuccessScreen from '../screens/SuccessScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import PropertyPhotoScreen from '../screens/PropertyPhotoScreen';
 import BottomNav from '../components/BottomNav';
-import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
+import FeatureTour from '../components/FeatureTour';
+import { isOnboardingComplete, setOnboardingComplete, isFeatureTourComplete, setFeatureTourComplete } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 const Stack = createStackNavigator();
@@ -83,6 +88,11 @@ function ShutoffsStack() {
       <Stack.Screen
         name="PropertyDetail"
         component={PropertyDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PropertyPhoto"
+        component={PropertyPhotoScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -131,6 +141,7 @@ function PropertyStack() {
       <Stack.Screen name="Shutoffs" component={ShutoffsStack} />
       <Stack.Screen name="Utilities" component={UtilitiesStack} />
       <Stack.Screen name="PropertyDetail" component={PropertyDetailScreen} />
+      <Stack.Screen name="PropertyPhoto" component={PropertyPhotoScreen} />
       <Stack.Screen name="ShutoffDetail" component={ShutoffDetailScreen} />
       <Stack.Screen name="UtilityDetail" component={UtilityDetailScreen} />
       <Stack.Screen name="AddProperty" component={AddPropertyScreen} />
@@ -155,6 +166,27 @@ function MainStack() {
   const bottomGutter = 96; // keep above bottom nav
 
   const [show911Modal, setShow911Modal] = useState(false);
+  const [showFeatureTour, setShowFeatureTour] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    isFeatureTourComplete()
+      .then((complete) => {
+        if (mounted && !complete) setShowFeatureTour(true);
+      })
+      .catch(() => {})
+      .finally(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const handleFeatureTourComplete = async () => {
+    try {
+      await setFeatureTourComplete();
+    } catch (e) {
+      console.warn('Failed to persist feature tour complete:', e);
+    }
+    setShowFeatureTour(false);
+  };
 
   const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const lastPosition = useRef({ x: 0, y: 0, initialized: false });
@@ -263,19 +295,25 @@ function MainStack() {
     navigation.navigate('EmergencyMode');
   };
 
-  return (
-    <View style={{ flex: 1 }}>
-      <Stack.Navigator 
-        screenOptions={{ headerShown: false }}
-        initialRouteName="Property"
-      >
-        <Stack.Screen name="Property" component={PropertyStack} />
-        <Stack.Screen name="Reminders" component={RemindersScreen} />
-        <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
-        <Stack.Screen name="Share" component={ShareScreen} />
-      </Stack.Navigator>
+  const featureTourValue = React.useMemo(
+    () => ({ requestShowFeatureTour: () => setShowFeatureTour(true) }),
+    []
+  );
 
-      <View style={styles.bottomNavContainer}>
+  return (
+    <FeatureTourContext.Provider value={featureTourValue}>
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator 
+          screenOptions={{ headerShown: false }}
+          initialRouteName="Property"
+        >
+          <Stack.Screen name="Property" component={PropertyStack} />
+          <Stack.Screen name="Reminders" component={RemindersScreen} />
+          <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
+          <Stack.Screen name="Share" component={ShareScreen} />
+        </Stack.Navigator>
+
+        <View style={styles.bottomNavContainer}>
         <BottomNav />
       </View>
 
@@ -294,6 +332,12 @@ function MainStack() {
           <Ionicons name="alert" size={28} color="#fff" />
         </View>
       </Animated.View>
+
+      <FeatureTour
+        visible={showFeatureTour}
+        onComplete={handleFeatureTourComplete}
+        onSkip={handleFeatureTourComplete}
+      />
 
       {/* 911 Confirmation Modal */}
       <Modal
@@ -331,14 +375,24 @@ function MainStack() {
         </View>
       </Modal>
     </View>
+    </FeatureTourContext.Provider>
   );
 }
+
+// Minimum time to show loading screen (e.g. for logo animation). To use Loading.gif, add assets/Loading.gif and use <Image source={require('../../assets/Loading.gif')} /> in loadingContainer.
+const LOADING_ANIMATION_DURATION_MS = 4000;
 
 export default function AppNavigator() {
   const { isSignedIn, isLoading: authLoading } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingPhase, setOnboardingPhase] = useState('welcome'); // 'welcome' | 'add-property'
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMinTimeReached, setLoadingMinTimeReached] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingMinTimeReached(true), LOADING_ANIMATION_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (showOnboarding) setOnboardingPhase('welcome');
@@ -421,26 +475,22 @@ export default function AppNavigator() {
     setShowOnboarding(false);
   };
 
-  if (authLoading) {
+  const showLoadingScreen = authLoading || isLoading || !loadingMinTimeReached;
+
+  if (showLoadingScreen) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Image
+          source={require('../../assets/Loading.gif')}
+          style={styles.loadingAnimation}
+          resizeMode="contain"
+        />
       </View>
     );
   }
 
   if (!isSignedIn) {
     return <AuthStack />;
-  }
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
   }
 
   if (showOnboarding) {
@@ -478,6 +528,7 @@ export default function AppNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       <RootStack.Screen name="MainStack" component={MainStack} />
+      <RootStack.Screen name="Profile" component={ProfileScreen} />
       <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
     </RootStack.Navigator>
   );
@@ -489,6 +540,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.backgroundSecondary,
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
   },
   loadingText: {
     marginTop: spacing.md,

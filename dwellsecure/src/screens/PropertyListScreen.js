@@ -11,13 +11,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
-import { getProperties, deleteProperty, resetOnboarding, resetAllData } from '../services/storage';
+import { getProperties, deleteProperty, resetOnboarding, resetAllData, resetFeatureTour } from '../services/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureTour } from '../contexts/FeatureTourContext';
 import { colors, spacing, typography } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
   const { signOut } = useAuth();
+  const { requestShowFeatureTour } = useFeatureTour();
   const [properties, setProperties] = useState([]);
 
   useFocusEffect(
@@ -92,6 +94,17 @@ export default function PropertyListScreen() {
           },
         },
         {
+          text: 'Show guide again',
+          onPress: async () => {
+            try {
+              await resetFeatureTour();
+              requestShowFeatureTour();
+            } catch (e) {
+              Alert.alert('Error', 'Could not reset guide');
+            }
+          },
+        },
+        {
           text: 'Reset Onboarding',
           onPress: async () => {
             Alert.alert(
@@ -151,7 +164,13 @@ export default function PropertyListScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            onPress={() => navigation.getParent()?.navigate('Profile')}
+            style={styles.profileButton}
+            accessibilityLabel="Open profile"
+          >
+            <Ionicons name="person-circle-outline" size={28} color={colors.textSecondary} />
+          </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeTitle}>Welcome to</Text>
             <Text style={styles.appTitle}>Dwell Secure</Text>
@@ -214,22 +233,32 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxl,
+    overflow: 'visible',
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    overflow: 'visible',
   },
-  headerSpacer: {
-    width: 40,
+  profileButton: {
+    minWidth: 44,
+    padding: spacing.sm,
+    marginTop: 4,
+    marginRight: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTextContainer: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   settingsButton: {
-    width: 40,
+    minWidth: 44,
     padding: spacing.sm,
     marginTop: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   welcomeTitle: {
     fontSize: 18,

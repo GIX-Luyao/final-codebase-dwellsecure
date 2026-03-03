@@ -52,6 +52,7 @@ export default function BottomNav() {
   const hideNavScreens = [
     'AddProperty', 'AddPerson', 'EditProperty', 'EmergencyMode',
     'MapPicker', 'Success', 'AddEditShutoff', 'AddEditUtility',
+    'PropertyPhoto', 'Profile',
   ];
   if (currentRoute && hideNavScreens.includes(currentRoute)) {
     return null;

@@ -779,6 +779,19 @@ export default function AddPropertyScreen({ route }) {
   };
 
   const handleBack = () => {
+    // When editing (from Property Detail), one back tap returns to the property page
+    if (isEditing && !onboardingMode) {
+      navigation.goBack();
+      return;
+    }
+    if (onboardingMode && step === 1) {
+      if (onboarding?.goBackToWelcome) {
+        onboarding.goBackToWelcome();
+      } else {
+        navigation.goBack();
+      }
+      return;
+    }
     if (step > 1) {
       if (step === 3) {
         setStep(cameFromMoreOptions ? 2 : 1);
