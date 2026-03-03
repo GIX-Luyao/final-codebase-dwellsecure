@@ -7,6 +7,7 @@ const SHUTOFFS_KEY = '@dwellsecure:shutoffs';
 const REMINDERS_KEY = '@dwellsecure:reminders';
 const UTILITIES_KEY = '@dwellsecure:utilities';
 const ONBOARDING_KEY = '@dwellsecure:onboarding_complete';
+const FEATURE_TOUR_KEY = '@dwellsecure:feature_tour_complete';
 const PROPERTY_KEY = '@dwellsecure:property';
 const PEOPLE_KEY = '@dwellsecure:people';
 
@@ -772,6 +773,34 @@ export const resetOnboarding = async () => {
     await AsyncStorage.removeItem(ONBOARDING_KEY);
   } catch (error) {
     console.error('Error resetting onboarding:', error);
+    throw error;
+  }
+};
+
+export const isFeatureTourComplete = async () => {
+  try {
+    const value = await AsyncStorage.getItem(FEATURE_TOUR_KEY);
+    return value === 'true';
+  } catch (error) {
+    console.error('Error checking feature tour status:', error);
+    return false;
+  }
+};
+
+export const setFeatureTourComplete = async () => {
+  try {
+    await AsyncStorage.setItem(FEATURE_TOUR_KEY, 'true');
+  } catch (error) {
+    console.error('Error setting feature tour complete:', error);
+    throw error;
+  }
+};
+
+export const resetFeatureTour = async () => {
+  try {
+    await AsyncStorage.removeItem(FEATURE_TOUR_KEY);
+  } catch (error) {
+    console.error('Error resetting feature tour:', error);
     throw error;
   }
 };
