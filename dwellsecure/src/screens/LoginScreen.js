@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   ActivityIndicator,
@@ -55,6 +56,7 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
@@ -75,6 +77,9 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Text style={[styles.label, { marginTop: spacing.lg }]}>Password</Text>
@@ -87,6 +92,9 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 editable={!loading}
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
               <TouchableOpacity
                 style={styles.eyeButton}
