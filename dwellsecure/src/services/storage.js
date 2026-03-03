@@ -206,11 +206,14 @@ export const getShutoff = async (id) => {
 
 export const saveShutoff = async (shutoff) => {
   try {
+    // Strip MongoDB _id so we never try to update the immutable _id field on the server
+    const { _id, ...shutoffWithoutMongoId } = shutoff || {};
+
     // Ensure type is normalized and verification_status exists
     const normalizedShutoff = {
-      ...shutoff,
-      type: normalizeShutoffType(shutoff.type || 'gas'),
-      verification_status: shutoff.verification_status || 'unverified',
+      ...shutoffWithoutMongoId,
+      type: normalizeShutoffType(shutoffWithoutMongoId.type || 'gas'),
+      verification_status: shutoffWithoutMongoId.verification_status || 'unverified',
     };
     
     console.log('[Storage] Saving shutoff:', normalizedShutoff.id);
@@ -598,24 +601,27 @@ export const getUtility = async (id) => {
 
 export const saveUtility = async (utility) => {
   try {
-    console.log('[Storage] Saving utility:', utility.id);
+    // Strip MongoDB _id so we never try to update the immutable _id field on the server
+    const { _id, ...utilityWithoutMongoId } = utility || {};
+
+    console.log('[Storage] Saving utility:', utilityWithoutMongoId.id);
     
     // Try API first
     if (getApiAvailability()) {
       try {
         console.log('[Storage] Attempting to save to MongoDB via API...');
-        await apiPost('/api/utilities', utility);
+        await apiPost('/api/utilities', utilityWithoutMongoId);
         console.log('[Storage] ✅ Successfully saved to MongoDB');
         
         // Also save to AsyncStorage as backup (read from AsyncStorage, not API, to avoid loop)
         try {
           const data = await AsyncStorage.getItem(UTILITIES_KEY);
           const utilities = data ? JSON.parse(data) : [];
-          const index = utilities.findIndex((u) => u.id === utility.id);
+          const index = utilities.findIndex((u) => u.id === utilityWithoutMongoId.id);
           if (index >= 0) {
-            utilities[index] = utility;
+            utilities[index] = utilityWithoutMongoId;
           } else {
-            utilities.push(utility);
+            utilities.push(utilityWithoutMongoId);
           }
           await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(utilities));
           console.log('[Storage] Also saved to AsyncStorage as backup');
@@ -634,12 +640,12 @@ export const saveUtility = async (utility) => {
     
     // Fallback to AsyncStorage
     const utilities = await getUtilities();
-    const index = utilities.findIndex((u) => u.id === utility.id);
+    const index = utilities.findIndex((u) => u.id === utilityWithoutMongoId.id);
 
     if (index >= 0) {
-      utilities[index] = utility;
+      utilities[index] = utilityWithoutMongoId;
     } else {
-      utilities.push(utility);
+      utilities.push(utilityWithoutMongoId);
     }
 
     await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(utilities));
@@ -716,24 +722,6 @@ export const exportData = async (shutoffs) => {
 export const isOnboardingComplete = async () => {
   try {
     const value = await AsyncStorage.getItem(ONBOARDING_KEY);
-    // #region agent log
-    fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': '6eea19',
-      },
-      body: JSON.stringify({
-        sessionId: '6eea19',
-        runId: 'pre-fix',
-        hypothesisId: 'H2',
-        location: 'src/services/storage.js:715',
-        message: 'isOnboardingComplete read from AsyncStorage',
-        data: { rawValue: value },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return value === 'true';
   } catch (error) {
     console.error('Error checking onboarding status:', error);
@@ -744,24 +732,6 @@ export const isOnboardingComplete = async () => {
 export const setOnboardingComplete = async () => {
   try {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    // #region agent log
-    fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': '6eea19',
-      },
-      body: JSON.stringify({
-        sessionId: '6eea19',
-        runId: 'pre-fix',
-        hypothesisId: 'H2',
-        location: 'src/services/storage.js:725',
-        message: 'setOnboardingComplete wrote to AsyncStorage',
-        data: {},
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   } catch (error) {
     console.error('Error setting onboarding complete:', error);
     throw error;
@@ -866,25 +836,28 @@ export const getProperty = async (id) => {
 
 export const saveProperty = async (property) => {
   try {
-    console.log('[Storage] Saving property:', property.id);
+    // Strip MongoDB _id so we never try to update the immutable _id field on the server
+    const { _id, ...propertyWithoutMongoId } = property || {};
+
+    console.log('[Storage] Saving property:', propertyWithoutMongoId.id);
     console.log('[Storage] API available:', getApiAvailability());
     
     // Try API first
     if (getApiAvailability()) {
       try {
         console.log('[Storage] Attempting to save to MongoDB via API...');
-        await apiPost('/api/properties', property);
+        await apiPost('/api/properties', propertyWithoutMongoId);
         console.log('[Storage] ✅ Successfully saved to MongoDB');
         
         // Also save to AsyncStorage as backup (read from AsyncStorage, not API, to avoid loop)
         try {
           const data = await AsyncStorage.getItem(PROPERTY_KEY);
           const properties = data ? JSON.parse(data) : [];
-          const index = properties.findIndex((p) => p.id === property.id);
+          const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
           if (index >= 0) {
-            properties[index] = property;
+            properties[index] = propertyWithoutMongoId;
           } else {
-            properties.push(property);
+            properties.push(propertyWithoutMongoId);
           }
           await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
           console.log('[Storage] Also saved to AsyncStorage as backup');
@@ -908,12 +881,12 @@ export const saveProperty = async (property) => {
     // Fallback to AsyncStorage
     console.log('[Storage] Saving to AsyncStorage...');
     const properties = await getProperties();
-    const index = properties.findIndex((p) => p.id === property.id);
+    const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
     
     if (index >= 0) {
-      properties[index] = property;
+      properties[index] = propertyWithoutMongoId;
     } else {
-      properties.push(property);
+      properties.push(propertyWithoutMongoId);
     }
     
     await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));

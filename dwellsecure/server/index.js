@@ -6,15 +6,6 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const config = require('./config');
 const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
 
-// #region agent log
-const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
-function debugLog(location, message, data, hypothesisId) {
-  const payload = { location, message, data: data || {}, timestamp: Date.now(), hypothesisId, runId: 'mongo-connect' };
-  fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
-  try { fs.appendFileSync(DEBUG_LOG_PATH, JSON.stringify(payload) + '\n'); } catch (_) {}
-}
-// #endregion
-
 const app = express();
 const { PORT, mongoUri, corsOptions } = config;
 
@@ -64,14 +55,6 @@ const client = new MongoClient(mongoUri, {
 let db = null;
 
 async function connectDB() {
-  // #region agent log
-  debugLog('server/index.js:connectDB:entry', 'connectDB entry', {
-    nodeVersion: process.version,
-    uriSource: process.env.MONGODB_URI ? 'env' : 'default',
-    uriHasSrv: mongoUri.includes('mongodb+srv'),
-    uriHost: mongoUri.includes('@') ? mongoUri.split('@')[1].split('/')[0].split('?')[0] : 'unknown',
-  }, 'A,B,C');
-  // #endregion
   try {
     console.log('🔌 Connecting to MongoDB...');
     console.log(`📡 URI: ${mongoUri.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
@@ -81,21 +64,9 @@ async function connectDB() {
     
     // Add detailed error handling
     try {
-      // #region agent log
-      debugLog('server/index.js:connectDB:beforeConnect', 'about to client.connect()', {}, 'D');
-      // #endregion
       await client.connect();
       console.log('✅ MongoDB client connected');
     } catch (connectError) {
-      // #region agent log
-      debugLog('server/index.js:connectDB:connectError', 'MongoDB connect failed', {
-        errorName: connectError.name,
-        errorCode: connectError.code,
-        errorMessage: (connectError.message || '').substring(0, 400),
-        hasCause: !!connectError.cause,
-        causeMessage: connectError.cause ? String(connectError.cause).substring(0, 200) : undefined,
-      }, 'D,E');
-      // #endregion
       console.error('');
       console.error('='.repeat(60));
       console.error('❌ MongoDB Connection Failed!');
@@ -175,15 +146,6 @@ async function connectDB() {
 
 // Routes
 app.get('/health', (req, res) => {
-  // #region agent log
-  debugLog('server/index.js:/health', 'health endpoint hit', {
-    ip: req.ip,
-    userAgent: req.headers['user-agent'] || null,
-    method: req.method,
-    path: req.path,
-  }, 'H1');
-  // #endregion
-
   res.json({ 
     status: 'ok', 
     db: db ? 'connected' : 'disconnected',

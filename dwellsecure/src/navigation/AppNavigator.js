@@ -415,24 +415,6 @@ export default function AppNavigator() {
           const completed = await isOnboardingComplete();
           if (!completed) {
             setShowOnboarding(true);
-            // #region agent log
-            fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Debug-Session-Id': '6eea19',
-              },
-              body: JSON.stringify({
-                sessionId: '6eea19',
-                runId: 'pre-fix',
-                hypothesisId: 'H3',
-                location: 'src/navigation/AppNavigator.js:297',
-                message: 'Interval forcing onboarding because completed=false',
-                data: { completed },
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-            // #endregion
           }
         } catch (_) {}
       }
@@ -444,24 +426,6 @@ export default function AppNavigator() {
     try {
       const completed = await isOnboardingComplete();
       setShowOnboarding(!completed);
-      // #region agent log
-      fetch('http://127.0.0.1:7878/ingest/45053c11-4f19-48f6-87d3-ad5b93d68f97', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': '6eea19',
-        },
-        body: JSON.stringify({
-          sessionId: '6eea19',
-          runId: 'pre-fix',
-          hypothesisId: 'H3',
-          location: 'src/navigation/AppNavigator.js:308',
-          message: 'checkOnboarding result',
-          data: { completed },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch (error) {
       console.error('Error checking onboarding:', error);
       setShowOnboarding(false);

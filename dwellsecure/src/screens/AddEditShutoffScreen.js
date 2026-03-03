@@ -547,7 +547,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       photosCount: shutoffData.photos.length,
       videosCount: shutoffData.videos.length,
     });
-
+    
     try {
       // Save shutoff first
       await saveShutoff(shutoffData);
