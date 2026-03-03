@@ -463,7 +463,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     };
 
     console.log('[AddEditUtility] Saving utility with propertyId:', finalPropertyId);
-
+    
     try {
       await saveUtility(utilityData);
       console.log('[AddEditUtility] ✅ Utility saved successfully');
