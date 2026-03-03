@@ -11,7 +11,6 @@ import {
   Platform,
   FlatList,
   Modal,
-  Keyboard,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -901,12 +900,10 @@ export default function AddEditUtilityScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView
-          style={styles.stepContent}
+        <ScrollView 
+          style={styles.stepContent} 
           contentContainerStyle={styles.step2ContentContainer}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
@@ -933,9 +930,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 onChangeText={setTitle}
                 placeholder="Title"
                 placeholderTextColor="#999"
-                returnKeyType="done"
-                blurOnSubmit={true}
-                onSubmitEditing={() => Keyboard.dismiss()}
               />
             </View>
           </View>
@@ -995,9 +989,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               placeholderTextColor="#999"
               multiline
               numberOfLines={3}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -1067,9 +1058,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                         placeholderTextColor="#999"
                         autoFocus
                         textTransform="uppercase"
-                        returnKeyType="done"
-                        blurOnSubmit={true}
-                        onSubmitEditing={() => Keyboard.dismiss()}
                       />
                       <TouchableOpacity
                         style={styles.floorInputClose}
@@ -1222,12 +1210,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView
-          style={styles.stepContent}
-          contentContainerStyle={styles.step2ContentContainer}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.step2ContentContainer}>
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>Enter utility</Text>
@@ -1320,9 +1303,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             placeholder="Enter maintenance notes..."
             placeholderTextColor="#999"
             multiline
-            returnKeyType="done"
-            blurOnSubmit={true}
-            onSubmitEditing={() => Keyboard.dismiss()}
           />
         </View>
 
@@ -1417,9 +1397,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               placeholderTextColor="#999"
               value={newContactName}
               onChangeText={setNewContactName}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
             <TextInput
               style={styles.addContactInput}
@@ -1428,9 +1405,6 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               value={newContactPhone}
               onChangeText={setNewContactPhone}
               keyboardType="phone-pad"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
             <View style={styles.addContactModalButtons}>
               <TouchableOpacity

@@ -12,7 +12,6 @@ import {
   Animated,
   FlatList,
   Modal,
-  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -654,12 +653,10 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
         
-        <ScrollView
-          style={styles.stepContent}
+        <ScrollView 
+          style={styles.stepContent} 
           contentContainerStyle={styles.step1ContentContainer}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           <Text style={styles.pageTitle}>
             To find your {getTypeTitle()} shutoff
@@ -783,12 +780,10 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView
-          style={styles.stepContent}
+        <ScrollView 
+          style={styles.stepContent} 
           contentContainerStyle={styles.step2ContentContainer}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
@@ -805,9 +800,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               placeholderTextColor="#999"
               multiline
               numberOfLines={3}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -878,9 +870,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                         placeholderTextColor="#999"
                         autoFocus
                         textTransform="uppercase"
-                        returnKeyType="done"
-                        blurOnSubmit={true}
-                        onSubmitEditing={() => Keyboard.dismiss()}
                       />
                       <TouchableOpacity
                         style={styles.floorInputClose}
@@ -1432,12 +1421,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView
-          style={styles.stepContent}
-          contentContainerStyle={styles.step2ContentContainer}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.step2ContentContainer}>
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
@@ -1531,9 +1515,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             placeholder="Enter maintenance notes..."
             placeholderTextColor="#999"
             multiline
-            returnKeyType="done"
-            blurOnSubmit={true}
-            onSubmitEditing={() => Keyboard.dismiss()}
           />
         </View>
 
@@ -1628,9 +1609,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               placeholderTextColor="#999"
               value={newContactName}
               onChangeText={setNewContactName}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
             <TextInput
               style={styles.addContactInput}
@@ -1639,9 +1617,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               value={newContactPhone}
               onChangeText={setNewContactPhone}
               keyboardType="phone-pad"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
             <View style={styles.addContactModalButtons}>
               <TouchableOpacity

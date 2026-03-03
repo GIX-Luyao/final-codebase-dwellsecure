@@ -9,7 +9,6 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
-  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -71,13 +70,7 @@ export default function ProfileScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile information</Text>
           <View style={styles.card}>
@@ -107,9 +100,6 @@ export default function ProfileScreen() {
                   placeholder="Your name"
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="words"
-                  returnKeyType="done"
-                  blurOnSubmit={true}
-                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 <Text style={[styles.label, { marginTop: spacing.md }]}>Email</Text>
                 <TextInput

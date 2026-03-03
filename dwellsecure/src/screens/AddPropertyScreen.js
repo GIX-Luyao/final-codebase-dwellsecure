@@ -9,7 +9,6 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  Keyboard,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -525,12 +524,10 @@ export default function AddPropertyScreen({ route }) {
     const selectedType = PROPERTY_TYPES.find((t) => t.id === propertyType);
     
     return (
-      <ScrollView
+      <ScrollView 
         style={styles.stepContainer}
         contentContainerStyle={styles.step2Content}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <Text style={styles.stepTitle}>Add your property</Text>
         
@@ -591,9 +588,6 @@ export default function AddPropertyScreen({ route }) {
               onChangeText={setAddressLine1}
               placeholder="Enter street address"
               placeholderTextColor="#8E8E93"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -605,9 +599,6 @@ export default function AddPropertyScreen({ route }) {
               onChangeText={setAddressLine2}
               placeholder="Apartment, suite, etc."
               placeholderTextColor="#8E8E93"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -621,9 +612,6 @@ export default function AddPropertyScreen({ route }) {
               onChangeText={setCity}
               placeholder="Enter city"
               placeholderTextColor="#8E8E93"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -638,9 +626,6 @@ export default function AddPropertyScreen({ route }) {
                 onChangeText={setState}
                 placeholder="State"
                 placeholderTextColor="#8E8E93"
-                returnKeyType="done"
-                blurOnSubmit={true}
-                onSubmitEditing={() => Keyboard.dismiss()}
               />
             </View>
             <View style={[styles.inputGroup, styles.formRowItem]}>
@@ -654,9 +639,6 @@ export default function AddPropertyScreen({ route }) {
                 placeholder="12345"
                 placeholderTextColor="#8E8E93"
                 keyboardType="numeric"
-                returnKeyType="done"
-                blurOnSubmit={true}
-                onSubmitEditing={() => Keyboard.dismiss()}
               />
             </View>
           </View>
@@ -671,9 +653,6 @@ export default function AddPropertyScreen({ route }) {
               onChangeText={setCountry}
               placeholder="Country"
               placeholderTextColor="#8E8E93"
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 

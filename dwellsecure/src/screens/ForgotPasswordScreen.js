@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
-  Keyboard,
   Platform,
   ScrollView,
   ActivityIndicator,
@@ -110,9 +109,6 @@ export default function ForgotPasswordScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <TouchableOpacity
