@@ -11,8 +11,9 @@ import {
   Alert,
   Platform,
   Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
@@ -36,6 +37,19 @@ export default function AIAssistanceScreen() {
   const [showUploadSection, setShowUploadSection] = useState(false);
   const scrollViewRef = useRef(null);
   const testRecordCreated = useRef(false);
+  const insets = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Test: Create a test record when screen loads
   useEffect(() => {
@@ -299,115 +313,119 @@ export default function AIAssistanceScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Finder</Text>
           <Text style={styles.headerSubtitle}>
             Ask here or send an image to identify shutoffs
           </Text>
         </View>
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.chatContainer}
-        contentContainerStyle={styles.chatContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        {messages.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={56} color={colors.textMuted} />
-            <Text style={styles.emptyStateText}>
-              Send an image to identify or ask me anything
-            </Text>
-            <Text style={styles.emptyStateSubtext}>
-              I can help you find gas, electricity, and water shutoffs
-            </Text>
-          </View>
-        ) : (
-          messages.map(renderMessage)
-        )}
-        {isLoadingText && (
-          <View style={styles.loadingContainer}>
-            <View style={styles.messageBubble}>
-              <ActivityIndicator size="small" color={colors.textSecondary} />
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.chatContainer}
+          contentContainerStyle={styles.chatContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          {messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={56} color={colors.textMuted} />
+              <Text style={styles.emptyStateText}>
+                Send an image to identify or ask me anything
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                I can help you find gas, electricity, and water shutoffs
+              </Text>
             </View>
-          </View>
-        )}
-      </ScrollView>
-
-      <View style={styles.bottomSection}>
-        {selectedImage && (
-          <View style={styles.selectedImageContainer}>
-            <Image source={{ uri: selectedImage }} style={styles.selectedImagePreview} />
-            <TouchableOpacity
-              style={styles.removeImageButton}
-              onPress={() => setSelectedImage(null)}
-            >
-              <Ionicons name="close-circle" size={20} color={colors.error} />
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {showUploadSection && (
-          <View style={styles.uploadSection}>
-            <TouchableOpacity 
-              style={styles.uploadButton} 
-              onPress={handleImageUpload}
-              disabled={isLoadingText}
-            >
-              <Ionicons name="image-outline" size={32} color={colors.primary} />
-              <Text style={styles.uploadButtonText}>Upload Photo</Text>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity 
-              style={styles.uploadButton} 
-              onPress={handleCameraCapture}
-              disabled={isLoadingText}
-            >
-              <Ionicons name="camera-outline" size={32} color={colors.primary} />
-              <Text style={styles.uploadButtonText}>Using Camera</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Ask here..."
-            placeholderTextColor={colors.textMuted}
-            value={inputText}
-            onChangeText={setInputText}
-            editable={!isLoadingText}
-            multiline
-            maxLength={500}
-            returnKeyType="done"
-            blurOnSubmit={true}
-            onSubmitEditing={() => Keyboard.dismiss()}
-          />
-          <TouchableOpacity 
-            style={styles.addButton} 
-            onPress={() => setShowUploadSection(!showUploadSection)}
-            disabled={isLoadingText}
-          >
-            <Ionicons name="add" size={28} color={colors.textMuted} />
-          </TouchableOpacity>
-          {hasText && (
-            <TouchableOpacity 
-              style={styles.submitButton} 
-              onPress={handleSubmit}
-              disabled={isLoadingText}
-            >
-              {isLoadingText ? (
-                <ActivityIndicator size="small" color={colors.textMuted} />
-              ) : (
-                <Ionicons name="send" size={20} color={colors.textMuted} />
-              )}
-            </TouchableOpacity>
+          ) : (
+            messages.map(renderMessage)
           )}
+          {isLoadingText && (
+            <View style={styles.loadingContainer}>
+              <View style={styles.messageBubble}>
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={[styles.bottomSection, { paddingBottom: keyboardVisible ? 8 : insets.bottom + 70 }]}>
+          {selectedImage && (
+            <View style={styles.selectedImageContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.selectedImagePreview} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => setSelectedImage(null)}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {showUploadSection && (
+            <View style={styles.uploadSection}>
+              <TouchableOpacity 
+                style={styles.uploadButton} 
+                onPress={handleImageUpload}
+                disabled={isLoadingText}
+              >
+                <Ionicons name="image-outline" size={32} color={colors.primary} />
+                <Text style={styles.uploadButtonText}>Upload Photo</Text>
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity 
+                style={styles.uploadButton} 
+                onPress={handleCameraCapture}
+                disabled={isLoadingText}
+              >
+                <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                <Text style={styles.uploadButtonText}>Using Camera</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Ask here..."
+              placeholderTextColor={colors.textMuted}
+              value={inputText}
+              onChangeText={setInputText}
+              editable={!isLoadingText}
+              multiline
+              maxLength={500}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+            <TouchableOpacity 
+              style={styles.addButton} 
+              onPress={() => setShowUploadSection(!showUploadSection)}
+              disabled={isLoadingText}
+            >
+              <Ionicons name="add" size={28} color={colors.textMuted} />
+            </TouchableOpacity>
+            {hasText && (
+              <TouchableOpacity 
+                style={styles.submitButton} 
+                onPress={handleSubmit}
+                disabled={isLoadingText}
+              >
+                {isLoadingText ? (
+                  <ActivityIndicator size="small" color={colors.textMuted} />
+                ) : (
+                  <Ionicons name="send" size={20} color={colors.textMuted} />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -582,8 +600,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: 100,
     paddingTop: 12,
+    paddingBottom: 8,
   },
   input: {
     flex: 1,
