@@ -276,6 +276,29 @@ export default function AIAssistanceScreen() {
     
     const paragraphs = formatText(message.text);
     
+    const bubble = (
+      <View
+        style={[
+          styles.messageBubble,
+          isUser ? styles.userMessageBubble : styles.aiMessageBubble,
+          message.isError && styles.errorMessageBubble,
+        ]}
+      >
+        {paragraphs.map((paragraph, index) => (
+          <Text
+            key={index}
+            style={[
+              styles.messageText,
+              isUser ? styles.userMessageText : styles.aiMessageText,
+              index > 0 && styles.messageParagraph,
+            ]}
+          >
+            {paragraph.trim()}
+          </Text>
+        ))}
+      </View>
+    );
+
     return (
       <View
         key={message.id}
@@ -287,29 +310,23 @@ export default function AIAssistanceScreen() {
         {message.image && (
           <Image source={{ uri: message.image }} style={styles.messageImage} />
         )}
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userMessageBubble : styles.aiMessageBubble,
-            message.isError && styles.errorMessageBubble,
-          ]}
-        >
-          {paragraphs.map((paragraph, index) => (
-            <Text
-              key={index}
-              style={[
-                styles.messageText,
-                isUser ? styles.userMessageText : styles.aiMessageText,
-                index > 0 && styles.messageParagraph,
-              ]}
-            >
-              {paragraph.trim()}
-            </Text>
-          ))}
-        </View>
+        {isUser ? bubble : (
+          <View style={styles.aiBubbleRow}>
+            <View style={styles.aiAvatar}>
+              <Ionicons name="sparkles" size={12} color={colors.primary} />
+            </View>
+            {bubble}
+          </View>
+        )}
       </View>
     );
   };
+
+  const SUGGESTIONS = [
+    { icon: 'water-outline', color: colors.accentWater, text: 'Where is my water shutoff?' },
+    { icon: 'flash-outline', color: colors.accentElectric, text: 'How do I turn off the electricity?' },
+    { icon: 'flame-outline', color: colors.accentGas, text: 'What do I do if I smell gas?' },
+  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -318,10 +335,20 @@ export default function AIAssistanceScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>AI Assistant</Text>
-          <Text style={styles.headerSubtitle}>Powered by OpenAI</Text>
+          <View style={styles.headerLeft}>
+            <View style={styles.headerIconWrap}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>AI Assistant</Text>
+              <Text style={styles.headerSubtitle}>Powered by OpenAI</Text>
+            </View>
+          </View>
         </View>
+
+        {/* Chat area */}
         <ScrollView
           ref={scrollViewRef}
           style={styles.chatContainer}
@@ -332,41 +359,54 @@ export default function AIAssistanceScreen() {
         >
           {messages.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="chatbubble-ellipses-outline" size={56} color={colors.textMuted} />
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.primary} />
+              </View>
               <Text style={styles.emptyStateTitle}>Ask me anything</Text>
               <Text style={styles.emptyStateText}>
-                Not sure where to start? Try asking ChatGPT:
+                Not sure where to start? Try one of these:
               </Text>
               <View style={styles.suggestionList}>
-                <View style={styles.suggestionChip}>
-                  <Ionicons name="water-outline" size={15} color={colors.primary} />
-                  <Text style={styles.suggestionText}>"Where is my water shutoff?"</Text>
-                </View>
-                <View style={styles.suggestionChip}>
-                  <Ionicons name="flash-outline" size={15} color={colors.primary} />
-                  <Text style={styles.suggestionText}>"How do I turn off the electricity?"</Text>
-                </View>
-                <View style={styles.suggestionChip}>
-                  <Ionicons name="flame-outline" size={15} color={colors.primary} />
-                  <Text style={styles.suggestionText}>"What do I do if I smell gas?"</Text>
-                </View>
+                {SUGGESTIONS.map((s, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.suggestionChip}
+                    onPress={() => setInputText(s.text)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.suggestionIconWrap, { backgroundColor: s.color + '18' }]}>
+                      <Ionicons name={s.icon} size={16} color={s.color} />
+                    </View>
+                    <Text style={styles.suggestionText}>{s.text}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Text style={styles.emptyStateSubtext}>
-                Or send a photo and I'll identify your shutoffs
-              </Text>
+              <View style={styles.photoHint}>
+                <Ionicons name="camera-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.emptyStateSubtext}>
+                  Or tap + to send a photo for identification
+                </Text>
+              </View>
             </View>
           ) : (
             messages.map(renderMessage)
           )}
           {isLoadingText && (
             <View style={styles.loadingContainer}>
-              <View style={styles.messageBubble}>
-                <ActivityIndicator size="small" color={colors.textSecondary} />
+              <View style={styles.aiBubbleRow}>
+                <View style={styles.aiAvatar}>
+                  <Ionicons name="sparkles" size={12} color={colors.primary} />
+                </View>
+                <View style={[styles.messageBubble, styles.aiMessageBubble]}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
               </View>
             </View>
           )}
         </ScrollView>
 
+        {/* Bottom input area */}
         <View style={[styles.bottomSection, { paddingBottom: keyboardVisible ? 8 : insets.bottom + 70 }]}>
           {selectedImage && (
             <View style={styles.selectedImageContainer}>
@@ -375,34 +415,49 @@ export default function AIAssistanceScreen() {
                 style={styles.removeImageButton}
                 onPress={() => setSelectedImage(null)}
               >
-                <Ionicons name="close-circle" size={20} color={colors.error} />
+                <Ionicons name="close-circle" size={22} color={colors.error} />
               </TouchableOpacity>
             </View>
           )}
-          
+
           {showUploadSection && (
             <View style={styles.uploadSection}>
-              <TouchableOpacity 
-                style={styles.uploadButton} 
+              <TouchableOpacity
+                style={styles.uploadButton}
                 onPress={handleImageUpload}
                 disabled={isLoadingText}
               >
-                <Ionicons name="image-outline" size={32} color={colors.primary} />
+                <View style={styles.uploadIconWrap}>
+                  <Ionicons name="image-outline" size={26} color={colors.primary} />
+                </View>
                 <Text style={styles.uploadButtonText}>Upload Photo</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
-              <TouchableOpacity 
-                style={styles.uploadButton} 
+              <TouchableOpacity
+                style={styles.uploadButton}
                 onPress={handleCameraCapture}
                 disabled={isLoadingText}
               >
-                <Ionicons name="camera-outline" size={32} color={colors.primary} />
-                <Text style={styles.uploadButtonText}>Using Camera</Text>
+                <View style={styles.uploadIconWrap}>
+                  <Ionicons name="camera-outline" size={26} color={colors.primary} />
+                </View>
+                <Text style={styles.uploadButtonText}>Take Photo</Text>
               </TouchableOpacity>
             </View>
           )}
-          
+
           <View style={styles.inputContainer}>
+            <TouchableOpacity
+              style={[styles.addButton, showUploadSection && styles.addButtonActive]}
+              onPress={() => setShowUploadSection(!showUploadSection)}
+              disabled={isLoadingText}
+            >
+              <Ionicons
+                name={showUploadSection ? 'close' : 'add'}
+                size={24}
+                color={showUploadSection ? colors.primary : colors.textMuted}
+              />
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
               placeholder="Ask here..."
@@ -416,26 +471,21 @@ export default function AIAssistanceScreen() {
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
             />
-            <TouchableOpacity 
-              style={styles.addButton} 
-              onPress={() => setShowUploadSection(!showUploadSection)}
-              disabled={isLoadingText}
+            <TouchableOpacity
+              style={[styles.submitButton, hasText && styles.submitButtonActive]}
+              onPress={handleSubmit}
+              disabled={isLoadingText || !hasText}
             >
-              <Ionicons name="add" size={28} color={colors.textMuted} />
+              {isLoadingText ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons
+                  name="arrow-up"
+                  size={20}
+                  color={hasText ? colors.white : colors.textMuted}
+                />
+              )}
             </TouchableOpacity>
-            {hasText && (
-              <TouchableOpacity 
-                style={styles.submitButton} 
-                onPress={handleSubmit}
-                disabled={isLoadingText}
-              >
-                {isLoadingText ? (
-                  <ActivityIndicator size="small" color={colors.textMuted} />
-                ) : (
-                  <Ionicons name="send" size={20} color={colors.textMuted} />
-                )}
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -450,85 +500,130 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
+
+  // ─── Header ───────────────────────────────────────────────
   header: {
-    paddingTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primary,
-    marginTop: 4,
     fontWeight: '500',
+    marginTop: 1,
   },
+
+  // ─── Chat area ────────────────────────────────────────────
   chatContainer: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
   },
   chatContent: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.lg,
     paddingBottom: 20,
   },
+
+  // ─── Empty state ──────────────────────────────────────────
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: spacing.screenPadding,
-    minHeight: 400,
+    paddingTop: 48,
+    paddingHorizontal: 4,
+    minHeight: 420,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyStateTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    textAlign: 'center',
-    marginTop: 16,
     marginBottom: 6,
+    letterSpacing: -0.4,
   },
   emptyStateText: {
     fontSize: 14,
     color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   suggestionList: {
     width: '100%',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   suggestionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    ...shadows.card,
+  },
+  suggestionIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   suggestionText: {
     fontSize: 14,
     color: colors.text,
     flex: 1,
+    fontWeight: '500',
+  },
+  photoHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   emptyStateSubtext: {
     fontSize: 13,
     color: colors.textMuted,
-    textAlign: 'center',
   },
+
+  // ─── Messages ─────────────────────────────────────────────
   messageContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   userMessageContainer: {
     alignItems: 'flex-end',
@@ -536,40 +631,55 @@ const styles = StyleSheet.create({
   aiMessageContainer: {
     alignItems: 'flex-start',
   },
+  aiBubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  aiAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   messageImage: {
     width: 200,
     height: 200,
-    borderRadius: borderRadius.md,
-    marginBottom: 8,
+    borderRadius: borderRadius.lg,
+    marginBottom: 6,
     resizeMode: 'cover',
   },
   messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    maxWidth: '78%',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
   },
   userMessageBubble: {
-    backgroundColor: colors.primaryDark,
-    borderColor: colors.primaryDark,
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 4,
   },
   aiMessageBubble: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
     borderColor: colors.border,
+    borderBottomLeftRadius: 4,
+    ...shadows.card,
   },
   errorMessageBubble: {
     backgroundColor: colors.errorBackground,
+    borderWidth: 1,
     borderColor: colors.error,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 22,
-    color: colors.text,
   },
   messageParagraph: {
-    marginTop: 12,
+    marginTop: 10,
   },
   userMessageText: {
     color: colors.white,
@@ -578,106 +688,120 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   loadingContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 12,
   },
+
+  // ─── Bottom input section ─────────────────────────────────
   bottomSection: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   selectedImageContainer: {
     position: 'relative',
     marginHorizontal: spacing.screenPadding,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 4,
     alignSelf: 'flex-start',
   },
   selectedImagePreview: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.sm,
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.md,
     resizeMode: 'cover',
   },
   removeImageButton: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderRadius: 11,
   },
   uploadSection: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 16,
-    padding: spacing.lg,
     marginHorizontal: spacing.screenPadding,
-    marginTop: 12,
-    marginBottom: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
+    paddingVertical: 12,
   },
   uploadButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  uploadIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
-    marginTop: 4,
   },
   divider: {
-    width: 2,
-    height: 60,
+    width: 1,
+    height: 50,
     backgroundColor: colors.border,
-    marginHorizontal: spacing.screenPadding,
   },
+
+  // ─── Input bar ────────────────────────────────────────────
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: spacing.screenPadding,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     paddingBottom: 8,
+    gap: 8,
+  },
+  addButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  addButtonActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   input: {
     flex: 1,
-    minHeight: 50,
-    maxHeight: 100,
-    backgroundColor: colors.surface,
-    borderRadius: 25,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 42,
+    maxHeight: 110,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 21,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    fontSize: 15,
     color: colors.text,
   },
-  addButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surface,
+  submitButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  submitButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+  submitButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 });
