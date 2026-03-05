@@ -212,25 +212,26 @@ export default function PropertyDetailScreen({ route }) {
                         });
                       }}
                     >
+                      {firstPhoto && (
+                        <>
+                          <Image source={{ uri: firstPhoto }} style={styles.utilityBgImage} blurRadius={10} />
+                          <View style={styles.utilityBgOverlay} />
+                        </>
+                      )}
                       <View style={styles.utilityShutoffTop}>
                         <View style={styles.utilityShutoffIconWrap}>
                           <Ionicons name={icon} size={20} color={colors.text} />
                         </View>
-                        {shutoff?.id && (
+                        {shutoff?.id ? (
                           <Text style={styles.utilityShutoffSubtitle}>View details</Text>
-                        )}
-                      </View>
-                      <View style={styles.utilityShutoffBox}>
-                        {firstPhoto ? (
-                          <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
-                        ) : !shutoff?.id ? (
+                        ) : (
                           <View style={styles.utilityShutoffBoxPlaceholder}>
                             <Text style={styles.utilityShutoffAddText}>Add</Text>
                             <View style={styles.utilityShutoffAddCircle}>
                               <Ionicons name="add" size={16} color="#1095EE" />
                             </View>
                           </View>
-                        ) : null}
+                        )}
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -258,6 +259,12 @@ export default function PropertyDetailScreen({ route }) {
                       activeOpacity={0.8}
                       onPress={() => navigation.navigate('UtilityDetail', { utilityId: utility.id })}
                     >
+                      {firstPhoto && (
+                        <>
+                          <Image source={{ uri: firstPhoto }} style={styles.utilityBgImage} blurRadius={10} />
+                          <View style={styles.utilityBgOverlay} />
+                        </>
+                      )}
                       <View style={styles.utilityShutoffTop}>
                         <View style={styles.utilityShutoffIconWrap}>
                           <Ionicons
@@ -267,11 +274,6 @@ export default function PropertyDetailScreen({ route }) {
                           />
                         </View>
                         <Text style={styles.utilityShutoffSubtitle}>View details</Text>
-                      </View>
-                      <View style={styles.utilityShutoffBox}>
-                        {firstPhoto && (
-                          <Image source={{ uri: firstPhoto }} style={styles.utilityShutoffBoxImage} />
-                        )}
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -518,6 +520,16 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 6,
     paddingHorizontal: 12,
+    overflow: 'hidden',
+  },
+  utilityBgImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: undefined,
+    height: undefined,
+  },
+  utilityBgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   utilityShutoffTop: {
     alignItems: 'center',
@@ -543,7 +555,8 @@ const styles = StyleSheet.create({
   utilityShutoffSubtitle: {
     marginTop: 9,
     fontSize: 12,
-    color: colors.textSecondary || '#666',
+    fontWeight: '600',
+    color: '#333',
   },
   utilityShutoffBox: {
     width: '100%',
@@ -566,7 +579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    marginTop: -20,
+    marginTop: 9,
   },
   utilityShutoffAddText: {
     fontSize: 14,
