@@ -910,7 +910,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         >
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
-            <Text style={styles.progressTitle}>Enter utility</Text>
+            <Text style={styles.progressTitle}>Utility</Text>
+            <Text style={styles.progressSubtitle}>Enter details for this utility</Text>
           </View>
 
           {/* Title + Icon Row */}
@@ -928,7 +929,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             </TouchableOpacity>
             <View style={[styles.inputRect, styles.titleInput]}>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { textAlignVertical: 'center' }]}
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Title"
@@ -1230,7 +1231,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         >
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
-            <Text style={styles.progressTitle}>Enter utility</Text>
+            <Text style={styles.progressTitle}>Utility</Text>
+            <Text style={styles.progressSubtitle}>Enter details for this utility</Text>
           </View>
 
           <View style={styles.maintenanceSection}>
@@ -1499,10 +1501,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   progressTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1E1E1E',
     textAlign: 'center',
+  },
+  progressSubtitle: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: -5,
   },
   progressIndicator: {
     width: 289,
@@ -1537,7 +1545,10 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     flex: 1,
+    height: 52,
     marginBottom: 0,
+    paddingVertical: 0,
+    justifyContent: 'center',
   },
   iconPickerPanel: {
     flexDirection: 'row',

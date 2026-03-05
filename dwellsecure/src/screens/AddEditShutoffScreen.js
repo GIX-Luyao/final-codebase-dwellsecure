@@ -766,11 +766,16 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const renderStep2 = () => {
     const getTitle = () => {
       const typeLabels = {
-        gas: 'gas',
-        electric: 'electric',
-        water: 'water',
+        gas: 'Gas',
+        electric: 'Electric',
+        water: 'Water',
       };
-      return `Enter ${typeLabels[selectedType] || 'gas'} shutoff`;
+      return `${typeLabels[selectedType] || 'Gas'} shutoff`;
+    };
+
+    const getSubtitle = () => {
+      const typeLabels = { gas: 'gas', electric: 'electric', water: 'water' };
+      return `Enter details for ${typeLabels[selectedType] || 'gas'} shutoff`;
     };
 
     return (
@@ -793,6 +798,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
+            <Text style={styles.progressSubtitle}>{getSubtitle()}</Text>
           </View>
 
           {/* Description Input */}
@@ -1415,11 +1421,16 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const renderStep3 = () => {
     const getTitle = () => {
       const typeLabels = {
-        gas: 'gas',
-        electric: 'electric',
-        water: 'water',
+        gas: 'Gas',
+        electric: 'Electric',
+        water: 'Water',
       };
-      return `Enter ${typeLabels[selectedType] || 'gas'} shutoff`;
+      return `${typeLabels[selectedType] || 'Gas'} shutoff`;
+    };
+
+    const getSubtitle = () => {
+      const typeLabels = { gas: 'gas', electric: 'electric', water: 'water' };
+      return `Enter details for ${typeLabels[selectedType] || 'gas'} shutoff`;
     };
 
     return (
@@ -1441,6 +1452,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Progress Indicator with Title */}
           <View style={styles.progressIndicatorContainer}>
             <Text style={styles.progressTitle}>{getTitle()}</Text>
+            <Text style={styles.progressSubtitle}>{getSubtitle()}</Text>
           </View>
 
           <View style={styles.maintenanceSection}>
@@ -2380,10 +2392,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   progressTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1E1E1E',
     textAlign: 'center',
+  },
+  progressSubtitle: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: -5,
   },
   progressIndicator: {
     width: 289,
