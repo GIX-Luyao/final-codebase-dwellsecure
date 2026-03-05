@@ -34,7 +34,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
 
   const [step, setStep] = useState(initialStep ?? 1);
   const [guideStep, setGuideStep] = useState(1); // Track which guide image (1 or 2)
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(''); // kept for backward compat
+  const [steps, setSteps] = useState(['', '']);
   const [location, setLocation] = useState('');
   const [locationCoords, setLocationCoords] = useState(null); // Store lat/lng for thumbnail
   const [floor, setFloor] = useState('');
@@ -63,6 +64,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const [verificationStatus, setVerificationStatus] = useState('unverified');
   const [isInEmergencyMode, setIsInEmergencyMode] = useState(false);
   const [selectedType, setSelectedType] = useState(shutoffType); // Allow type to be changed
+
+  // Step-by-step helpers
+  const addStep = () => setSteps(prev => [...prev, '']);
+  const removeStep = (index) => setSteps(prev => prev.length > 2 ? prev.filter((_, i) => i !== index) : prev);
+  const updateStep = (index, value) => setSteps(prev => { const s = [...prev]; s[index] = value; return s; });
 
   useEffect(() => {
     checkMode();
@@ -181,6 +187,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     const data = allShutoffs.find(s => s.id === shutoff.id);
     if (data) {
       setDescription(data.description || '');
+      const loadedSteps = (data.description || '').split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      setSteps(loadedSteps.length > 0 ? loadedSteps : ['']);
       setLocation(data.location || '');
       // Try to parse location string to extract coordinates, or use stored coordinates
       if (data.latitude && data.longitude) {
@@ -219,11 +227,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const getShutoffTypeLabel = () => {
     const labels = {
       gas: 'Gas',
-      electric: 'Electric',
+      electric: 'Electricity',
       water: 'Water',
       // Backward compatibility
       fire: 'Gas',
-      power: 'Electric',
+      power: 'Electricity',
     };
     return labels[selectedType] || labels[shutoffType] || 'Gas';
   };
@@ -520,7 +528,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       id: shutoffId,
       type: selectedType, // gas/electric/water from step selection
       // Step 2 information
-      description: description.trim(),
+      description: steps.map(s => s.trim()).filter(s => s.length > 0).join('\n'),
       location: location.trim(), // Location string
       latitude: locationCoords?.latitude || null, // Map coordinates
       longitude: locationCoords?.longitude || null, // Map coordinates
@@ -620,7 +628,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     const getTypeTitle = () => {
       const typeLabels = {
         gas: 'gas',
-        electric: 'electric',
+        electric: 'electricity',
         water: 'water',
       };
       return typeLabels[selectedType] || 'gas';
@@ -767,14 +775,14 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     const getTitle = () => {
       const typeLabels = {
         gas: 'Gas',
-        electric: 'Electric',
+        electric: 'Electricity',
         water: 'Water',
       };
       return `${typeLabels[selectedType] || 'Gas'} shutoff`;
     };
 
     const getSubtitle = () => {
-      const typeLabels = { gas: 'gas', electric: 'electric', water: 'water' };
+      const typeLabels = { gas: 'gas', electric: 'electricity', water: 'water' };
       return `Enter details for ${typeLabels[selectedType] || 'gas'} shutoff`;
     };
 
@@ -801,20 +809,37 @@ export default function AddEditShutoffScreen({ route, navigation }) {
             <Text style={styles.progressSubtitle}>{getSubtitle()}</Text>
           </View>
 
-          {/* Description Input */}
-          <View style={styles.inputRect}>
-            <TextInput
-              style={[styles.textInput, styles.textInputMultiline]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Please describe how to find it..."
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={3}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
-            />
+          {/* Step-by-step instructions */}
+          <Text style={styles.sectionTitle}>How to locate it</Text>
+          <View style={styles.stepsSection}>
+            {steps.map((stepText, index) => (
+              <View key={index} style={styles.stepRow}>
+                <View style={styles.stepNumberBadge}>
+                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+                </View>
+                <View style={[styles.inputRect, styles.stepInput]}>
+                  <TextInput
+                    style={[styles.textInput, { textAlignVertical: 'center' }]}
+                    value={stepText}
+                    onChangeText={(val) => updateStep(index, val)}
+                    placeholder={`Step ${index + 1}`}
+                    placeholderTextColor="#999"
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                  />
+                </View>
+                {steps.length > 2 && (
+                  <TouchableOpacity onPress={() => removeStep(index)} style={styles.stepDeleteButton}>
+                    <Ionicons name="close-circle" size={22} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addStepButton} onPress={addStep}>
+              <Ionicons name="add-circle-outline" size={20} color="#1095EE" />
+              <Text style={styles.addStepText}>Add step</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Voice Note Button */}
@@ -1422,14 +1447,14 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     const getTitle = () => {
       const typeLabels = {
         gas: 'Gas',
-        electric: 'Electric',
+        electric: 'Electricity',
         water: 'Water',
       };
       return `${typeLabels[selectedType] || 'Gas'} shutoff`;
     };
 
     const getSubtitle = () => {
-      const typeLabels = { gas: 'gas', electric: 'electric', water: 'water' };
+      const typeLabels = { gas: 'gas', electric: 'electricity', water: 'water' };
       return `Enter details for ${typeLabels[selectedType] || 'gas'} shutoff`;
     };
 
@@ -2390,6 +2415,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginBottom: 30,
+  },
+  stepsSection: {
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  stepNumberBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#1095EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepNumberText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  stepInput: {
+    flex: 1,
+    marginBottom: 0,
+    height: 48,
+    paddingVertical: 0,
+    justifyContent: 'center',
+  },
+  stepDeleteButton: {
+    padding: 4,
+    flexShrink: 0,
+  },
+  addStepButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: 2,
+    marginLeft: 36,
+  },
+  addStepText: {
+    fontSize: 14,
+    color: '#1095EE',
+    fontWeight: '600',
   },
   progressTitle: {
     fontSize: 28,

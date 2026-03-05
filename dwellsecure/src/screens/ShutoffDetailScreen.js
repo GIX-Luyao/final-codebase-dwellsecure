@@ -1125,7 +1125,7 @@ export default function ShutoffDetailScreen({ route }) {
         return { label: 'Gas', icon: 'flame-outline', color: '#ff6b35' };
       case 'electric':
       case 'power':
-        return { label: 'Electric', icon: 'flash-outline', color: '#ffc107' };
+        return { label: 'Electricity', icon: 'flash-outline', color: '#ffc107' };
       case 'water':
         return { label: 'Water', icon: 'water-outline', color: '#2196f3' };
       default:

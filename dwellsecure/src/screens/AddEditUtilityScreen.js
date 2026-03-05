@@ -30,7 +30,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   const [title, setTitle] = useState('');
   const [utilityIcon, setUtilityIcon] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(''); // kept for backward compat
+  const [steps, setSteps] = useState(['', '']);
   const [location, setLocation] = useState('');
   const [locationCoords, setLocationCoords] = useState(null);
   const [floor, setFloor] = useState('');
@@ -56,6 +57,11 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   const [showFloorInput, setShowFloorInput] = useState(false);
   const [reminderId, setReminderId] = useState(null);
   const [isInEmergencyMode, setIsInEmergencyMode] = useState(false);
+
+  // Step-by-step helpers
+  const addStep = () => setSteps(prev => [...prev, '']);
+  const removeStep = (index) => setSteps(prev => prev.length > 2 ? prev.filter((_, i) => i !== index) : prev);
+  const updateStep = (index, value) => setSteps(prev => { const s = [...prev]; s[index] = value; return s; });
 
   useEffect(() => {
     checkMode();
@@ -163,6 +169,8 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       setTitle(data.title || '');
       setUtilityIcon(data.utilityIcon || null);
       setDescription(data.description || '');
+      const loadedSteps = (data.description || '').split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      setSteps(loadedSteps.length > 0 ? loadedSteps : ['']);
       setLocation(data.location || '');
       if (data.latitude && data.longitude) {
         setLocationCoords({
@@ -445,7 +453,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       // Step 2 information
       title: title.trim(),
       utilityIcon: utilityIcon || null,
-      description: description.trim(),
+      description: steps.map(s => s.trim()).filter(s => s.length > 0).join('\n'),
       location: location.trim(),
       latitude: locationCoords?.latitude || null,
       longitude: locationCoords?.longitude || null,
@@ -986,20 +994,37 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Description Input */}
-          <View style={styles.inputRect}>
-            <TextInput
-              style={[styles.textInput, styles.textInputMultiline]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Please describe how to find it..."
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={3}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={() => Keyboard.dismiss()}
-            />
+          {/* Step-by-step instructions */}
+          <Text style={styles.sectionTitle}>How to locate it</Text>
+          <View style={styles.stepsSection}>
+            {steps.map((stepText, index) => (
+              <View key={index} style={styles.stepRow}>
+                <View style={styles.stepNumberBadge}>
+                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+                </View>
+                <View style={[styles.inputRect, styles.stepInput]}>
+                  <TextInput
+                    style={[styles.textInput, { textAlignVertical: 'center' }]}
+                    value={stepText}
+                    onChangeText={(val) => updateStep(index, val)}
+                    placeholder={`Step ${index + 1}`}
+                    placeholderTextColor="#999"
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                  />
+                </View>
+                {steps.length > 2 && (
+                  <TouchableOpacity onPress={() => removeStep(index)} style={styles.stepDeleteButton}>
+                    <Ionicons name="close-circle" size={22} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addStepButton} onPress={addStep}>
+              <Ionicons name="add-circle-outline" size={20} color="#1095EE" />
+              <Text style={styles.addStepText}>Add step</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Voice Note Button */}
@@ -1499,6 +1524,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginBottom: 30,
+  },
+  stepsSection: {
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  stepNumberBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#1095EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepNumberText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  stepInput: {
+    flex: 1,
+    marginBottom: 0,
+    height: 48,
+    paddingVertical: 0,
+    justifyContent: 'center',
+  },
+  stepDeleteButton: {
+    padding: 4,
+    flexShrink: 0,
+  },
+  addStepButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: 2,
+    marginLeft: 36,
+  },
+  addStepText: {
+    fontSize: 14,
+    color: '#1095EE',
+    fontWeight: '600',
   },
   progressTitle: {
     fontSize: 28,
