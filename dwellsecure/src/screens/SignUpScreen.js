@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   ActivityIndicator,
@@ -65,6 +66,7 @@ export default function SignUpScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
@@ -82,6 +84,9 @@ export default function SignUpScreen() {
               onChangeText={setName}
               autoCapitalize="words"
               editable={!loading}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Text style={[styles.label, { marginTop: spacing.lg }]}>Email</Text>
@@ -95,6 +100,9 @@ export default function SignUpScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Text style={[styles.label, { marginTop: spacing.lg }]}>Password</Text>
@@ -107,6 +115,9 @@ export default function SignUpScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 editable={!loading}
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
               <TouchableOpacity
                 style={styles.eyeButton}
@@ -129,6 +140,9 @@ export default function SignUpScreen() {
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
               editable={!loading}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <TouchableOpacity

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Keyboard,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,7 +84,11 @@ export default function AddPersonScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={28} color="#333" />
@@ -117,6 +122,9 @@ export default function AddPersonScreen() {
               onChangeText={setName}
               placeholder="Enter name"
               placeholderTextColor="#999"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -128,6 +136,9 @@ export default function AddPersonScreen() {
               onChangeText={setRole}
               placeholder="e.g., Homeowner, Tenant, Property Manager"
               placeholderTextColor="#999"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -140,6 +151,9 @@ export default function AddPersonScreen() {
               placeholder="(123) 456-7890"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -153,6 +167,9 @@ export default function AddPersonScreen() {
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 

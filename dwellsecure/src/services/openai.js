@@ -37,19 +37,12 @@ export const askAboutShutoffs = async (question) => {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      // #region agent log
-      console.warn('[DEBUG] ask API failed', { url, status: response.status, apiBase: API_BASE_URL });
-      fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'openai.js:askAboutShutoffs', message: 'ask API non-OK', data: { url, status: response.status, statusText: response.statusText, apiBase: API_BASE_URL }, timestamp: Date.now(), hypothesisId: '404-cause' }) }).catch(() => {});
-      // #endregion
       throw new Error(data.error || `Request failed: ${response.status}`);
     }
 
     const data = await response.json();
     return data.text || 'Unable to answer your question. Please try again.';
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'openai.js:askAboutShutoffs:catch', message: 'ask failed', data: { url, apiBase: API_BASE_URL, errorMessage: error.message }, timestamp: Date.now(), hypothesisId: '404-cause' }) }).catch(() => {});
-    // #endregion
     console.error('Error asking about shutoffs:', error);
     throw error;
   }

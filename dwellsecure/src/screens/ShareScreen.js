@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../constants/theme';
@@ -18,7 +18,13 @@ export default function ShareScreen() {
         <Text style={styles.headerTitle}>Share</Text>
         <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
 
         <View style={styles.shareSection}>
           <Text style={styles.sectionLabel}>Add member</Text>
@@ -32,6 +38,9 @@ export default function ShareScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
             <TouchableOpacity style={styles.addButton} onPress={handleShare}>
               <Ionicons name="add" size={24} color={colors.textMuted} />

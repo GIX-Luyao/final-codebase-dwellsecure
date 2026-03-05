@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -310,6 +311,8 @@ export default function AIAssistanceScreen() {
         style={styles.chatContainer}
         contentContainerStyle={styles.chatContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {messages.length === 0 ? (
           <View style={styles.emptyState}>
@@ -378,6 +381,9 @@ export default function AIAssistanceScreen() {
             editable={!isLoadingText}
             multiline
             maxLength={500}
+            returnKeyType="done"
+            blurOnSubmit={true}
+            onSubmitEditing={() => Keyboard.dismiss()}
           />
           <TouchableOpacity 
             style={styles.addButton} 
