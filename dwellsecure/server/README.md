@@ -17,6 +17,7 @@ npm install
    - **MONGODB_PASSWORD** – used only when `MONGODB_URI` is not set (default dev user/password in `config.js`).
    - **PORT** – server port (default 3000).
    - **CORS_ORIGIN** – comma-separated allowed origins (optional).
+   - **JWT_SECRET** – secret for signing auth tokens (required in production; dev default exists).
    - Create a `.env` file in the project root (or `server`) for local overrides.
 
 3. Start the server:
@@ -42,10 +43,13 @@ For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `
 ## API Endpoints
 
 - `GET /health` - Health check
+- `POST /api/auth/register` - Register (body: `email`, `password`, optional `name`, `photo`). Returns `{ user, token }`. Password stored hashed (bcrypt).
+- `POST /api/auth/login` - Login (body: `email`, `password`). Returns `{ user, token }`.
 - `GET /api/shutoffs` - Get all shutoffs
 - `GET /api/shutoffs/:id` - Get a specific shutoff
 - `POST /api/shutoffs` - Create or update a shutoff
 - `DELETE /api/shutoffs/:id` - Delete a shutoff
+- `GET /api/properties` - Get properties (when `Authorization: Bearer <token>` present, returns only that user's properties).
 - `GET /api/utilities` - Get all utilities
 - `GET /api/utilities/:id` - Get a specific utility
 - `POST /api/utilities` - Create or update a utility
