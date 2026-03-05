@@ -2,9 +2,19 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const FormData = require('form-data');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const config = require('./config');
 const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
+
+// #region agent log
+const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
+function debugLog(location, message, data, hypothesisId) {
+  const payload = { location, message, data: data || {}, timestamp: Date.now(), hypothesisId, runId: 'mongo-connect' };
+  fetch('http://127.0.0.1:7242/ingest/14f14bef-012d-49c5-bc8a-a091927f7e62', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+  try { fs.appendFileSync(DEBUG_LOG_PATH, JSON.stringify(payload) + '\n'); } catch (_) {}
+}
+// #endregion
 
 const app = express();
 const { PORT, mongoUri, corsOptions } = config;
@@ -55,6 +65,14 @@ const client = new MongoClient(mongoUri, {
 let db = null;
 
 async function connectDB() {
+  // #region agent log
+  debugLog('server/index.js:connectDB:entry', 'connectDB entry', {
+    nodeVersion: process.version,
+    uriSource: process.env.MONGODB_URI ? 'env' : 'default',
+    uriHasSrv: mongoUri.includes('mongodb+srv'),
+    uriHost: mongoUri.includes('@') ? mongoUri.split('@')[1].split('/')[0].split('?')[0] : 'unknown',
+  }, 'A,B,C');
+  // #endregion
   try {
     console.log('🔌 Connecting to MongoDB...');
     console.log(`📡 URI: ${mongoUri.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
@@ -64,9 +82,21 @@ async function connectDB() {
     
     // Add detailed error handling
     try {
+      // #region agent log
+      debugLog('server/index.js:connectDB:beforeConnect', 'about to client.connect()', {}, 'D');
+      // #endregion
       await client.connect();
       console.log('✅ MongoDB client connected');
     } catch (connectError) {
+      // #region agent log
+      debugLog('server/index.js:connectDB:connectError', 'MongoDB connect failed', {
+        errorName: connectError.name,
+        errorCode: connectError.code,
+        errorMessage: (connectError.message || '').substring(0, 400),
+        hasCause: !!connectError.cause,
+        causeMessage: connectError.cause ? String(connectError.cause).substring(0, 200) : undefined,
+      }, 'D,E');
+      // #endregion
       console.error('');
       console.error('='.repeat(60));
       console.error('❌ MongoDB Connection Failed!');
@@ -146,6 +176,15 @@ async function connectDB() {
 
 // Routes
 app.get('/health', (req, res) => {
+  // #region agent log
+  debugLog('server/index.js:/health', 'health endpoint hit', {
+    ip: req.ip,
+    userAgent: req.headers['user-agent'] || null,
+    method: req.method,
+    path: req.path,
+  }, 'H1');
+  // #endregion
+
   res.json({ 
     status: 'ok', 
     db: db ? 'connected' : 'disconnected',
@@ -791,6 +830,98 @@ app.post('/api/ai/ask', async (req, res) => {
     res.json({ text });
   } catch (error) {
     console.error('Error /api/ai/ask:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+app.post('/api/ai/voice-note', async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ error: 'OpenAI API key not configured on server' });
+    }
+    const { audioBase64, context } = req.body || {};
+    if (!audioBase64) {
+      return res.status(400).json({ error: 'audioBase64 required' });
+    }
+
+    // Decode base64 audio and write to a temporary file
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const tmpDir = path.join(__dirname, '..', '.tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    const tmpPath = path.join(tmpDir, `voice-${Date.now()}.m4a`);
+    fs.writeFileSync(tmpPath, audioBuffer);
+
+    try {
+      // 1) Transcribe audio with OpenAI Whisper
+      const form = new FormData();
+      form.append('file', fs.createReadStream(tmpPath));
+      form.append('model', 'whisper-1');
+
+      const transcribeResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          ...form.getHeaders(),
+        },
+        body: form,
+      });
+
+      if (!transcribeResponse.ok) {
+        const err = await transcribeResponse.json().catch(() => ({}));
+        return res.status(transcribeResponse.status).json({ error: err.error?.message || 'OpenAI transcription failed' });
+      }
+
+      const transcribeData = await transcribeResponse.json();
+      const transcript = transcribeData.text || '';
+
+      // 2) Summarize transcript into a concise description
+      let description = transcript;
+      if (transcript) {
+        try {
+          const roleContext = context === 'utility'
+            ? 'a utility (service provider or home system)'
+            : 'a shutoff (gas, electric, or water valve)';
+
+          const prompt = `You are helping a resident record structured information about ${roleContext} in a home maintenance app.
+Transcript of their voice note:
+"""${transcript}"""
+
+Rewrite this as a short, clear description (1–2 sentences) focused on how to find and use it. Respond in plain text only.`;
+
+          const summarizeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are a concise, safety-focused assistant for a home shutoff/utility app.' },
+                { role: 'user', content: prompt },
+              ],
+              max_tokens: 200,
+            }),
+          });
+
+          if (summarizeResponse.ok) {
+            const summarizeData = await summarizeResponse.json();
+            description = (summarizeData.choices?.[0]?.message?.content || transcript).trim();
+          }
+        } catch (e) {
+          console.error('Error summarizing voice note:', e);
+        }
+      }
+
+      res.json({ transcript, description });
+    } finally {
+      // Best-effort cleanup
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+    }
+  } catch (error) {
+    console.error('Error /api/ai/voice-note:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
