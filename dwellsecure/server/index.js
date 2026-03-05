@@ -21,7 +21,9 @@ const app = express();
 const { PORT, mongoUri, corsOptions } = config;
 
 app.use(cors(corsOptions));
-app.use(express.json());
+const JSON_BODY_LIMIT = 15 * 1024 * 1024; // 15 MB
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+
 
 // Request logging middleware - MUST be before routes
 app.use((req, res, next) => {
@@ -1031,4 +1033,5 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
+
 
