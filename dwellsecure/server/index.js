@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
@@ -853,22 +854,26 @@ app.post('/api/ai/voice-note', async (req, res) => {
     form.append('model', 'whisper-1');
 
     try {
-      const transcribeResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          ...form.getHeaders(),
-        },
-        body: form,
-      });
+      const transcribeResponse = await axios.post(
+        'https://api.openai.com/v1/audio/transcriptions',
+        form,
+        {
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            ...form.getHeaders(),
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          validateStatus: () => true,
+        }
+      );
 
-      if (!transcribeResponse.ok) {
-        const err = await transcribeResponse.json().catch(() => ({}));
-        return res.status(transcribeResponse.status).json({ error: err.error?.message || 'OpenAI transcription failed' });
+      if (transcribeResponse.status !== 200) {
+        const err = transcribeResponse.data?.error?.message || transcribeResponse.statusText || 'OpenAI transcription failed';
+        return res.status(transcribeResponse.status).json({ error: err });
       }
 
-      const transcribeData = await transcribeResponse.json();
-      const transcript = transcribeData.text || '';
+      const transcript = transcribeResponse.data?.text || '';
 
       // 2) Summarize transcript into a concise description
       let description = transcript;
@@ -1026,3 +1031,4 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
+
