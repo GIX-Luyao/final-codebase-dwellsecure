@@ -319,10 +319,8 @@ export default function AIAssistanceScreen() {
         keyboardVerticalOffset={0}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Finder</Text>
-          <Text style={styles.headerSubtitle}>
-            Ask here or send an image to identify shutoffs
-          </Text>
+          <Text style={styles.headerTitle}>AI Assistant</Text>
+          <Text style={styles.headerSubtitle}>Powered by OpenAI</Text>
         </View>
         <ScrollView
           ref={scrollViewRef}
@@ -334,12 +332,27 @@ export default function AIAssistanceScreen() {
         >
           {messages.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={56} color={colors.textMuted} />
+              <Ionicons name="chatbubble-ellipses-outline" size={56} color={colors.textMuted} />
+              <Text style={styles.emptyStateTitle}>Ask me anything</Text>
               <Text style={styles.emptyStateText}>
-                Send an image to identify or ask me anything
+                Not sure where to start? Try asking ChatGPT:
               </Text>
+              <View style={styles.suggestionList}>
+                <View style={styles.suggestionChip}>
+                  <Ionicons name="water-outline" size={15} color={colors.primary} />
+                  <Text style={styles.suggestionText}>"Where is my water shutoff?"</Text>
+                </View>
+                <View style={styles.suggestionChip}>
+                  <Ionicons name="flash-outline" size={15} color={colors.primary} />
+                  <Text style={styles.suggestionText}>"How do I turn off the electricity?"</Text>
+                </View>
+                <View style={styles.suggestionChip}>
+                  <Ionicons name="flame-outline" size={15} color={colors.primary} />
+                  <Text style={styles.suggestionText}>"What do I do if I smell gas?"</Text>
+                </View>
+              </View>
               <Text style={styles.emptyStateSubtext}>
-                I can help you find gas, electricity, and water shutoffs
+                Or send a photo and I'll identify your shutoffs
               </Text>
             </View>
           ) : (
@@ -453,9 +466,10 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: 6,
+    fontSize: 13,
+    color: colors.primary,
+    marginTop: 4,
+    fontWeight: '500',
   },
   chatContainer: {
     flex: 1,
@@ -473,15 +487,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     minHeight: 400,
   },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 6,
+  },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  suggestionList: {
+    width: '100%',
+    gap: 10,
+    marginBottom: 20,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: colors.text,
+    flex: 1,
   },
   emptyStateSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',
   },
