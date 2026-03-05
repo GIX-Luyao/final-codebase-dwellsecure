@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
   // Header styles matching AddProperty/AddEditShutoff
   overviewHeader: {
     paddingTop: 50,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     paddingBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
   // Address section
   addressSection: {
     paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     alignItems: 'center',
   },
   addressTitle: {
@@ -1351,7 +1351,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   descriptionBox: {
-    marginTop: 12,
+    marginTop: 30,
     width: '100%',
     height: 80,
     backgroundColor: '#f5f5f5',
@@ -1372,7 +1372,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
   tabContentContainer: {
     paddingBottom: 100,
