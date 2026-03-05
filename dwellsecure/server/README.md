@@ -50,6 +50,9 @@ For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `
 - `GET /api/utilities/:id` - Get a specific utility
 - `POST /api/utilities` - Create or update a utility
 - `DELETE /api/utilities/:id` - Delete a utility
+- `POST /api/ai/voice-note` - Transcribe and summarize a voice note (requires `OPENAI_API_KEY`)
+
+**Note:** If the app shows "Voice note API not available" (404), redeploy this server so the deployed instance includes the `/api/ai/voice-note` route.
 
 ## Testing
 
