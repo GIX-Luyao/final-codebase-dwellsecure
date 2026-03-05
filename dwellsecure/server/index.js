@@ -844,21 +844,15 @@ app.post('/api/ai/voice-note', async (req, res) => {
       return res.status(400).json({ error: 'audioBase64 required' });
     }
 
-    // Decode base64 audio and write to a temporary file
+    // Decode base64 audio
     const audioBuffer = Buffer.from(audioBase64, 'base64');
-    const tmpDir = path.join(__dirname, '..', '.tmp');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-    const tmpPath = path.join(tmpDir, `voice-${Date.now()}.m4a`);
-    fs.writeFileSync(tmpPath, audioBuffer);
+
+    // 1) Transcribe audio with OpenAI Whisper (append Buffer with filename so multipart parses correctly)
+    const form = new FormData();
+    form.append('file', audioBuffer, { filename: 'audio.m4a', contentType: 'audio/mp4' });
+    form.append('model', 'whisper-1');
 
     try {
-      // 1) Transcribe audio with OpenAI Whisper
-      const form = new FormData();
-      form.append('file', fs.createReadStream(tmpPath));
-      form.append('model', 'whisper-1');
-
       const transcribeResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: {
@@ -916,9 +910,9 @@ Rewrite this as a short, clear description (1–2 sentences) focused on how to f
       }
 
       res.json({ transcript, description });
-    } finally {
-      // Best-effort cleanup
-      try { fs.unlinkSync(tmpPath); } catch (_) {}
+    } catch (innerErr) {
+      console.error('Error in voice-note transcription/summary:', innerErr);
+      throw innerErr;
     }
   } catch (error) {
     console.error('Error /api/ai/voice-note:', error);
@@ -1012,7 +1006,7 @@ async function startServer() {
     console.log('='.repeat(60));
     console.log(`✅ Server started successfully!`);
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`📍 Health check: https://dwellsecuregix.onrender.com:${PORT}/health`);
     console.log(`🌐 Server listening on all interfaces (accessible from network)`);
     console.log(`📊 Database status: ${db ? 'CONNECTED ✅' : 'DISCONNECTED ❌ (using local storage)'}`);
     console.log('='.repeat(60));
