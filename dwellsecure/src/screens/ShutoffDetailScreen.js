@@ -1169,7 +1169,7 @@ export default function ShutoffDetailScreen({ route }) {
       <View style={styles.editButtonFixed}>
         <TouchableOpacity 
           style={styles.saveButtonIcon} 
-          onPress={() => shutoff && navigation.navigate('AddEditShutoff', { shutoff })}
+          onPress={() => shutoff && navigation.navigate('AddEditShutoff', { shutoff, initialStep: 2 })}
         >
           <Ionicons name="pencil" size={24} color="#fff" />
         </TouchableOpacity>

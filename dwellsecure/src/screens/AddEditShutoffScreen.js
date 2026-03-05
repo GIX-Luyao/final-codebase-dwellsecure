@@ -25,14 +25,14 @@ import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
 
 export default function AddEditShutoffScreen({ route, navigation }) {
-  const { shutoff, type, propertyId } = route.params || {};
+  const { shutoff, type, propertyId, initialStep } = route.params || {};
   const isEditing = !!shutoff;
   // Support both old types (fire, power) and new types (gas, electric) for backward compatibility
   const initialType = type || shutoff?.type || 'gas';
   // Normalize old types to new types
   const shutoffType = initialType === 'fire' ? 'gas' : initialType === 'power' ? 'electric' : initialType;
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep ?? 1);
   const [guideStep, setGuideStep] = useState(1); // Track which guide image (1 or 2)
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
