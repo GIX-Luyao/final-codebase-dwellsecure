@@ -53,7 +53,7 @@ export default function RemindersScreen() {
         if (reminder.type === 'utility' && reminder.utilityId) {
           const utility = utilityMap[reminder.utilityId];
           if (utility) {
-            enriched.displayTitle = utility.name || enriched.title;
+            enriched.displayTitle = utility.title || utility.name || enriched.title;
             enriched.displayIcon = utility.utilityIcon || enriched.icon || null;
           }
         } else if (reminder.type === 'shutoff' && reminder.shutoffId) {

@@ -378,8 +378,8 @@ export default function UtilityDetailScreen({ route }) {
           icon: utilityData.utilityIcon || null,
           date: reminderDate.toISOString(),
           completed: markComplete || false, // Use current markComplete state
-          title: `Maintenance reminder for ${utilityData.name || 'utility'}`,
-          description: `Maintenance reminder for ${utilityData.description || utilityData.name || 'utility'}`,
+          title: `Maintenance reminder for ${utilityData.title || utilityData.name || 'utility'}`,
+          description: `Maintenance reminder for ${utilityData.description || utilityData.title || utilityData.name || 'utility'}`,
           contacts: reminder?.contacts || [],
           notes: reminder?.notes || '',
           createdAt: reminder?.createdAt || new Date().toISOString(),
