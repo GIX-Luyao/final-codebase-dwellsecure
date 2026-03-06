@@ -90,17 +90,18 @@ export default function PersonDetailScreen({ route }) {
         <View style={styles.headerRight}>
           <TouchableOpacity
             onPress={handleEdit}
-            style={styles.iconButton}
+            style={styles.editButton}
             accessibilityLabel="Edit person"
           >
-            <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+            <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+            <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleDelete}
-            style={[styles.iconButton, { marginLeft: spacing.sm }]}
+            style={styles.deleteHeaderButton}
             accessibilityLabel="Delete person"
           >
-            <Ionicons name="trash-outline" size={20} color={colors.error} />
+            <Ionicons name="trash-outline" size={17} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -176,12 +177,6 @@ export default function PersonDetailScreen({ route }) {
             <Text style={styles.emptyText}>No contact information added</Text>
           </View>
         )}
-
-        {/* Delete Button */}
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
-          <Ionicons name="trash-outline" size={18} color={colors.error} />
-          <Text style={styles.deleteButtonText}>Delete Person</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -221,12 +216,39 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   iconButton: {
     width: 36,
     height: 36,
     borderRadius: borderRadius.full,
     backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  deleteHeaderButton: {
+    width: 34,
+    height: 34,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.errorBackground,
+    borderWidth: 1,
+    borderColor: colors.error + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -365,24 +387,5 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textMuted,
     fontStyle: 'italic',
-  },
-
-  /* Delete button */
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.error,
-    backgroundColor: colors.errorBackground,
-  },
-  deleteButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.error,
   },
 });
