@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
+const axios = require('axios');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const config = require('./config');
 const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
@@ -21,7 +21,9 @@ const app = express();
 const { PORT, mongoUri, corsOptions } = config;
 
 app.use(cors(corsOptions));
-app.use(express.json());
+// Allow larger JSON body for voice-note (base64 audio); default is 100kb which causes 413
+const JSON_BODY_LIMIT = 15 * 1024 * 1024; // 15 MB
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
 // Request logging middleware - MUST be before routes
 app.use((req, res, next) => {
@@ -848,7 +850,7 @@ app.post('/api/ai/voice-note', async (req, res) => {
     // Decode base64 audio
     const audioBuffer = Buffer.from(audioBase64, 'base64');
 
-    // 1) Transcribe audio with OpenAI Whisper (append Buffer with filename so multipart parses correctly)
+    // 1) Transcribe audio with OpenAI Whisper (axios handles multipart correctly with form-data)
     const form = new FormData();
     form.append('file', audioBuffer, { filename: 'audio.m4a', contentType: 'audio/mp4' });
     form.append('model', 'whisper-1');
@@ -875,45 +877,8 @@ app.post('/api/ai/voice-note', async (req, res) => {
 
       const transcript = transcribeResponse.data?.text || '';
 
-      // 2) Summarize transcript into a concise description
-      let description = transcript;
-      if (transcript) {
-        try {
-          const roleContext = context === 'utility'
-            ? 'a utility (service provider or home system)'
-            : 'a shutoff (gas, electric, or water valve)';
-
-          const prompt = `You are helping a resident record structured information about ${roleContext} in a home maintenance app.
-Transcript of their voice note:
-"""${transcript}"""
-
-Rewrite this as a short, clear description (1–2 sentences) focused on how to find and use it. Respond in plain text only.`;
-
-          const summarizeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: 'You are a concise, safety-focused assistant for a home shutoff/utility app.' },
-                { role: 'user', content: prompt },
-              ],
-              max_tokens: 200,
-            }),
-          });
-
-          if (summarizeResponse.ok) {
-            const summarizeData = await summarizeResponse.json();
-            description = (summarizeData.choices?.[0]?.message?.content || transcript).trim();
-          }
-        } catch (e) {
-          console.error('Error summarizing voice note:', e);
-        }
-      }
-
+      // Use transcript as description only (no GPT rewrite), so we never add or invent content
+      const description = transcript;
       res.json({ transcript, description });
     } catch (innerErr) {
       console.error('Error in voice-note transcription/summary:', innerErr);
@@ -1031,4 +996,3 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
-
