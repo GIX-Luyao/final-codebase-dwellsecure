@@ -375,6 +375,7 @@ export default function UtilityDetailScreen({ route }) {
           id: reminder?.id || `reminder-${Date.now()}`,
           utilityId: utilityData.id,
           type: 'utility',
+          icon: utilityData.utilityIcon || null,
           date: reminderDate.toISOString(),
           completed: markComplete || false, // Use current markComplete state
           title: `Maintenance reminder for ${utilityData.name || 'utility'}`,

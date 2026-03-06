@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getReminders, saveReminder } from '../services/storage';
+import { getReminders, saveReminder, getShutoffs, getUtilities } from '../services/storage';
 import SwipeableReminderItem from '../components/SwipeableReminderItem';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 
@@ -18,16 +18,57 @@ export default function RemindersScreen() {
   );
 
   const loadReminders = async () => {
-    const allReminders = await getReminders();
+    const [allReminders, allShutoffs, allUtilities] = await Promise.all([
+      getReminders(),
+      getShutoffs(),
+      getUtilities(),
+    ]);
+
+    // Build lookup maps for fast access
+    const shutoffMap = {};
+    allShutoffs.forEach((s) => { shutoffMap[s.id] = s; });
+    const utilityMap = {};
+    allUtilities.forEach((u) => { utilityMap[u.id] = u; });
+
+    const getShutoffLabel = (type) => {
+      switch (type) {
+        case 'gas':
+        case 'fire':
+          return { label: 'Gas Shutoff', icon: 'flame-outline' };
+        case 'electric':
+        case 'power':
+          return { label: 'Electricity Shutoff', icon: 'flash-outline' };
+        case 'water':
+          return { label: 'Water Shutoff', icon: 'water-outline' };
+        default:
+          return { label: 'Shutoff', icon: 'construct-outline' };
+      }
+    };
+
     const grouped = {};
-    let incompleteCount = 0;
     allReminders.forEach((reminder) => {
       if (reminder.completed !== true && reminder.date) {
-        incompleteCount++;
+        // Enrich with live data from the linked utility/shutoff
+        let enriched = { ...reminder };
+        if (reminder.type === 'utility' && reminder.utilityId) {
+          const utility = utilityMap[reminder.utilityId];
+          if (utility) {
+            enriched.displayTitle = utility.name || enriched.title;
+            enriched.displayIcon = utility.utilityIcon || enriched.icon || null;
+          }
+        } else if (reminder.type === 'shutoff' && reminder.shutoffId) {
+          const shutoff = shutoffMap[reminder.shutoffId];
+          if (shutoff) {
+            const { label, icon } = getShutoffLabel(shutoff.type);
+            enriched.displayTitle = label;
+            enriched.displayIcon = icon;
+          }
+        }
+
         const date = new Date(reminder.date);
         const dateKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(reminder);
+        grouped[dateKey].push(enriched);
       }
     });
 

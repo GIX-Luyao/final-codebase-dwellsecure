@@ -452,6 +452,7 @@ export default function ShutoffDetailScreen({ route }) {
           id: reminder?.id || `reminder-${Date.now()}`,
           shutoffId: shutoffData.id,
           type: 'shutoff',
+          icon: shutoffData.icon || null,
           date: reminderDate.toISOString(),
           completed: markComplete || false, // Use current markComplete state
           title: `Maintenance reminder for ${shutoffData.type || 'shutoff'}`,

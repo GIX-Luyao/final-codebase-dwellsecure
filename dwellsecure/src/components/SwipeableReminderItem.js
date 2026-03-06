@@ -95,10 +95,13 @@ export default function SwipeableReminderItem({ reminder, onPress, onComplete, c
   };
 
   const getIconName = () => {
+    if (reminder.displayIcon) return reminder.displayIcon;
     if (reminder.icon) return reminder.icon;
     if (reminder.type === 'utility') return 'build-outline';
     return 'flame-outline';
   };
+
+  const getDisplayTitle = () => reminder.displayTitle || reminder.title || 'Reminder';
 
   return (
     <View style={styles.wrapper}>
@@ -126,7 +129,7 @@ export default function SwipeableReminderItem({ reminder, onPress, onComplete, c
 
           {/* Text */}
           <View style={styles.textWrap}>
-            <Text style={styles.titleText} numberOfLines={2}>{reminder.title}</Text>
+            <Text style={styles.titleText} numberOfLines={2}>{getDisplayTitle()}</Text>
             {dateTime && (
               <View style={styles.metaRow}>
                 <Ionicons name="time-outline" size={12} color={colors.textMuted} />
