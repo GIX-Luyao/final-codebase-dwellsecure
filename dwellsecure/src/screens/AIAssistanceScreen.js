@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
 import { saveShutoff } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
@@ -129,14 +128,35 @@ export default function AIAssistanceScreen() {
 
   const handleImageUpload = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*',
-        copyToCacheDirectory: true,
+      if (!ImagePicker) {
+        Alert.alert(
+          'Photo Library Not Available',
+          'This feature requires expo-image-picker. Please install it by running: npx expo install expo-image-picker',
+          [{ text: 'OK' }]
+        );
+        setShowUploadSection(false);
+        return;
+      }
+
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please enable photo library access in your device settings.',
+          [{ text: 'OK' }]
+        );
+        setShowUploadSection(false);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const imageUri = result.assets[0].uri;
-        setSelectedImage(imageUri);
+        setSelectedImage(result.assets[0].uri);
         setShowUploadSection(false);
       }
     } catch (error) {
@@ -196,8 +216,8 @@ export default function AIAssistanceScreen() {
 
   const handleSubmit = async () => {
     const text = inputText.trim();
-    
-    if (!text) {
+
+    if (!text && !selectedImage) {
       return;
     }
 
@@ -205,7 +225,7 @@ export default function AIAssistanceScreen() {
     const userMessage = {
       id: Date.now().toString(),
       type: 'user',
-      text: text,
+      text: text || 'Please identify this image.',
       image: selectedImage,
     };
     setMessages((prev) => [...prev, userMessage]);
@@ -262,6 +282,7 @@ export default function AIAssistanceScreen() {
   };
 
   const hasText = inputText.trim().length > 0;
+  const canSend = hasText || !!selectedImage;
 
   const renderMessage = (message) => {
     const isUser = message.type === 'user';
@@ -472,9 +493,9 @@ export default function AIAssistanceScreen() {
               onSubmitEditing={() => Keyboard.dismiss()}
             />
             <TouchableOpacity
-              style={[styles.submitButton, hasText && styles.submitButtonActive]}
+              style={[styles.submitButton, canSend && styles.submitButtonActive]}
               onPress={handleSubmit}
-              disabled={isLoadingText || !hasText}
+              disabled={isLoadingText || !canSend}
             >
               {isLoadingText ? (
                 <ActivityIndicator size="small" color={colors.white} />
@@ -482,7 +503,7 @@ export default function AIAssistanceScreen() {
                 <Ionicons
                   name="arrow-up"
                   size={20}
-                  color={hasText ? colors.white : colors.textMuted}
+                  color={canSend ? colors.white : colors.textMuted}
                 />
               )}
             </TouchableOpacity>
