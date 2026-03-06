@@ -13,6 +13,7 @@ import {
   FlatList,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -20,6 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { getShutoff, saveShutoff, getPeople, savePerson, deleteShutoff, getReminders, getRemindersByShutoffId, saveReminder, deleteReminder } from '../services/storage';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 export default function ShutoffDetailScreen({ route }) {
   const navigation = useNavigation();
@@ -622,8 +624,9 @@ export default function ShutoffDetailScreen({ route }) {
           <View style={styles.sectionTitleRow}>
             <Text style={styles.sectionTitle}>Maintenance Reminder</Text>
           </View>
+          <View style={styles.reminderCard}>
           <View style={styles.reminderSingleLine}>
-            <Ionicons name="calendar-outline" size={20} color={maintenanceDate ? "#1095EE" : "#999"} />
+            <Ionicons name="calendar-outline" size={20} color={maintenanceDate ? colors.primary : colors.textMuted} />
             <Text style={[styles.reminderDateText, !maintenanceDate && styles.reminderDateTextDisabled]}>
               {maintenanceDate && maintenanceTime
                 ? `${maintenanceDate.getFullYear()} - ${String(maintenanceDate.getMonth() + 1).padStart(2, '0')} - ${String(maintenanceDate.getDate()).padStart(2, '0')}  ${maintenanceTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
@@ -668,13 +671,16 @@ export default function ShutoffDetailScreen({ route }) {
               <Text style={styles.reminderNotesText}>{reminder.notes}</Text>
             </View>
           ) : null}
+          </View>
         </View>
       </View>
 
       <View style={styles.formSection}>
         <Text style={styles.sectionLabel}>Technician / Professional</Text>
         <View style={styles.contactCard}>
-          <Ionicons name="person-circle-outline" size={24} color="#666" />
+          <View style={styles.contactIconWrap}>
+            <Ionicons name="person-outline" size={20} color={colors.primary} />
+          </View>
           <View style={styles.contactInfo}>
             {shutoff?.contacts && shutoff.contacts.length > 0 ? (
               <>
@@ -684,7 +690,7 @@ export default function ShutoffDetailScreen({ route }) {
                 ) : null}
               </>
             ) : (
-              <Text style={styles.contactNoContact}>No contact</Text>
+              <Text style={styles.contactNoContact}>No contact added</Text>
             )}
           </View>
         </View>
@@ -1139,41 +1145,47 @@ export default function ShutoffDetailScreen({ route }) {
   const getTitle = () => typeInfo.label;
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Header with back button and delete */}
-        <View style={styles.overviewHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Fixed Header */}
+      <View style={styles.overviewHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconButton}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => shutoff && navigation.navigate('AddEditShutoff', { shutoff, initialStep: 2 })}
+            style={styles.editButton}
+            disabled={!shutoff}
+          >
+            <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+            <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.headerDeleteButton}>
-            <Ionicons name="trash-outline" size={24} color="#ff4444" />
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteIconButton}>
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
           </TouchableOpacity>
         </View>
+      </View>
 
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Title */}
         <View style={styles.addressSection}>
-          <Text style={styles.addressTitle}>{getTitle()}</Text>
-          <View style={styles.descriptionBox}>
-            <Text style={styles.descriptionText} numberOfLines={3} ellipsizeMode="tail">
-              {shutoff?.description || ''}
-            </Text>
+          <View style={[styles.typeIconBadge, { backgroundColor: typeInfo.color + '18', borderColor: typeInfo.color + '33' }]}>
+            <Ionicons name={typeInfo.icon} size={28} color={typeInfo.color} />
           </View>
+          <Text style={styles.addressTitle}>{getTitle()}</Text>
+          {shutoff?.description ? (
+            <View style={styles.descriptionBox}>
+              <Text style={styles.descriptionText} numberOfLines={3} ellipsizeMode="tail">
+                {shutoff.description}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Shutoff Details */}
         {renderShutoffTab()}
       </ScrollView>
 
-      {/* Fixed Edit Button */}
-      <View style={styles.editButtonFixed}>
-        <TouchableOpacity 
-          style={styles.saveButtonIcon} 
-          onPress={() => shutoff && navigation.navigate('AddEditShutoff', { shutoff, initialStep: 2 })}
-        >
-          <Ionicons name="pencil" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
 
       {/* Media Modal */}
       <Modal
@@ -1311,61 +1323,114 @@ export default function ShutoffDetailScreen({ route }) {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 215, // Space for fixed edit button (135 + 50) and bottom nav
+    paddingBottom: 120,
+    paddingTop: 8,
   },
-  // Header styles matching AddProperty/AddEditShutoff
   overviewHeader: {
-    paddingTop: 50,
-    paddingHorizontal: 30,
-    paddingBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  backIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.card,
+  },
+  deleteIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.errorBackground,
+    borderWidth: 1,
+    borderColor: colors.error + '22',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerDeleteButton: {
     padding: 4,
   },
-  // Address section
   addressSection: {
     paddingVertical: 16,
     paddingHorizontal: 30,
     alignItems: 'center',
   },
+  typeIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   addressTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     textAlign: 'center',
+    marginBottom: 4,
   },
   descriptionBox: {
-    marginTop: 30,
+    marginTop: 16,
     width: '100%',
-    height: 80,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
-    borderRadius: 8,
-    padding: 12,
-    paddingLeft: 20,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    paddingLeft: 16,
     justifyContent: 'flex-start',
     overflow: 'hidden',
+    ...shadows.card,
   },
   descriptionText: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 15,
+    color: colors.textSecondary,
     textAlign: 'left',
     textAlignVertical: 'top',
     lineHeight: 22,
@@ -1407,22 +1472,24 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   sectionLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     marginBottom: 12,
   },
   locationButton: {
     aspectRatio: 220 / 152,
     borderRadius: 15,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.borderLight,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   locationHint: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textMuted,
     marginTop: 6,
   },
   locationThumbnail: {
@@ -1435,6 +1502,7 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
   },
   mediaGrid: {
     flexDirection: 'row',
@@ -1525,7 +1593,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 6,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.borderLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1955,11 +2026,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   reminderCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: 14,
+    marginTop: 4,
+    ...shadows.card,
   },
   reminderContent: {
     flex: 1,
@@ -1986,16 +2059,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 8,
   },
   reminderDateText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#1E1E1E',
+    color: colors.text,
     flex: 1,
   },
   reminderDateTextDisabled: {
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '400',
   },
   markCompleteInline: {
@@ -2004,21 +2076,23 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   reminderNotesBox: {
-    marginTop: 12,
+    marginTop: 10,
     padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   reminderNotesText: {
-    fontSize: 15,
-    color: '#64748b',
-    lineHeight: 22,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
   pickerButtonContent: {
     flexDirection: 'row',
@@ -2050,9 +2124,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
   },
   optionalLabel: {
     fontSize: 12,
@@ -2102,16 +2176,16 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   markCompleteButtonActive: {
-    backgroundColor: '#1095EE',
-    borderColor: '#1095EE',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   markCompleteButtonText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   markCompleteButtonTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   reminderRow: {
     flexDirection: 'row',
@@ -2184,27 +2258,40 @@ const styles = StyleSheet.create({
   contactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    padding: 14,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.card,
+  },
+  contactIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contactInfo: {
     flex: 1,
     marginLeft: 12,
   },
   contactName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: 2,
   },
   contactPhone: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   contactNoContact: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   displayText: {
@@ -2236,29 +2323,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontStyle: 'italic',
-  },
-  editButtonFixed: {
-    position: 'absolute',
-    bottom: 135,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonIcon: {
-    width: 120,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#30ACFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    alignSelf: 'center',
-    marginTop: 10,
   },
   profileRow: {
     flexDirection: 'row',

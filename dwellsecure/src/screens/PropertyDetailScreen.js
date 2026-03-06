@@ -130,9 +130,8 @@ export default function PropertyDetailScreen({ route }) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.headerSide}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color={colors.text} />
-              <Text style={styles.backText}>Back</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconButton}>
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
@@ -354,12 +353,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
   },
   header: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   headerRow: {
     flexDirection: 'row',
@@ -375,17 +374,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButton: {
-    flexDirection: 'row',
+  backIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingRight: 6,
-  },
-  backText: {
-    marginLeft: 2,
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
+    ...shadows.card,
   },
   headerTitle: {
     fontSize: 18,

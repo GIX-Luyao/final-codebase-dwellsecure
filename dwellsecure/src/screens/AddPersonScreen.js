@@ -104,7 +104,7 @@ export default function AddPersonScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-          <Ionicons name="close" size={20} color={colors.text} />
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Person' : 'Add Person'}</Text>
         <View style={{ width: 34 }} />
@@ -192,19 +192,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   closeButton: {
     width: 34,
     height: 34,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.card,
   },
   headerTitle: {
     ...typography.titleSmall,

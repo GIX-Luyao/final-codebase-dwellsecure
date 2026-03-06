@@ -84,7 +84,7 @@ export default function PersonDetailScreen({ route }) {
           style={styles.iconButton}
           accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Person Details</Text>
         <View style={styles.headerRight}>
@@ -203,11 +203,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   headerTitle: {
     ...typography.titleSmall,
@@ -222,9 +222,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.card,
   },
   editButton: {
     flexDirection: 'row',
