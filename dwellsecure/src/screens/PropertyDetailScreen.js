@@ -776,6 +776,7 @@ const styles = StyleSheet.create({
   addPersonButton: {
     alignItems: 'center',
     width: 100,
+    marginTop: 20,
   },
   addPersonCircle: {
     width: 60,
