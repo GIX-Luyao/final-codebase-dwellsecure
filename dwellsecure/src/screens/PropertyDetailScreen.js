@@ -13,7 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getProperty, getShutoffs, getUtilities, getPeople, deleteProperty } from '../services/storage';
 import { getStreetAddress } from '../utils/addressUtils';
-import { colors, spacing } from '../constants/theme';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 export default function PropertyDetailScreen({ route }) {
   const navigation = useNavigation();
@@ -88,18 +88,21 @@ export default function PropertyDetailScreen({ route }) {
     );
   };
 
-  const renderPlaceholder = (text) => (
-    <View style={styles.placeholderItem}>
-      <Ionicons name="image-outline" size={40} color="#ccc" />
-    </View>
-  );
+  const getInitials = (name = '') =>
+    name
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
 
   const addressText = property?.address || '4120 11th Ave, Seattle, Washington 98105, USA';
 
   const utilityTypes = [
-    { key: 'gas', label: 'Gas', icon: 'flame-outline' },
-    { key: 'electricity', label: 'Electricity', icon: 'flash-outline' },
-    { key: 'water', label: 'Water', icon: 'water-outline' },
+    { key: 'gas', label: 'Gas', icon: 'flame-outline', accent: colors.accentGas, accentLight: colors.warningLight },
+    { key: 'electricity', label: 'Electricity', icon: 'flash-outline', accent: colors.accentElectric, accentLight: '#fefce8' },
+    { key: 'water', label: 'Water', icon: 'water-outline', accent: colors.accentWater, accentLight: colors.primaryLight },
   ];
 
   const findUtilityForType = (typeKey) => {
@@ -140,13 +143,14 @@ export default function PropertyDetailScreen({ route }) {
           <View style={[styles.headerSide, styles.headerActions]}>
             <TouchableOpacity
               onPress={() => navigation.navigate('EditProperty', { property, initialStep: 2 })}
-              style={styles.headerActionButton}
+              style={styles.editButton}
               disabled={!property}
             >
-              <Ionicons name="pencil" size={20} color={colors.text} />
+              <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+              <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} style={styles.headerActionButton}>
-              <Ionicons name="trash-outline" size={20} color="#ff4444" />
+            <TouchableOpacity onPress={handleDelete} style={styles.deleteHeaderButton}>
+              <Ionicons name="trash-outline" size={17} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -180,10 +184,10 @@ export default function PropertyDetailScreen({ route }) {
           <View style={styles.utilitiesShutoffsRowWrap}>
             <View style={styles.utilitiesShutoffsRow}>
               {[
-                { type: 'gas', icon: 'flame-outline', label: 'Gas' },
-                { type: 'electric', icon: 'flash-outline', label: 'Electricity' },
-                { type: 'water', icon: 'water-outline', label: 'Water' },
-              ].map(({ type, icon, label }) => {
+                { type: 'gas', icon: 'flame-outline', label: 'Gas', accent: colors.accentGas, accentLight: colors.warningLight },
+                { type: 'electric', icon: 'flash-outline', label: 'Electricity', accent: colors.accentElectric, accentLight: '#fefce8' },
+                { type: 'water', icon: 'water-outline', label: 'Water', accent: colors.accentWater, accentLight: colors.primaryLight },
+              ].map(({ type, icon, label, accent, accentLight }) => {
                 const shutoff = Array.isArray(shutoffs)
                   ? shutoffs.find(s => {
                       const normalizedType = s.type === 'fire' ? 'gas' : s.type === 'power' ? 'electric' : s.type;
@@ -219,17 +223,17 @@ export default function PropertyDetailScreen({ route }) {
                         </>
                       )}
                       <View style={styles.utilityShutoffTop}>
-                        <View style={styles.utilityShutoffIconWrap}>
-                          <Ionicons name={icon} size={20} color={colors.text} />
+                        <View style={[styles.utilityShutoffIconWrap, { backgroundColor: accentLight, borderColor: accent + '33' }]}>
+                          <Ionicons name={icon} size={20} color={accent} />
                         </View>
                         {shutoff?.id ? (
-                          <Text style={styles.utilityShutoffSubtitle}>View details</Text>
+                          <View style={styles.utilityPill}>
+                            <Text style={styles.utilityPillText}>View details</Text>
+                          </View>
                         ) : (
-                          <View style={styles.utilityShutoffBoxPlaceholder}>
-                            <Text style={styles.utilityShutoffAddText}>Add</Text>
-                            <View style={styles.utilityShutoffAddCircle}>
-                              <Ionicons name="add" size={16} color="#1095EE" />
-                            </View>
+                          <View style={[styles.utilityPill, styles.utilityPillAdd]}>
+                            <Ionicons name="add" size={13} color={colors.primary} />
+                            <Text style={[styles.utilityPillText, styles.utilityPillAddText]}>Add</Text>
                           </View>
                         )}
                       </View>
@@ -266,14 +270,16 @@ export default function PropertyDetailScreen({ route }) {
                         </>
                       )}
                       <View style={styles.utilityShutoffTop}>
-                        <View style={styles.utilityShutoffIconWrap}>
+                        <View style={[styles.utilityShutoffIconWrap, utility?.utilityIcon && { backgroundColor: colors.primaryLight, borderColor: colors.primary + '33' }]}>
                           <Ionicons
                             name={utility?.utilityIcon || 'apps-outline'}
                             size={20}
-                            color={utility?.utilityIcon ? '#1095EE' : colors.textSecondary || '#999'}
+                            color={utility?.utilityIcon ? colors.primary : colors.textMuted}
                           />
                         </View>
-                        <Text style={styles.utilityShutoffSubtitle}>View details</Text>
+                        <View style={styles.utilityPill}>
+                          <Text style={styles.utilityPillText}>View details</Text>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -288,16 +294,12 @@ export default function PropertyDetailScreen({ route }) {
                 >
                   <View style={styles.utilityShutoffTop}>
                     <View style={styles.utilityShutoffIconWrap}>
-                      <Ionicons name="apps-outline" size={20} color={colors.textSecondary || '#999'} />
+                      <Ionicons name="apps-outline" size={20} color={colors.textMuted} />
                     </View>
                   </View>
-                  <View style={styles.utilityShutoffBox}>
-                    <View style={[styles.utilityShutoffBoxPlaceholder, { marginTop: -20 }]}>
-                      <Text style={styles.utilityShutoffAddText}>Add</Text>
-                      <View style={styles.utilityShutoffAddCircle}>
-                        <Ionicons name="add" size={16} color="#1095EE" />
-                      </View>
-                    </View>
+                  <View style={[styles.utilityPill, styles.utilityPillAdd, { marginTop: 4 }]}>
+                    <Ionicons name="add" size={13} color={colors.primary} />
+                    <Text style={[styles.utilityPillText, styles.utilityPillAddText]}>Add</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -323,11 +325,11 @@ export default function PropertyDetailScreen({ route }) {
                   <Image source={{ uri: person.profilePhoto }} style={styles.personAvatarImage} />
                 ) : (
                   <View style={styles.personAvatar}>
-                    <Ionicons name="person" size={40} color="#999" />
+                    <Text style={styles.personAvatarInitials}>{getInitials(person.name) || '?'}</Text>
                   </View>
                 )}
-                <Text style={styles.personName}>{person.name}</Text>
-                {person.role && <Text style={styles.personRole}>{person.role}</Text>}
+                <Text style={styles.personName} numberOfLines={1}>{person.name}</Text>
+                {person.role && <Text style={styles.personRole} numberOfLines={1}>{person.role}</Text>}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
@@ -335,7 +337,7 @@ export default function PropertyDetailScreen({ route }) {
               onPress={() => navigation.navigate('AddPerson', { propertyId: propertyId })}
             >
               <View style={styles.addPersonCircle}>
-                <Ionicons name="add" size={30} color="#1095EE" />
+                <Ionicons name="add" size={30} color={colors.primary} />
               </View>
               <Text style={styles.addPersonText}>Add Person</Text>
             </TouchableOpacity>
@@ -392,10 +394,33 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     justifyContent: 'flex-end',
+    gap: spacing.sm,
   },
-  headerActionButton: {
-    marginLeft: 12,
-    padding: 4,
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  deleteHeaderButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: colors.errorBackground,
+    borderWidth: 1,
+    borderColor: colors.error + '22',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -413,19 +438,24 @@ const styles = StyleSheet.create({
     aspectRatio: 2,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border,
+    ...shadows.card,
   },
   propertyImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border,
   },
   placeholderImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
   imageOverlay: {
     position: 'absolute',
@@ -454,12 +484,13 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     marginTop: 6,
     fontSize: 13,
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: colors.text,
   },
   itemsGrid: {
     flexDirection: 'row',
@@ -515,12 +546,14 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border || '#ddd',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingTop: 12,
     paddingBottom: 6,
     paddingHorizontal: 12,
     overflow: 'hidden',
+    backgroundColor: colors.background,
+    ...shadows.card,
   },
   utilityBgImage: {
     ...StyleSheet.absoluteFillObject,
@@ -543,7 +576,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     marginTop: 10,
     marginBottom: 10,
   },
@@ -556,7 +589,31 @@ const styles = StyleSheet.create({
     marginTop: 9,
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textSecondary,
+  },
+  utilityPill: {
+    marginTop: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  utilityPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  utilityPillAdd: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary + '33',
+  },
+  utilityPillAddText: {
+    color: colors.primary,
   },
   utilityShutoffBox: {
     width: '100%',
@@ -584,14 +641,14 @@ const styles = StyleSheet.create({
   utilityShutoffAddText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1095EE',
+    color: colors.primary,
   },
   utilityShutoffAddCircle: {
     width: 20,
     height: 20,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#1095EE',
+    borderColor: colors.primary,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
@@ -745,53 +802,64 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border || '#ddd',
+    borderColor: colors.borderLight,
     backgroundColor: colors.background,
+    ...shadows.card,
   },
   personAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  personAvatarInitials: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 0.5,
   },
   personAvatarImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border,
     marginBottom: 8,
   },
   personName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
+    textAlign: 'center',
   },
   personRole: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
   },
   addPersonButton: {
     alignItems: 'center',
     width: 100,
+    marginTop: 20,
   },
   addPersonCircle: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#1095EE',
+    borderColor: colors.primary,
     borderStyle: 'dashed',
     marginBottom: 8,
   },
   addPersonText: {
     fontSize: 12,
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },

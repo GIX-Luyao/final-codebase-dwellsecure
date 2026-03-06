@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,23 +7,17 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { getPerson, savePerson, deletePerson, saveReminder, deleteReminder } from '../services/storage';
+import { getPerson, deletePerson } from '../services/storage';
+import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 
 export default function PersonDetailScreen({ route }) {
   const navigation = useNavigation();
   const { personId } = route.params || {};
-
   const [person, setPerson] = useState(null);
-  const [maintenanceDate, setMaintenanceDate] = useState(new Date());
-  const [maintenanceTime, setMaintenanceTime] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [reminderId, setReminderId] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -33,16 +27,7 @@ export default function PersonDetailScreen({ route }) {
 
   const loadPersonData = async () => {
     const data = await getPerson(personId);
-    if (data) {
-      setPerson(data);
-      if (data.maintenanceDate) {
-        setMaintenanceDate(new Date(data.maintenanceDate));
-      }
-      if (data.maintenanceTime) {
-        setMaintenanceTime(new Date(data.maintenanceTime));
-      }
-      setReminderId(data.reminderId || null);
-    }
+    if (data) setPerson(data);
   };
 
   const handleEdit = () => {
@@ -54,22 +39,16 @@ export default function PersonDetailScreen({ route }) {
       'Delete Person',
       'Are you sure you want to delete this person? This action cannot be undone.',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              if (reminderId) {
-                await deleteReminder(reminderId);
-              }
               await deletePerson(personId);
               navigation.goBack();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete person');
+            } catch {
+              Alert.alert('Error', 'Failed to delete person.');
             }
           },
         },
@@ -77,307 +56,336 @@ export default function PersonDetailScreen({ route }) {
     );
   };
 
-  const handleSaveReminder = async () => {
-    if (!person) return;
-
-    if (maintenanceDate && maintenanceTime) {
-      const reminderIdToUse = reminderId || `reminder-${Date.now()}`;
-      const reminderDate = new Date(maintenanceDate);
-      reminderDate.setHours(maintenanceTime.getHours());
-      reminderDate.setMinutes(maintenanceTime.getMinutes());
-      reminderDate.setSeconds(0);
-      reminderDate.setMilliseconds(0);
-
-      const reminder = {
-        id: reminderIdToUse,
-        personId: person.id,
-        title: `Contact ${person.name}`,
-        description: `Reminder to contact ${person.name}${person.role ? ` (${person.role})` : ''}`,
-        date: reminderDate.toISOString(),
-        icon: 'person-outline',
-        completed: false,
-        type: 'person',
-      };
-
-      await saveReminder(reminder);
-      const updatedPerson = { ...person, reminderId: reminderIdToUse };
-      await savePerson(updatedPerson);
-      setReminderId(reminderIdToUse);
-      Alert.alert('Success', 'Reminder saved successfully');
-    } else if (reminderId) {
-      await deleteReminder(reminderId);
-      const updatedPerson = { ...person, reminderId: null };
-      await savePerson(updatedPerson);
-      setReminderId(null);
-      Alert.alert('Success', 'Reminder removed');
-    }
-  };
+  const getInitials = (name = '') =>
+    name
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
 
   if (!person) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
-      </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading…</Text>
+      </SafeAreaView>
     );
   }
 
+  const initials = getInitials(person.name);
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.iconButton}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleEdit} style={styles.headerActionButton}>
-            <Ionicons name="pencil" size={20} color="#333" />
+        <Text style={styles.headerTitle}>Person Details</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={handleEdit}
+            style={styles.editButton}
+            accessibilityLabel="Edit person"
+          >
+            <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+            <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.headerActionButton}>
-            <Ionicons name="trash-outline" size={20} color="#ff4444" />
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={styles.deleteHeaderButton}
+            accessibilityLabel="Delete person"
+          >
+            <Ionicons name="trash-outline" size={17} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.profileSection}>
-          {person.profilePhoto ? (
-            <Image source={{ uri: person.profilePhoto }} style={styles.profileImage} />
-          ) : (
-            <View style={styles.profilePlaceholder}>
-              <Ionicons name="person" size={80} color="#999" />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>{person.name}</Text>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Role</Text>
-          <Text style={styles.value}>{person.role || 'Not specified'}</Text>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Contact Info</Text>
-          {person.phone && (
-            <View style={styles.contactRow}>
-              <Ionicons name="call-outline" size={20} color="#666" />
-              <Text style={styles.contactText}>{person.phone}</Text>
-            </View>
-          )}
-          {person.email && (
-            <View style={styles.contactRow}>
-              <Ionicons name="mail-outline" size={20} color="#666" />
-              <Text style={styles.contactText}>{person.email}</Text>
-            </View>
-          )}
-          {!person.phone && !person.email && (
-            <Text style={styles.noContact}>No contact information</Text>
-          )}
-        </View>
-
-        <View style={styles.reminderSection}>
-          <Text style={styles.sectionLabel}>Reminder</Text>
-          <View style={styles.dateTimeRow}>
-            <View style={styles.dateTimeInput}>
-              <Text style={styles.inputLabel}>Date</Text>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.pickerButtonText}>
-                  {maintenanceDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
-                <Ionicons name="calendar-outline" size={20} color="#666" />
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={maintenanceDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) {
-                      setMaintenanceDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-            </View>
-            <View style={styles.dateTimeInput}>
-              <Text style={styles.inputLabel}>Time</Text>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={styles.pickerButtonText}>
-                  {maintenanceTime.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                <Ionicons name="time-outline" size={20} color="#666" />
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={maintenanceTime}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, selectedTime) => {
-                    setShowTimePicker(Platform.OS === 'ios');
-                    if (selectedTime) {
-                      setMaintenanceTime(selectedTime);
-                    }
-                  }}
-                />
-              )}
-            </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero / Avatar */}
+        <View style={styles.heroSection}>
+          <View style={styles.avatarWrapper}>
+            {person.profilePhoto ? (
+              <Image source={{ uri: person.profilePhoto }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitials}>{initials || '?'}</Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity style={styles.saveReminderButton} onPress={handleSaveReminder}>
-            <Text style={styles.saveReminderText}>Save Reminder</Text>
-          </TouchableOpacity>
+          <Text style={styles.heroName}>{person.name}</Text>
+          {person.role ? (
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>{person.role}</Text>
+            </View>
+          ) : null}
         </View>
+
+        {/* Contact Info Card */}
+        {(person.phone || person.email) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Contact</Text>
+            {person.phone && (
+              <TouchableOpacity style={styles.contactRow} activeOpacity={0.7}>
+                <View style={[styles.contactIcon, { backgroundColor: colors.primaryLight }]}>
+                  <Ionicons name="call-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactLabel}>Phone</Text>
+                  <Text style={styles.contactValue}>{person.phone}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+            {person.phone && person.email && <View style={styles.divider} />}
+            {person.email && (
+              <TouchableOpacity style={styles.contactRow} activeOpacity={0.7}>
+                <View style={[styles.contactIcon, { backgroundColor: colors.primaryLight }]}>
+                  <Ionicons name="mail-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactLabel}>Email</Text>
+                  <Text style={styles.contactValue}>{person.email}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Notes Card */}
+        {person.notes ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Notes</Text>
+            <Text style={styles.notesText}>{person.notes}</Text>
+          </View>
+        ) : null}
+
+        {/* No contact fallback */}
+        {!person.phone && !person.email && (
+          <View style={styles.emptyCard}>
+            <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No contact information added</Text>
+          </View>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textMuted,
+  },
+
+  /* Header */
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
-  backButton: {
-    marginBottom: 10,
+  headerTitle: {
+    ...typography.titleSmall,
+    fontSize: 17,
   },
-  headerActions: {
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  headerActionButton: {
-    marginLeft: 15,
-    padding: 4,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 100, // Space for bottom nav
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#e0e0e0',
-  },
-  profilePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#e0e0e0',
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoSection: {
-    marginBottom: 25,
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
   },
-  label: {
+  editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    color: colors.primary,
   },
-  value: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '500',
+  deleteHeaderButton: {
+    width: 34,
+    height: 34,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.errorBackground,
+    borderWidth: 1,
+    borderColor: colors.error + '22',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  /* Scroll */
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: 48,
+  },
+
+  /* Hero */
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  avatarWrapper: {
+    marginBottom: spacing.lg,
+    ...shadows.cardHover,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 1,
+  },
+  heroName: {
+    ...typography.title,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  roleBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  roleBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+
+  /* Cards */
+  card: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.card,
+  },
+  cardTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: spacing.lg,
+  },
+
+  /* Contact rows */
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: spacing.sm,
   },
-  contactText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 10,
+  contactIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  noContact: {
-    fontSize: 16,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  reminderSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  sectionLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 15,
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
-    marginBottom: 20,
-  },
-  dateTimeInput: {
+  contactInfo: {
     flex: 1,
   },
-  inputLabel: {
-    fontSize: 14,
+  contactLabel: {
+    fontSize: 11,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    color: colors.textMuted,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  pickerButton: {
+  contactValue: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: spacing.xs,
+    marginLeft: 48,
+  },
+
+  /* Notes */
+  notesText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+
+  /* Empty state */
+  emptyCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.borderLight,
+    gap: spacing.md,
   },
-  pickerButtonText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  saveReminderButton: {
-    backgroundColor: '#A8A8A8',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  saveReminderText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  emptyText: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
 });
-
