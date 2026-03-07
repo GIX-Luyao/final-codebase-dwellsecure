@@ -1,7 +1,7 @@
-# PSDwell Documentation
+# Dwell Secure Documentation
 
 ## Project Description
-PSDwell is a powerful tool designed to facilitate effective management and interaction within digital workspaces. Its primary goal is to provide an intuitive platform for users to manage projects, collaborate on tasks, and track overall progress efficiently.
+Dwell Secure is a powerful tool designed to facilitate effective management and interaction within digital workspaces. Its primary goal is to provide an intuitive platform for users to manage projects, collaborate on tasks, and track overall progress efficiently.
 
 ## Features
 - **User-friendly Interface**: An intuitive and easy-to-navigate interface that enhances user experience.
