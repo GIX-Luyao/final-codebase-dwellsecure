@@ -64,9 +64,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -198,6 +196,15 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support & data</Text>
           <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => navigation.navigate('Share')}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.menuLabel}>Share</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
             <TouchableOpacity
               style={styles.menuRow}
               onPress={() => Alert.alert('Help', 'Help and FAQ will be available in a future update.')}
