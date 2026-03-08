@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -115,13 +115,20 @@ export default function RemindersScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.titleRow}>
           <View style={styles.headerIconWrap}>
             <Ionicons name="calendar" size={22} color={colors.primary} />
           </View>
           <View style={styles.titleTextBlock}>
             <Text style={styles.headerTitle}>Reminders</Text>
-            <Text style={styles.subtitle}>Swipe left on a card to mark complete</Text>
+            <Text style={styles.headerSubtitle}>Swipe left on a card to mark complete</Text>
           </View>
         </View>
       </View>
@@ -177,17 +184,25 @@ const styles = StyleSheet.create({
 
   /* Header */
   header: {
-    paddingTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.backgroundSecondary,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: spacing.md,
+    flex: 1,
   },
   headerIconWrap: {
     width: 40,
@@ -201,16 +216,16 @@ const styles = StyleSheet.create({
   },
   titleTextBlock: {
     flex: 1,
-    gap: 4,
+    gap: 0,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
   },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textMuted,
+  headerSubtitle: {
+    fontSize: 12,
+    color: colors.primary,
   },
 
   /* Scroll */
