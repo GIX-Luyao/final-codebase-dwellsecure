@@ -92,23 +92,47 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile information</Text>
           <View style={styles.card}>
-            <View style={styles.avatarRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(name || email || '?').charAt(0).toUpperCase()}
-                </Text>
+            <View style={styles.profileCardRow}>
+              <View style={styles.profileCardLeft}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(name || email || '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                {!isEditingProfile ? (
+                  <>
+                    <Text style={styles.displayName}>{name || 'No name set'}</Text>
+                    <Text style={styles.displayEmail}>{email || '—'}</Text>
+                    <TouchableOpacity
+                      style={styles.profileCardAction}
+                      onPress={() => setIsEditingProfile(true)}
+                      accessibilityLabel="Edit profile"
+                    >
+                      <Ionicons name="pencil" size={16} color={colors.primary} />
+                      <Text style={styles.profileCardActionText}>Edit</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </>
+                ) : null}
               </View>
-              {!isEditingProfile ? (
+              <View style={styles.profileCardRight}>
+                <View style={styles.shareSectionAvatar}>
+                  <Ionicons name="people-outline" size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.shareSectionTitle}>Sharing & People</Text>
+                <Text style={styles.shareSectionSubtitle}>Manage who has access</Text>
                 <TouchableOpacity
-                  style={styles.editProfileButton}
-                  onPress={() => setIsEditingProfile(true)}
+                  style={styles.profileCardAction}
+                  onPress={() => navigation.getParent()?.navigate('Share')}
+                  accessibilityLabel="Open Sharing & People"
                 >
-                  <Ionicons name="pencil" size={18} color={colors.primary} />
-                  <Text style={styles.editProfileText}>Edit</Text>
+                  <Ionicons name="open-outline" size={16} color={colors.primary} />
+                  <Text style={styles.profileCardActionText}>Open</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
-              ) : null}
+              </View>
             </View>
-            {isEditingProfile ? (
+            {isEditingProfile && (
               <View style={styles.editFields}>
                 <Text style={styles.label}>Name</Text>
                 <TextInput
@@ -152,11 +176,6 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              <>
-                <Text style={styles.displayName}>{name || 'No name set'}</Text>
-                <Text style={styles.displayEmail}>{email || '—'}</Text>
-              </>
             )}
           </View>
         </View>
@@ -329,49 +348,84 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.card,
   },
-  avatarRow: {
+  profileCardRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  profileCardLeft: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  profileCardRight: {
+    flex: 1,
+    paddingLeft: spacing.lg,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.borderLight,
+    justifyContent: 'flex-start',
+  },
+  shareSectionAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  shareSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  shareSectionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   avatarText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.primary,
   },
-  editProfileButton: {
+  displayName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  displayEmail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  profileCardAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    marginTop: 2,
   },
-  editProfileText: {
-    fontSize: 14,
+  profileCardActionText: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
   },
-  displayName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  displayEmail: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
   editFields: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   label: {
     ...typography.label,
