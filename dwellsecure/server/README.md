@@ -18,6 +18,11 @@ npm install
    - **PORT** – server port (default 3000).
    - **CORS_ORIGIN** – comma-separated allowed origins (optional).
    - **JWT_SECRET** – secret for signing auth tokens (required in production; dev default exists).
+   - **ADDRESS_ENCRYPTION_KEY** – 32-byte key so address/geo are stored **encrypted** in MongoDB (API still returns plain text for map/UI). If unset, addresses are stored in **plain**. Generate one with:
+     ```bash
+     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+     ```
+     Use the 64-character hex string as the env value. On Render: Dashboard → your service → Environment → Add `ADDRESS_ENCRYPTION_KEY` = that value, then redeploy.
    - Create a `.env` file in the project root (or `server`) for local overrides.
 
 3. Start the server:

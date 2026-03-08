@@ -9,7 +9,12 @@ async function authRequest(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error('Login/register not available. Redeploy the backend (server folder) so it includes /api/auth/register and /api/auth/login.');
+    }
+    throw new Error(data.error || `Request failed: ${res.status}`);
+  }
   return data;
 }
 
@@ -51,50 +56,24 @@ export function AuthProvider({ children }) {
     if (!email || !password) {
       throw new Error('Email and password are required');
     }
-    try {
-      const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.login, { email, password });
-      await Promise.all([setAuthToken(apiToken), setUser(apiUser)]);
-      setTokenState(apiToken);
-      setUserState(apiUser);
-    } catch (e) {
-      // Backend unavailable or auth failed: use mock so app still works offline
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        email: email.trim().toLowerCase(),
-        name: email.trim().split('@')[0],
-      };
-      const mockToken = `mock-token-${Date.now()}`;
-      await Promise.all([setAuthToken(mockToken), setUser(mockUser)]);
-      setTokenState(mockToken);
-      setUserState(mockUser);
-    }
+    const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.login, { email, password });
+    await Promise.all([setAuthToken(apiToken), setUser(apiUser)]);
+    setTokenState(apiToken);
+    setUserState(apiUser);
   }, []);
 
   const signUp = useCallback(async (email, password, name) => {
     if (!email || !password) {
       throw new Error('Email and password are required');
     }
-    try {
-      const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.register, {
-        email,
-        password,
-        name: (name || '').trim() || undefined,
-      });
-      await Promise.all([setAuthToken(apiToken), setUser(apiUser)]);
-      setTokenState(apiToken);
-      setUserState(apiUser);
-    } catch (e) {
-      // Backend unavailable or duplicate email: use mock so app still works offline
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        email: email.trim().toLowerCase(),
-        name: (name || email.trim().split('@')[0]).trim(),
-      };
-      const mockToken = `mock-token-${Date.now()}`;
-      await Promise.all([setAuthToken(mockToken), setUser(mockUser)]);
-      setTokenState(mockToken);
-      setUserState(mockUser);
-    }
+    const { user: apiUser, token: apiToken } = await authRequest(API_ENDPOINTS.auth.register, {
+      email,
+      password,
+      name: (name || '').trim() || undefined,
+    });
+    await Promise.all([setAuthToken(apiToken), setUser(apiUser)]);
+    setTokenState(apiToken);
+    setUserState(apiUser);
   }, []);
 
   const signOut = useCallback(async () => {

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { getAppMode, EMERGENCY_MODE } from './modeService';
-import { apiGet, apiPost, apiPut, apiDelete, getApiAvailability } from './apiClient';
+import { apiGet, apiPost, apiPostForce, apiPut, apiDelete, getApiAvailability, setApiAvailability } from './apiClient';
 
 const SHUTOFFS_KEY = '@dwellsecure:shutoffs';
 const REMINDERS_KEY = '@dwellsecure:reminders';
@@ -840,45 +840,38 @@ export const saveProperty = async (property) => {
     const { _id, ...propertyWithoutMongoId } = property || {};
 
     console.log('[Storage] Saving property:', propertyWithoutMongoId.id);
-    console.log('[Storage] API available:', getApiAvailability());
-    
-    // Try API first
-    if (getApiAvailability()) {
+
+    // Always try API first (even if startup health check failed, e.g. Render was sleeping)
+    try {
+      console.log('[Storage] Attempting to save to MongoDB via API...');
+      await apiPostForce('/api/properties', propertyWithoutMongoId);
+      console.log('[Storage] ✅ Successfully saved to MongoDB');
+      setApiAvailability(true);
+
+      // Also save to AsyncStorage as backup
       try {
-        console.log('[Storage] Attempting to save to MongoDB via API...');
-        await apiPost('/api/properties', propertyWithoutMongoId);
-        console.log('[Storage] ✅ Successfully saved to MongoDB');
-        
-        // Also save to AsyncStorage as backup (read from AsyncStorage, not API, to avoid loop)
-        try {
-          const data = await AsyncStorage.getItem(PROPERTY_KEY);
-          const properties = data ? JSON.parse(data) : [];
-          const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
-          if (index >= 0) {
-            properties[index] = propertyWithoutMongoId;
-          } else {
-            properties.push(propertyWithoutMongoId);
-          }
-          await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
-          console.log('[Storage] Also saved to AsyncStorage as backup');
-        } catch (error) {
-          console.warn('[Storage] Failed to save to AsyncStorage backup:', error);
-        }
-        return;
-      } catch (error) {
-        console.error('[Storage] API save failed:', error.message);
-        if (error.message !== 'API_UNAVAILABLE') {
-          console.warn('[Storage] Falling back to AsyncStorage due to API error');
+        const data = await AsyncStorage.getItem(PROPERTY_KEY);
+        const properties = data ? JSON.parse(data) : [];
+        const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
+        if (index >= 0) {
+          properties[index] = propertyWithoutMongoId;
         } else {
-          console.warn('[Storage] API unavailable, using AsyncStorage');
+          properties.push(propertyWithoutMongoId);
         }
-        // Fall through to AsyncStorage
+        await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
+      } catch (error) {
+        console.warn('[Storage] Failed to save to AsyncStorage backup:', error);
       }
-    } else {
-      console.warn('[Storage] API not available, using AsyncStorage only');
+      return;
+    } catch (error) {
+      console.error('[Storage] API save failed:', error.message);
+      if (error.message !== 'API_UNAVAILABLE') {
+        console.warn('[Storage] Falling back to AsyncStorage due to API error');
+      }
+      // Fall through to AsyncStorage
     }
-    
-    // Fallback to AsyncStorage
+
+    // Fallback to AsyncStorage when API failed or was skipped
     console.log('[Storage] Saving to AsyncStorage...');
     const properties = await getProperties();
     const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);

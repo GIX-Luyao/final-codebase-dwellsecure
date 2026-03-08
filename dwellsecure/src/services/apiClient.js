@@ -156,6 +156,17 @@ export const apiPost = async (endpoint, data) => {
 };
 
 /**
+ * POST without availability check (e.g. save property always tries server so upload works after Render wake-up).
+ */
+export const apiPostForce = async (endpoint, data) => {
+  console.log(`[API] POST (force) ${endpoint}`);
+  return apiRequest(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+/**
  * PUT request (for updates)
  */
 export const apiPut = async (endpoint, data) => {

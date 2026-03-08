@@ -8,7 +8,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
-const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
+const { encryptAddressFields, decryptAddressFields, isEncryptionEnabled } = require('./addressCrypto');
 
 const { jwtSecret } = config;
 const BCRYPT_ROUNDS = 10;
@@ -179,6 +179,14 @@ async function connectDB() {
     const remindersCount = await db.collection('reminders').countDocuments();
     const usersCount = await db.collection('users').countDocuments();
     console.log(`📝 Current documents: ${shutoffsCount} shutoffs, ${utilitiesCount} utilities, ${propertiesCount} properties, ${remindersCount} reminders, ${usersCount} users`);
+
+    if (!isEncryptionEnabled()) {
+      const keyRaw = process.env.ADDRESS_ENCRYPTION_KEY;
+      const len = keyRaw ? String(keyRaw).trim().length : 0;
+      console.warn('⚠️  ADDRESS_ENCRYPTION_KEY is missing or invalid — address/geo stored in PLAIN. Key must be 64 hex chars (no quotes/spaces). Current length: ' + len);
+    } else {
+      console.log('🔐 Address/geo encryption enabled (ADDRESS_ENCRYPTION_KEY valid).');
+    }
     
     console.log('✅ MongoDB connection established and verified!');
   } catch (error) {
