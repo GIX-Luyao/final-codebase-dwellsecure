@@ -64,11 +64,22 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.titleRow}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="person" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.titleTextBlock}>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <Text style={styles.headerSubtitle}>Manage your account</Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -200,6 +211,15 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
+              onPress={() => navigation.navigate('Share')}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.menuLabel}>Share</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuRow}
               onPress={() => Alert.alert('Help', 'Help and FAQ will be available in a future update.')}
             >
               <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
@@ -246,23 +266,46 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  headerIconWrap: {
     width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleTextBlock: {
+    flex: 1,
+    gap: 0,
   },
   headerTitle: {
-    ...typography.title,
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text,
   },
-  headerSpacer: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: 12,
+    color: colors.primary,
   },
   scroll: {
     flex: 1,

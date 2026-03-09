@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../constants/theme';
 
 export default function ShareScreen() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
 
   const handleShare = () => {
@@ -15,8 +17,14 @@ export default function ShareScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Share</Text>
-        <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Go back">
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle}>Share</Text>
+          <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
+        </View>
+        <View style={styles.headerSpacer} />
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -88,6 +96,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.lg,
@@ -95,6 +105,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  backButton: {
+    padding: spacing.sm,
+    width: 40,
+    marginRight: spacing.sm,
+  },
+  headerTextWrap: { flex: 1 },
+  headerSpacer: { width: 40 },
   headerTitle: {
     fontSize: 26,
     fontWeight: '700',
