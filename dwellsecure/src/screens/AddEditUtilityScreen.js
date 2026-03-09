@@ -1222,17 +1222,19 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               )}
             </View>
           </View>
+
+          {/* Continue button at end of page */}
+          <View style={styles.continueButtonContainer}>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.continueButtonText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-        {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
-          <TouchableOpacity 
-            style={styles.continueButton}
-            onPress={handleNext}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-forward" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
       </View>
     );
   };
@@ -1391,6 +1393,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
             onPress={handleSave}
             activeOpacity={0.8}
           >
+            <Text style={styles.continueButtonText}>Save</Text>
             <Ionicons name="checkmark" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -1519,6 +1522,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 120,
     flexGrow: 1,
+  },
+  continueButtonContainer: {
+    alignItems: 'center',
+    marginTop: 32,
+    paddingBottom: 24,
   },
   progressIndicatorContainer: {
     alignItems: 'center',
@@ -1896,17 +1904,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   continueButton: {
-    width: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
     height: 50,
     borderRadius: 25,
     backgroundColor: '#30ACFF',
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
+  },
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
   },
   maintenanceSection: {
     marginBottom: 20,

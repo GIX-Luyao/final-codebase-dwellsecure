@@ -49,18 +49,14 @@ export default function BottomNav() {
   const currentRoute = getCurrentRoute();
   const activeIndex = getActiveIndex();
 
-  const hideNavScreens = [
-    'AddProperty', 'AddPerson', 'EditProperty', 'EmergencyMode',
-    'MapPicker', 'Success', 'AddEditShutoff', 'AddEditUtility',
-    'PropertyPhoto',
-  ];
-  if (currentRoute && hideNavScreens.includes(currentRoute)) {
-    return null;
-  }
+  // Navigation bar is shown on all screens
 
   const handleNavPress = (index) => {
     switch (index) {
-      case 0: navigation.navigate('Property'); break;
+      case 0:
+        // Navigate to Property tab and pop to root (PropertyList) so Home always goes back to the list
+        navigation.navigate('Property', { screen: 'PropertyList' });
+        break;
       case 1: navigation.navigate('Reminders'); break;
       case 2: navigation.navigate('AIAssistance'); break;
       case 3: navigation.navigate('Profile'); break;
