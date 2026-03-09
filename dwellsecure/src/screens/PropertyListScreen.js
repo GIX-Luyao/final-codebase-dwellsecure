@@ -18,7 +18,7 @@ import { colors, spacing, typography } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { requestShowFeatureTour } = useFeatureTour();
   const [properties, setProperties] = useState([]);
 
@@ -27,6 +27,11 @@ export default function PropertyListScreen() {
       loadProperties();
     }, [])
   );
+
+  // Refetch when user changes (e.g. after sign-in or sign-out) so list is always scoped to current user
+  React.useEffect(() => {
+    loadProperties();
+  }, [user?.id]);
 
   const loadProperties = async () => {
     const data = await getProperties();

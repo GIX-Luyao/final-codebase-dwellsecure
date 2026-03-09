@@ -775,9 +775,13 @@ export const resetFeatureTour = async () => {
   }
 };
 
+/**
+ * Fetch property list. When user is signed in, API returns only that user's properties (server filters by userId from JWT).
+ * When signed out or API unavailable, falls back to AsyncStorage (local list).
+ */
 export const getProperties = async () => {
   try {
-    // Try API first
+    // Try API first (apiClient sends Authorization: Bearer when signed in → server filters by req.userId)
     if (getApiAvailability()) {
       try {
         return await apiGet('/api/properties');

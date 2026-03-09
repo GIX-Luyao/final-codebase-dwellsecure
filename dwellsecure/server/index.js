@@ -575,7 +575,7 @@ app.delete('/api/utilities/:id', async (req, res) => {
   }
 });
 
-// Properties routes (one user can have many properties; when authenticated, filter by userId)
+// Properties routes (one user can have many properties; when Bearer token present, return only that user's)
 app.get('/api/properties', async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: 'Database not connected' });
