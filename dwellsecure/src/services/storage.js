@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system';
 import { getAppMode, EMERGENCY_MODE } from './modeService';
 import { apiGet, apiPost, apiPostForce, apiPut, apiDelete, getApiAvailability, setApiAvailability } from './apiClient';
 import { addPending } from './syncService';
+import { scheduleNotification, cancelNotification } from './notifications';
 
 const SHUTOFFS_KEY = '@dwellsecure:shutoffs';
 const REMINDERS_KEY = '@dwellsecure:reminders';
@@ -453,6 +454,12 @@ export const saveReminder = async (reminder) => {
         } catch (error) {
           console.warn('[Storage] Failed to save to AsyncStorage backup:', error);
         }
+        // Schedule or cancel local notification and alarm
+        if (reminder.completed || !reminder.date || new Date(reminder.date).getTime() <= Date.now()) {
+          cancelNotification(reminder.id);
+        } else {
+          scheduleNotification(reminder);
+        }
         return;
       } catch (error) {
         console.error('[Storage] API save failed:', error.message);
@@ -482,6 +489,12 @@ export const saveReminder = async (reminder) => {
     const { _id: _r, __v, ...reminderPayload } = reminder;
     await addPending({ op: 'upsert', entityType: 'reminders', payload: reminderPayload });
     console.log('[Storage] Saved to AsyncStorage and queued for sync');
+    // Schedule or cancel local notification and alarm
+    if (reminder.completed || !reminder.date || new Date(reminder.date).getTime() <= Date.now()) {
+      cancelNotification(reminder.id);
+    } else {
+      scheduleNotification(reminder);
+    }
   } catch (error) {
     console.error('[Storage] Error saving reminder:', error);
     throw error;
@@ -504,6 +517,7 @@ export const deleteReminder = async (id) => {
         } catch (error) {
           console.warn('[Storage] Failed to delete from AsyncStorage backup:', error);
         }
+        cancelNotification(id);
         return;
       } catch (error) {
         if (error.message !== 'API_UNAVAILABLE') {
@@ -512,12 +526,13 @@ export const deleteReminder = async (id) => {
         // Fall through to AsyncStorage
       }
     }
-    
+
     // Fallback to AsyncStorage
     const reminders = await getReminders();
     const filtered = reminders.filter((r) => r.id !== id);
     await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(filtered));
     await addPending({ op: 'delete', entityType: 'reminders', id });
+    cancelNotification(id);
   } catch (error) {
     console.error('Error deleting reminder:', error);
     throw error;
