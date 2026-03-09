@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
 import { saveShutoff } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
@@ -29,6 +30,7 @@ try {
 }
 
 export default function AIAssistanceScreen() {
+  const navigation = useNavigation();
   const [inputText, setInputText] = useState('');
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -358,11 +360,18 @@ export default function AIAssistanceScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="chevron-back" size={26} color={colors.text} />
+          </TouchableOpacity>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Ionicons name="sparkles" size={22} color={colors.primary} />
             </View>
-            <View>
+            <View style={styles.titleTextBlock}>
               <Text style={styles.headerTitle}>AI Assistant</Text>
               <Text style={styles.headerSubtitle}>Powered by OpenAI</Text>
             </View>
@@ -528,7 +537,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
@@ -536,30 +544,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  backButton: {
+    padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
+    flex: 1,
   },
   headerIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleTextBlock: {
+    flex: 1,
+    gap: 0,
+  },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 12,
     color: colors.primary,
-    fontWeight: '500',
-    marginTop: 1,
+    marginTop: 0,
   },
 
   // ─── Chat area ────────────────────────────────────────────
