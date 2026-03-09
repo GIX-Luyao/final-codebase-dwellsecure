@@ -18,15 +18,19 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
+import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
 
 export default function AddEditShutoffScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { shutoff, type, propertyId, initialStep } = route.params || {};
   const isEditing = !!shutoff;
+  const bottomPadding = (insets.bottom || 0) + BOTTOM_NAV_HEIGHT;
   // Support both old types (fire, power) and new types (gas, electric) for backward compatibility
   const initialType = type || shutoff?.type || 'gas';
   // Normalize old types to new types
@@ -754,7 +758,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           </View>
         </ScrollView>
         {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
+        <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.helpButton}
             onPress={() => {
@@ -1045,7 +1049,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           </View>
         </ScrollView>
         {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
+        <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.continueButton}
             onPress={handleNext}
@@ -1611,7 +1615,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         </View>
       </ScrollView>
         {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
+        <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.continueButton}
             onPress={handleSave}

@@ -50,6 +50,9 @@ export const typography = {
   label: { fontSize: 14, fontWeight: '600', color: colors.text },
 };
 
+/** Height of the main bottom tab bar so content can add padding and avoid overlap */
+export const BOTTOM_NAV_HEIGHT = 72;
+
 export const borderRadius = {
   sm: 8,
   md: 12,

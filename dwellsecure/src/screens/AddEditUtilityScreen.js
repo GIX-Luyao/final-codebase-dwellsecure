@@ -16,15 +16,19 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
+import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
 
 export default function AddEditUtilityScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { utility, propertyId, presetDescription } = route.params || {};
   const isEditing = !!utility;
+  const bottomPadding = (insets.bottom || 0) + BOTTOM_NAV_HEIGHT;
 
   const [step, setStep] = useState(2); // Start from step 2
   const [title, setTitle] = useState('');
@@ -1387,7 +1391,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         </View>
       </ScrollView>
         {/* Fixed Action Buttons */}
-        <View style={styles.fixedActionButtons}>
+        <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.continueButton}
             onPress={handleSave}

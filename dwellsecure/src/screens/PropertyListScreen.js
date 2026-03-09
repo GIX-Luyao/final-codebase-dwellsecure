@@ -6,9 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
@@ -20,6 +19,7 @@ import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { signOut, user } = useAuth();
   const { lastSyncAt } = useSync();
   const { requestShowFeatureTour } = useFeatureTour();
@@ -167,12 +167,9 @@ export default function PropertyListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerLogoPlaceholder}>
-          <Image source={require('../../assets/icon.png')} style={styles.headerLogo} resizeMode="contain" />
-        </View>
-        <View style={styles.headerTextContainer}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
+        <View style={styles.headerTextContainer} pointerEvents="box-none">
           <Text style={styles.headerTitle}>Dwell Secure</Text>
           <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
         </View>
@@ -185,6 +182,7 @@ export default function PropertyListScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.contentWrap}>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {properties.length > 0 ? (
           <View style={styles.propertyContainer}>
@@ -218,47 +216,48 @@ export default function PropertyListScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing.xl,
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xl,
+    minHeight: 72,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    position: 'relative',
   },
-  headerLogoPlaceholder: {
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  headerLogo: {
-    width: 32,
-    height: 32,
+  contentWrap: {
+    flex: 1,
+    backgroundColor: colors.backgroundSecondary,
   },
   headerTextContainer: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 56,
+    paddingTop: spacing.xxl + spacing.lg,
   },
   settingsButton: {
     width: 48,
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 'auto',
   },
   headerTitle: {
     fontSize: 26,

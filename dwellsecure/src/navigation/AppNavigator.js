@@ -510,7 +510,7 @@ export default function AppNavigator() {
     <SyncProvider>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="MainStack" component={MainStack} />
-        <RootStack.Screen name="Profile" component={ProfileScreen} />
+        <RootStack.Screen name="ProfileStandalone" component={ProfileScreen} />
         <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
       </RootStack.Navigator>
     </SyncProvider>

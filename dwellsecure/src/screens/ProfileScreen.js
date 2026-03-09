@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
+import { colors, spacing, typography, borderRadius, shadows, BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user, signOut, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -61,17 +62,24 @@ export default function ProfileScreen() {
     );
   };
 
+  const canGoBack = navigation.canGoBack();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.titleRow}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeContent} edges={['bottom']}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) + spacing.md }]}>
+          {canGoBack ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.backButton} />
+          )}
+          <View style={styles.titleRow}>
           <View style={styles.headerIconWrap}>
             <Ionicons name="person" size={22} color={colors.primary} />
           </View>
@@ -80,11 +88,11 @@ export default function ProfileScreen() {
             <Text style={styles.headerSubtitle}>Manage your account</Text>
           </View>
         </View>
-      </View>
+        </View>
 
-      <ScrollView
+        <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: (insets.bottom || 0) + BOTTOM_NAV_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -272,13 +280,18 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footerVersion}>Dwell Secure</Text>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  safeContent: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
   },

@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,8 +40,10 @@ const MORE_PROPERTY_TYPES = [
 
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const onboarding = useOnboarding();
   const { property, initialStep, onboardingMode } = route?.params || {};
+  const bottomPadding = (insets.bottom || 0) + BOTTOM_NAV_HEIGHT;
   const isEditing = !!property;
   
   const [step, setStep] = useState(initialStep || 1);
@@ -446,7 +450,7 @@ export default function AddPropertyScreen({ route }) {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.propertyTypesScrollContent}
+        contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.propertyTypesContainer}>
@@ -515,7 +519,7 @@ export default function AddPropertyScreen({ route }) {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.propertyTypesScrollContent}
+        contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.propertyTypesContainer}>
@@ -560,7 +564,7 @@ export default function AddPropertyScreen({ route }) {
     return (
       <ScrollView
         style={styles.stepContainer}
-        contentContainerStyle={styles.step2Content}
+        contentContainerStyle={[styles.step2Content, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -771,7 +775,7 @@ export default function AddPropertyScreen({ route }) {
     const secondaryAddress = secondaryAddressParts.join(', ');
 
     return (
-      <ScrollView style={styles.stepContainer} contentContainerStyle={styles.step3Content}>
+      <ScrollView style={styles.stepContainer} contentContainerStyle={[styles.step3Content, { paddingBottom: bottomPadding }]}>
         <View style={styles.addressHeader}>
           <Text style={styles.addressTitle}>{addressLine1.trim() || 'Address'}</Text>
           {secondaryAddress ? (
