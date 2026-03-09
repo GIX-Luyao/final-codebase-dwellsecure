@@ -1117,8 +1117,10 @@ app.post('/api/ai/voice-note', async (req, res) => {
         return res.status(400).json({ error: 'No speech detected in the recording.' });
       }
 
-      // 2) Convert transcript to actionable steps via GPT
-      const stepsPrompt = `Summarize the whole speech, do not add any extra text. Filter out irrelevant information. And convert to actionable steps. The output should be just steps the user can follow. If input contains no relevant information regarding how to locate, output "please provide more information".`;
+      // 2) Convert transcript to actionable steps via GPT (irrelevant → show as popup only, never fill into steps)
+      const stepsPrompt = `Summarize the whole speech. Do not add any extra text. Filter out irrelevant information and convert to actionable steps. Output only the steps the user can follow, one per line.
+If the input contains no relevant information regarding how to locate the shutoff or utility, reply with exactly and only: please provide more information
+Do not output any steps in that case — that phrase will be shown as a popup to the user, not filled into the form.`;
       const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1141,13 +1143,16 @@ app.post('/api/ai/voice-note', async (req, res) => {
       const chatData = await chatResponse.json();
       const stepsText = (chatData.choices?.[0]?.message?.content || '').trim();
 
-      if (!stepsText || stepsText.toLowerCase() === 'please provide more information') {
+      const isOnlyMessage = (s) => /^please\s+provide\s+more\s+information\.?$/i.test(s.trim());
+      if (!stepsText || isOnlyMessage(stepsText)) {
         return res.json({ transcript, message: 'please provide more information' });
       }
 
-      // Parse into steps: split by newlines, trim, strip leading "1." "2." "-" "•", filter empty
+      // Parse into steps; exclude any line that is the popup message so it is never filled into a step field
       const rawLines = stepsText.split(/\n+/).map(s => s.trim()).filter(Boolean);
-      const steps = rawLines.map(line => line.replace(/^[\d]+[.)]\s*|^[-•]\s*/i, '').trim()).filter(Boolean);
+      const steps = rawLines
+        .map(line => line.replace(/^[\d]+[.)]\s*|^[-•]\s*/i, '').trim())
+        .filter(line => line && !isOnlyMessage(line));
       if (steps.length === 0) {
         return res.json({ transcript, message: 'please provide more information' });
       }
