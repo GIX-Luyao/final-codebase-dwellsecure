@@ -12,6 +12,7 @@ import {
   FlatList,
   Modal,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,8 @@ import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
+import { startVoiceRecording, stopRecordingWithBase64 } from '../utils/voiceRecording';
+import { submitVoiceNoteForSteps } from '../services/openai';
 
 export default function AddEditUtilityScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -61,11 +64,48 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   const [showFloorInput, setShowFloorInput] = useState(false);
   const [reminderId, setReminderId] = useState(null);
   const [isInEmergencyMode, setIsInEmergencyMode] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const recordingRef = useRef(null);
 
   // Step-by-step helpers
   const addStep = () => setSteps(prev => [...prev, '']);
   const removeStep = (index) => setSteps(prev => prev.length > 2 ? prev.filter((_, i) => i !== index) : prev);
   const updateStep = (index, value) => setSteps(prev => { const s = [...prev]; s[index] = value; return s; });
+
+  const handleVoiceNotePress = async () => {
+    if (isProcessingVoice) return;
+    if (isRecordingVoice) {
+      try {
+        setIsProcessingVoice(true);
+        const base64 = await stopRecordingWithBase64(recordingRef.current);
+        recordingRef.current = null;
+        setIsRecordingVoice(false);
+        const result = await submitVoiceNoteForSteps(base64);
+        if (result.message) {
+          Alert.alert('', result.message);
+          return;
+        }
+        if (result.steps && result.steps.length > 0) {
+          setSteps(result.steps);
+        }
+      } catch (e) {
+        setIsRecordingVoice(false);
+        recordingRef.current = null;
+        Alert.alert('Error', e.message || 'Voice note failed.');
+      } finally {
+        setIsProcessingVoice(false);
+      }
+      return;
+    }
+    try {
+      const recording = await startVoiceRecording();
+      recordingRef.current = recording;
+      setIsRecordingVoice(true);
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Could not start recording.');
+    }
+  };
 
   useEffect(() => {
     checkMode();
@@ -1035,13 +1075,22 @@ export default function AddEditUtilityScreen({ route, navigation }) {
           <View style={styles.voiceNoteContainer}>
             <TouchableOpacity
               style={styles.voiceNoteButton}
-              onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available soon.')}
+              onPress={handleVoiceNotePress}
+              disabled={isProcessingVoice}
               activeOpacity={0.7}
             >
-              <Ionicons name="mic" size={28} color="#1095EE" />
+              {isProcessingVoice ? (
+                <ActivityIndicator size="small" color="#1095EE" />
+              ) : (
+                <Ionicons name={isRecordingVoice ? 'stop-circle' : 'mic'} size={28} color="#1095EE" />
+              )}
             </TouchableOpacity>
             <Text style={styles.voiceNoteHint}>
-              Record a voice note about the location & usage — we'll write the description for you.
+              {isProcessingVoice
+                ? 'Processing…'
+                : isRecordingVoice
+                  ? 'Tap to stop recording'
+                  : "Record a voice note about the location & usage — we'll fill the steps for you."}
             </Text>
           </View>
 

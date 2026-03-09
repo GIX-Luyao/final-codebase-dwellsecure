@@ -1112,11 +1112,46 @@ app.post('/api/ai/voice-note', async (req, res) => {
         return res.status(transcribeResponse.status).json({ error: err });
       }
 
-      const transcript = transcribeResponse.data?.text || '';
+      const transcript = (transcribeResponse.data?.text || '').trim();
+      if (!transcript) {
+        return res.status(400).json({ error: 'No speech detected in the recording.' });
+      }
 
-      // Use transcript as description only (no GPT rewrite), so we never add or invent content
-      const description = transcript;
-      res.json({ transcript, description });
+      // 2) Convert transcript to actionable steps via GPT
+      const stepsPrompt = `Summarize the whole speech, do not add any extra text. Filter out irrelevant information. And convert to actionable steps. The output should be just steps the user can follow. If input contains no relevant information regarding how to locate, output "please provide more information".`;
+      const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: stepsPrompt },
+            { role: 'user', content: transcript },
+          ],
+          max_tokens: 500,
+        }),
+      });
+      if (!chatResponse.ok) {
+        const err = await chatResponse.json().catch(() => ({}));
+        return res.status(chatResponse.status).json({ error: err.error?.message || 'OpenAI steps request failed' });
+      }
+      const chatData = await chatResponse.json();
+      const stepsText = (chatData.choices?.[0]?.message?.content || '').trim();
+
+      if (!stepsText || stepsText.toLowerCase() === 'please provide more information') {
+        return res.json({ transcript, message: 'please provide more information' });
+      }
+
+      // Parse into steps: split by newlines, trim, strip leading "1." "2." "-" "•", filter empty
+      const rawLines = stepsText.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      const steps = rawLines.map(line => line.replace(/^[\d]+[.)]\s*|^[-•]\s*/i, '').trim()).filter(Boolean);
+      if (steps.length === 0) {
+        return res.json({ transcript, message: 'please provide more information' });
+      }
+      res.json({ transcript, description: transcript, steps });
     } catch (innerErr) {
       console.error('Error in voice-note transcription/summary:', innerErr);
       throw innerErr;
