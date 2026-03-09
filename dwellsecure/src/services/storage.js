@@ -336,8 +336,11 @@ export const getReminders = async () => {
     if (getApiAvailability()) {
       try {
         const reminders = await apiGet('/api/reminders');
-        // Ensure result is always an array
-        return Array.isArray(reminders) ? reminders : [];
+        const list = Array.isArray(reminders) ? reminders : [];
+        // Dedupe by id (keep last) in case of duplicate entries
+        const byId = new Map();
+        list.forEach((r) => { byId.set(r.id, r); });
+        return Array.from(byId.values());
       } catch (error) {
         if (error.message !== 'API_UNAVAILABLE') {
           console.warn('[Storage] API fetch failed, falling back to AsyncStorage:', error.message);
@@ -349,8 +352,10 @@ export const getReminders = async () => {
     // Fallback to AsyncStorage
     const data = await AsyncStorage.getItem(REMINDERS_KEY);
     const reminders = data ? JSON.parse(data) : [];
-    // Ensure result is always an array
-    return Array.isArray(reminders) ? reminders : [];
+    const list = Array.isArray(reminders) ? reminders : [];
+    const byId = new Map();
+    list.forEach((r) => { byId.set(r.id, r); });
+    return Array.from(byId.values());
   } catch (error) {
     console.error('Error getting reminders:', error);
     return [];

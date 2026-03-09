@@ -52,6 +52,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const yearPickerScrollRef = useRef(null);
   const hourPickerScrollRef = useRef(null);
   const minutePickerScrollRef = useRef(null);
+  const savingRef = useRef(false);
   const [notes, setNotes] = useState('');
   const [contacts, setContacts] = useState([]);
   const [showContactDropdown, setShowContactDropdown] = useState(false);
@@ -507,6 +508,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       Alert.alert('Emergency Mode', 'Cannot save shutoff records in Emergency Mode.');
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
 
     // Resolve propertyId: from params, existing shutoff when editing, or first property when adding
     let finalPropertyId = propertyId || (isEditing && shutoff?.propertyId) || null;
@@ -595,7 +598,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
 
         await saveReminder(reminder);
         console.log('[AddEditShutoff] ✅ Reminder saved successfully');
-        
+        setReminderId(reminderIdToUse); // so a repeat save updates the same reminder
         // Update shutoff with reminder ID
         shutoffData.reminderId = reminderIdToUse;
         await saveShutoff(shutoffData);
@@ -621,6 +624,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         errorMsg = 'Server unavailable: Saved locally only.';
       }
       Alert.alert('Error', errorMsg);
+    } finally {
+      savingRef.current = false;
     }
   };
 

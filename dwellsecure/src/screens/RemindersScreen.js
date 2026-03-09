@@ -24,6 +24,11 @@ export default function RemindersScreen() {
       getUtilities(),
     ]);
 
+    // Dedupe reminders by id (defensive: avoid showing same reminder twice)
+    const byId = new Map();
+    (Array.isArray(allReminders) ? allReminders : []).forEach((r) => { byId.set(r.id, r); });
+    const remindersList = Array.from(byId.values());
+
     // Build lookup maps for fast access
     const shutoffMap = {};
     allShutoffs.forEach((s) => { shutoffMap[s.id] = s; });
@@ -46,7 +51,7 @@ export default function RemindersScreen() {
     };
 
     const grouped = {};
-    allReminders.forEach((reminder) => {
+    remindersList.forEach((reminder) => {
       if (reminder.completed !== true && reminder.date) {
         // Enrich with live data from the linked utility/shutoff
         let enriched = { ...reminder };
