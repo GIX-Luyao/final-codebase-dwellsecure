@@ -32,8 +32,11 @@ const corsOptions = process.env.CORS_ORIGIN
   ? { origin: process.env.CORS_ORIGIN.split(',').map(s => s.trim()) }
   : {};
 
+const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+
 module.exports = {
   PORT,
   mongoUri,
   corsOptions,
+  jwtSecret,
 };

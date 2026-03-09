@@ -1,10 +1,11 @@
 /**
  * API Client for backend communication
  * Falls back to AsyncStorage if API is unavailable
- * Base URL and health settings come from config/api.js
+ * Sends Authorization: Bearer <token> when signed in so properties are filtered by user.
  */
 import { Platform } from 'react-native';
 import { API_BASE_URL, HEALTH_PATH, HEALTH_TIMEOUT_MS } from '../config/api';
+import { getAuthToken } from './authStorage';
 
 export { API_BASE_URL };
 
@@ -66,30 +67,21 @@ const apiRequest = async (endpoint, options = {}) => {
   const method = options.method || 'GET';
   const url = `${API_BASE_URL}${endpoint}`;
   const startTime = Date.now();
-  
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
   try {
-    // Log outgoing request
+    const token = await getAuthToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch (_) {}
+
+  try {
     console.log(`[API] → ${method} ${endpoint}`);
     if (method === 'POST' && options.body) {
       try {
         const bodyData = JSON.parse(options.body);
-        console.log(`[API] → POST body:`, { 
-          id: bodyData.id, 
-          type: bodyData.type,
-          description: bodyData.description?.substring(0, 30) + '...' 
-        });
-      } catch (e) {
-        // Ignore parse errors
-      }
+        console.log(`[API] → POST body:`, { id: bodyData.id, type: bodyData.type, description: bodyData.description?.substring(0, 30) + '...' });
+      } catch (e) {}
     }
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    const response = await fetch(url, { ...options, headers });
 
     const duration = Date.now() - startTime;
     
