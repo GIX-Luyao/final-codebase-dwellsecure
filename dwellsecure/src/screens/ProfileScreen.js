@@ -211,7 +211,7 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
-              onPress={() => navigation.navigate('Share')}
+              onPress={() => Alert.alert('Share', 'Share property information with family members will be available in a future update.')}
             >
               <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
               <Text style={styles.menuLabel}>Share</Text>

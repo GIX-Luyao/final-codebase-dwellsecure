@@ -17,7 +17,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
-import { saveShutoff } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 // Dynamically import expo-image-picker (handle if not installed)
@@ -37,7 +36,6 @@ export default function AIAssistanceScreen() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showUploadSection, setShowUploadSection] = useState(false);
   const scrollViewRef = useRef(null);
-  const testRecordCreated = useRef(false);
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -50,47 +48,6 @@ export default function AIAssistanceScreen() {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
-
-  // Test: Create a test record when screen loads
-  useEffect(() => {
-    const createTestRecord = async () => {
-      // Only create once
-      if (testRecordCreated.current) {
-        return;
-      }
-      testRecordCreated.current = true;
-
-      try {
-        console.log('[AI Chat] 🧪 Creating test record for database connection...');
-        
-        const testShutoff = {
-          id: `test-ai-chat-${Date.now()}`,
-          type: 'electric',
-          description: 'Test record created from AI Chat screen',
-          location: 'Test Location',
-          verification_status: 'unverified',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          notes: 'This is an automatic test record to verify MongoDB connection',
-        };
-
-        console.log('[AI Chat] Test shutoff data:', testShutoff);
-        await saveShutoff(testShutoff);
-        console.log('[AI Chat] ✅ Test record created successfully!');
-        console.log('[AI Chat] Check MongoDB Atlas to verify the record exists.');
-      } catch (error) {
-        console.error('[AI Chat] ❌ Failed to create test record:', error);
-        console.error('[AI Chat] Error details:', error.message);
-      }
-    };
-
-    // Create test record after a short delay to ensure screen is mounted
-    const timer = setTimeout(() => {
-      createTestRecord();
-    }, 1000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
