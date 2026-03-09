@@ -14,10 +14,6 @@ const { jwtSecret } = config;
 const BCRYPT_ROUNDS = 10;
 const TOKEN_EXPIRES_IN = '7d';
 
-const { jwtSecret } = config;
-const BCRYPT_ROUNDS = 10;
-const TOKEN_EXPIRES_IN = '7d';
-
 // #region agent log
 const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
 function debugLog(location, message, data, hypothesisId) {
