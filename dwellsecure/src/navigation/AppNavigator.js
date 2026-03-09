@@ -403,7 +403,10 @@ export default function AppNavigator() {
   }, [showOnboarding]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn) {
+      setIsLoading(false);
+      return;
+    }
     checkOnboarding();
   }, [isSignedIn]);
 

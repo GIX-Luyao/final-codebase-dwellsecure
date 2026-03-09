@@ -12,17 +12,28 @@ const AUTH_TAG_LEN = 16;
 const KEY_LEN = 32;
 
 function getKey() {
-  const raw = process.env.ADDRESS_ENCRYPTION_KEY;
-  if (!raw || raw.length < 32) return null;
-  if (Buffer.isEncoding('hex') && /^[0-9a-fA-F]+$/.test(raw) && raw.length === 64) {
+  let raw = process.env.ADDRESS_ENCRYPTION_KEY;
+  if (!raw || typeof raw !== 'string') return null;
+  raw = raw.trim();
+  if (raw.length < 32) return null;
+  // Strip surrounding quotes (Render or shell sometimes add them)
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    raw = raw.slice(1, -1).trim();
+  }
+  if (raw.length < 32) return null;
+  // 64 hex chars → 32-byte key
+  if (/^[0-9a-fA-F]+$/.test(raw) && raw.length === 64) {
     return Buffer.from(raw, 'hex');
   }
+  // base64 string that decodes to 32 bytes (e.g. 44 chars)
   try {
     const b = Buffer.from(raw, 'base64');
-    return b.length === KEY_LEN ? b : null;
-  } catch (_) {
-    return null;
-  }
+    if (b.length === KEY_LEN) return b;
+  } catch (_) {}
+  // Any string whose UTF-8 length is exactly 32 bytes = raw key (e.g. 32 ASCII chars)
+  const bRaw = Buffer.from(raw, 'utf8');
+  if (bRaw.length === KEY_LEN) return bRaw;
+  return null;
 }
 
 function encrypt(plaintext) {
@@ -59,13 +70,19 @@ function decrypt(ciphertext) {
   }
 }
 
-const ADDRESS_KEYS = ['address', 'addressLine1', 'addressLine2', 'city', 'state', 'zipCode', 'country'];
+/** Address and geo fields encrypted at rest in MongoDB; decrypted when sent to client for map/UI. */
+const ADDRESS_KEYS = ['address', 'addressLine1', 'addressLine2', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'];
+
+/** After decryption, latitude/longitude must be numbers for map and UI. */
+const GEO_NUMERIC_KEYS = ['latitude', 'longitude'];
 
 function encryptAddressFields(obj) {
   if (!obj) return obj;
   const out = { ...obj };
   for (const k of ADDRESS_KEYS) {
-    if (out[k] != null && out[k] !== '') out[k] = encrypt(out[k]);
+    if (out[k] != null && out[k] !== '') {
+      out[k] = encrypt(typeof out[k] === 'number' ? String(out[k]) : out[k]);
+    }
   }
   return out;
 }
@@ -76,7 +93,18 @@ function decryptAddressFields(obj) {
   for (const k of ADDRESS_KEYS) {
     if (out[k] != null && out[k] !== '') out[k] = decrypt(out[k]);
   }
+  for (const k of GEO_NUMERIC_KEYS) {
+    if (out[k] != null && out[k] !== '') {
+      const n = parseFloat(out[k]);
+      if (!Number.isNaN(n)) out[k] = n;
+    }
+  }
   return out;
 }
 
-module.exports = { encrypt, decrypt, encryptAddressFields, decryptAddressFields };
+/** Returns true if ADDRESS_ENCRYPTION_KEY is set and valid (addresses will be stored encrypted). */
+function isEncryptionEnabled() {
+  return getKey() !== null;
+}
+
+module.exports = { encrypt, decrypt, encryptAddressFields, decryptAddressFields, isEncryptionEnabled };

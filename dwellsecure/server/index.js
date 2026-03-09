@@ -8,7 +8,11 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
-const { encryptAddressFields, decryptAddressFields } = require('./addressCrypto');
+const { encryptAddressFields, decryptAddressFields, isEncryptionEnabled } = require('./addressCrypto');
+
+const { jwtSecret } = config;
+const BCRYPT_ROUNDS = 10;
+const TOKEN_EXPIRES_IN = '7d';
 
 const { jwtSecret } = config;
 const BCRYPT_ROUNDS = 10;
@@ -63,15 +67,6 @@ app.use((req, res, next) => {
   next();
 });
 
-function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
-  try {
-    const payload = jwt.verify(authHeader.slice(7), jwtSecret);
-    if (payload.userId) req.userId = payload.userId;
-  } catch (_) {}
-  next();
-}
 app.use(optionalAuth);
 
 // MongoDB connection (uri from config)
@@ -174,6 +169,7 @@ async function connectDB() {
       await db.createCollection('users');
       console.log('📦 Created collection: users');
     }
+    // Unique index on email for users (one account per email)
     try {
       await db.collection('users').createIndex({ email: 1 }, { unique: true });
     } catch (e) {
@@ -187,6 +183,14 @@ async function connectDB() {
     const remindersCount = await db.collection('reminders').countDocuments();
     const usersCount = await db.collection('users').countDocuments();
     console.log(`📝 Current documents: ${shutoffsCount} shutoffs, ${utilitiesCount} utilities, ${propertiesCount} properties, ${remindersCount} reminders, ${usersCount} users`);
+
+    if (!isEncryptionEnabled()) {
+      const keyRaw = process.env.ADDRESS_ENCRYPTION_KEY;
+      const len = keyRaw ? String(keyRaw).trim().length : 0;
+      console.warn('⚠️  ADDRESS_ENCRYPTION_KEY is missing or invalid — address/geo stored in PLAIN. Key must be 64 hex chars (no quotes/spaces). Current length: ' + len);
+    } else {
+      console.log('🔐 Address/geo encryption enabled (ADDRESS_ENCRYPTION_KEY valid).');
+    }
     
     console.log('✅ MongoDB connection established and verified!');
   } catch (error) {
@@ -222,6 +226,23 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ----- Auth: optional middleware (sets req.userId when valid Bearer token present) -----
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, jwtSecret);
+    if (payload.userId) req.userId = payload.userId;
+  } catch (_) {
+    // Invalid or expired token; leave req.userId unset
+  }
+  next();
+}
+
+// ----- Auth routes (email + password; password stored hashed with bcrypt) -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: 'Database not connected' });
@@ -230,15 +251,26 @@ app.post('/api/auth/register', async (req, res) => {
     if (!emailNorm) return res.status(400).json({ error: 'Email is required' });
     if (!password || typeof password !== 'string') return res.status(400).json({ error: 'Password is required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
     const collection = db.collection('users');
     const existing = await collection.findOne({ email: emailNorm });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
+
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const id = `user-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    const user = { id, name: (name && typeof name === 'string') ? name.trim() : emailNorm.split('@')[0] || 'User', email: emailNorm, photo: (photo && typeof photo === 'string') ? photo : null, password: hashedPassword, createdAt: new Date().toISOString() };
+    const user = {
+      id,
+      name: (name && typeof name === 'string') ? name.trim() : emailNorm.split('@')[0] || 'User',
+      email: emailNorm,
+      photo: (photo && typeof photo === 'string') ? photo : null,
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
+    };
     await collection.insertOne(user);
     const token = jwt.sign({ userId: id }, jwtSecret, { expiresIn: TOKEN_EXPIRES_IN });
-    res.status(201).json({ user: { id: user.id, name: user.name, email: user.email, photo: user.photo }, token });
+    const safeUser = { id: user.id, name: user.name, email: user.email, photo: user.photo };
+    console.log(`[API] POST /api/auth/register - Created user: ${emailNorm}`);
+    res.status(201).json({ user: safeUser, token });
   } catch (error) {
     console.error('Error /api/auth/register:', error);
     res.status(500).json({ error: 'Registration failed', details: error.message });
@@ -250,14 +282,22 @@ app.post('/api/auth/login', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not connected' });
     const { email, password } = req.body || {};
     const emailNorm = (email && typeof email === 'string') ? email.trim().toLowerCase() : '';
-    if (!emailNorm || !password || typeof password !== 'string') return res.status(400).json({ error: 'Email and password are required' });
+    if (!emailNorm || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     const collection = db.collection('users');
     const user = await collection.findOne({ email: emailNorm });
-    if (!user || !user.password) return res.status(401).json({ error: 'Invalid email or password' });
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid email or password' });
+
     const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: TOKEN_EXPIRES_IN });
-    res.json({ user: { id: user.id, name: user.name, email: user.email, photo: user.photo }, token });
+    const safeUser = { id: user.id, name: user.name, email: user.email, photo: user.photo };
+    console.log(`[API] POST /api/auth/login - User: ${emailNorm}`);
+    res.json({ user: safeUser, token });
   } catch (error) {
     console.error('Error /api/auth/login:', error);
     res.status(500).json({ error: 'Login failed', details: error.message });
@@ -535,7 +575,7 @@ app.delete('/api/utilities/:id', async (req, res) => {
   }
 });
 
-// Properties routes (when Authorization present, only that user's properties)
+// Properties routes (one user can have many properties; when authenticated, filter by userId)
 app.get('/api/properties', async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: 'Database not connected' });
@@ -556,8 +596,12 @@ app.get('/api/properties/:id', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not connected' });
     const collection = db.collection('properties');
     const property = await collection.findOne({ id: req.params.id });
-    if (!property) return res.status(404).json({ error: 'Property not found' });
-    if (req.userId && property.userId && property.userId !== req.userId) return res.status(404).json({ error: 'Property not found' });
+    if (!property) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    if (req.userId && property.userId && property.userId !== req.userId) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
     res.json(decryptAddressFields(property));
   } catch (error) {
     console.error('Error fetching property:', error);
@@ -602,6 +646,7 @@ app.post('/api/properties', async (req, res) => {
       property.createdAt = new Date().toISOString();
     }
     property.updatedAt = new Date().toISOString();
+    // Link to user when authenticated
     if (req.userId) property.userId = req.userId;
 
     const toSave = encryptAddressFields(property);
@@ -667,7 +712,11 @@ app.delete('/api/properties/:id', async (req, res) => {
     const filter = { id: req.params.id };
     if (req.userId) filter.userId = req.userId;
     const result = await collection.deleteOne(filter);
-    if (result.deletedCount === 0) return res.status(404).json({ error: 'Property not found' });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+
     console.log(`[API] DELETE /api/properties/${req.params.id} - Deleted`);
     res.json({ success: true });
   } catch (error) {
