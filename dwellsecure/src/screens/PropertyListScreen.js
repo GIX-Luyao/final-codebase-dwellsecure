@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -15,7 +16,7 @@ import { getProperties, deleteProperty, resetOnboarding, resetAllData, resetFeat
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import { useFeatureTour } from '../contexts/FeatureTourContext';
-import { colors, spacing, typography } from '../constants/theme';
+import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
@@ -168,20 +169,20 @@ export default function PropertyListScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeftSpacer} />
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Dwell Secure</Text>
-            <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleSettingsPress}
-            style={styles.settingsButton}
-            accessibilityLabel="Settings"
-          >
-            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+        <View style={styles.headerLogoPlaceholder}>
+          <Image source={require('../../assets/icon.png')} style={styles.headerLogo} resizeMode="contain" />
         </View>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Dwell Secure</Text>
+          <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleSettingsPress}
+          style={styles.settingsButton}
+          accessibilityLabel="Settings"
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
@@ -227,29 +228,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
   },
   header: {
-    backgroundColor: colors.background,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xxl,
-    overflow: 'visible',
-  },
-  headerLeftSpacer: {
-    width: 40,
-  },
-  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    overflow: 'visible',
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerLogoPlaceholder: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
   },
   headerTextContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   settingsButton: {
-    minWidth: 44,
-    padding: spacing.sm,
-    marginTop: 4,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -260,8 +267,8 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.textMuted,
-    marginTop: 6,
+    color: colors.primary,
+    marginTop: 4,
   },
   content: { flex: 1 },
   contentContainer: {
