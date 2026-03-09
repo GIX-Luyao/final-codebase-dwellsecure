@@ -13,12 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
 import { getProperties, deleteProperty, resetOnboarding, resetAllData, resetFeatureTour } from '../services/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import { useFeatureTour } from '../contexts/FeatureTourContext';
 import { colors, spacing, typography } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const { lastSyncAt } = useSync();
   const { requestShowFeatureTour } = useFeatureTour();
   const [properties, setProperties] = useState([]);
 
@@ -27,6 +29,9 @@ export default function PropertyListScreen() {
       loadProperties();
     }, [])
   );
+
+  React.useEffect(() => { loadProperties(); }, [user?.id]);
+  React.useEffect(() => { loadProperties(); }, [lastSyncAt]);
 
   const loadProperties = async () => {
     const data = await getProperties();

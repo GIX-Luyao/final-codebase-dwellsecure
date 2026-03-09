@@ -4,7 +4,7 @@
  */
 import { Platform } from 'react-native';
 
-// --- Base URL ---
+// --- Base URL (this branch: psdwell.onrender.com) ---
 const PRODUCTION_DEFAULT = 'https://dwellsecuregix.onrender.com';
 const DEV_WEB = 'https://dwellsecuregix.onrender.com';
 const DEV_ANDROID = 'https://dwellsecuregix.onrender.com';
@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   auth: {
     login: '/api/auth/login',
     register: '/api/auth/register',
+    forgotPassword: '/api/auth/forgot-password',
   },
   shutoffs: '/api/shutoffs',
   utilities: '/api/utilities',

@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { getAppMode, EMERGENCY_MODE } from './modeService';
-import { apiGet, apiPost, apiPut, apiDelete, getApiAvailability } from './apiClient';
+import { apiGet, apiPost, apiPostForce, apiPut, apiDelete, getApiAvailability, setApiAvailability } from './apiClient';
+import { addPending } from './syncService';
 
 const SHUTOFFS_KEY = '@dwellsecure:shutoffs';
 const REMINDERS_KEY = '@dwellsecure:reminders';
@@ -270,7 +271,8 @@ export const saveShutoff = async (shutoff) => {
     }
     
     await AsyncStorage.setItem(SHUTOFFS_KEY, JSON.stringify(shutoffs));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'shutoffs', payload: normalizedShutoff });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving shutoff:', error);
     throw error;
@@ -319,8 +321,8 @@ export const deleteShutoff = async (id) => {
     const shutoffs = await getAllShutoffsRaw();
     const filtered = shutoffs.filter((s) => s.id !== id);
     await AsyncStorage.setItem(SHUTOFFS_KEY, JSON.stringify(filtered));
-    
-    console.log('[Storage] ✅ Deleted shutoff from AsyncStorage');
+    await addPending({ op: 'delete', entityType: 'shutoffs', id });
+    console.log('[Storage] ✅ Deleted shutoff from AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error deleting shutoff:', error);
     throw error;
@@ -477,7 +479,9 @@ export const saveReminder = async (reminder) => {
     }
     
     await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
-    console.log('[Storage] Saved to AsyncStorage');
+    const { _id: _r, __v, ...reminderPayload } = reminder;
+    await addPending({ op: 'upsert', entityType: 'reminders', payload: reminderPayload });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving reminder:', error);
     throw error;
@@ -513,6 +517,7 @@ export const deleteReminder = async (id) => {
     const reminders = await getReminders();
     const filtered = reminders.filter((r) => r.id !== id);
     await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(filtered));
+    await addPending({ op: 'delete', entityType: 'reminders', id });
   } catch (error) {
     console.error('Error deleting reminder:', error);
     throw error;
@@ -649,7 +654,8 @@ export const saveUtility = async (utility) => {
     }
 
     await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(utilities));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'utilities', payload: utilityWithoutMongoId });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error saving utility:', error);
     throw error;
@@ -698,8 +704,8 @@ export const deleteUtility = async (id) => {
     const utilities = await getUtilities();
     const filtered = utilities.filter((u) => u.id !== id);
     await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(filtered));
-    
-    console.log('[Storage] ✅ Deleted utility from AsyncStorage');
+    await addPending({ op: 'delete', entityType: 'utilities', id });
+    console.log('[Storage] ✅ Deleted utility from AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error deleting utility:', error);
     throw error;
@@ -775,32 +781,15 @@ export const resetFeatureTour = async () => {
   }
 };
 
+/**
+ * Fetch property list from local cache (offline-first; sync job fills cache when online).
+ */
 export const getProperties = async () => {
   try {
-    // Try API first
-    if (getApiAvailability()) {
-      try {
-        return await apiGet('/api/properties');
-      } catch (error) {
-        if (error.message !== 'API_UNAVAILABLE') {
-          console.warn('[Storage] API fetch failed, falling back to AsyncStorage:', error.message);
-        }
-        // Fall through to AsyncStorage
-      }
-    }
-    
-    // Fallback to AsyncStorage
     const data = await AsyncStorage.getItem(PROPERTY_KEY);
     if (!data) return [];
-    
     const parsed = JSON.parse(data);
-    // Handle backward compatibility: if it's a single object, convert to array
-    if (Array.isArray(parsed)) {
-      return parsed;
-    } else {
-      // Old format: single object, convert to array
-      return [parsed];
-    }
+    return Array.isArray(parsed) ? parsed : [parsed];
   } catch (error) {
     console.error('Error getting properties:', error);
     return [];
@@ -840,45 +829,38 @@ export const saveProperty = async (property) => {
     const { _id, ...propertyWithoutMongoId } = property || {};
 
     console.log('[Storage] Saving property:', propertyWithoutMongoId.id);
-    console.log('[Storage] API available:', getApiAvailability());
-    
-    // Try API first
-    if (getApiAvailability()) {
+
+    // Always try API first (even if startup health check failed, e.g. Render was sleeping)
+    try {
+      console.log('[Storage] Attempting to save to MongoDB via API...');
+      await apiPostForce('/api/properties', propertyWithoutMongoId);
+      console.log('[Storage] ✅ Successfully saved to MongoDB');
+      setApiAvailability(true);
+
+      // Also save to AsyncStorage as backup
       try {
-        console.log('[Storage] Attempting to save to MongoDB via API...');
-        await apiPost('/api/properties', propertyWithoutMongoId);
-        console.log('[Storage] ✅ Successfully saved to MongoDB');
-        
-        // Also save to AsyncStorage as backup (read from AsyncStorage, not API, to avoid loop)
-        try {
-          const data = await AsyncStorage.getItem(PROPERTY_KEY);
-          const properties = data ? JSON.parse(data) : [];
-          const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
-          if (index >= 0) {
-            properties[index] = propertyWithoutMongoId;
-          } else {
-            properties.push(propertyWithoutMongoId);
-          }
-          await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
-          console.log('[Storage] Also saved to AsyncStorage as backup');
-        } catch (error) {
-          console.warn('[Storage] Failed to save to AsyncStorage backup:', error);
-        }
-        return;
-      } catch (error) {
-        console.error('[Storage] API save failed:', error.message);
-        if (error.message !== 'API_UNAVAILABLE') {
-          console.warn('[Storage] Falling back to AsyncStorage due to API error');
+        const data = await AsyncStorage.getItem(PROPERTY_KEY);
+        const properties = data ? JSON.parse(data) : [];
+        const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
+        if (index >= 0) {
+          properties[index] = propertyWithoutMongoId;
         } else {
-          console.warn('[Storage] API unavailable, using AsyncStorage');
+          properties.push(propertyWithoutMongoId);
         }
-        // Fall through to AsyncStorage
+        await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
+      } catch (error) {
+        console.warn('[Storage] Failed to save to AsyncStorage backup:', error);
       }
-    } else {
-      console.warn('[Storage] API not available, using AsyncStorage only');
+      return;
+    } catch (error) {
+      console.error('[Storage] API save failed:', error.message);
+      if (error.message !== 'API_UNAVAILABLE') {
+        console.warn('[Storage] Falling back to AsyncStorage due to API error');
+      }
+      // Fall through to AsyncStorage
     }
-    
-    // Fallback to AsyncStorage
+
+    // Fallback to AsyncStorage when API failed or was skipped
     console.log('[Storage] Saving to AsyncStorage...');
     const properties = await getProperties();
     const index = properties.findIndex((p) => p.id === propertyWithoutMongoId.id);
@@ -890,7 +872,8 @@ export const saveProperty = async (property) => {
     }
     
     await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'properties', payload: propertyWithoutMongoId });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving property:', error);
     throw error;
@@ -976,7 +959,8 @@ export const deleteProperty = async (id) => {
       const properties = await getProperties();
       const filtered = properties.filter((p) => p.id !== id);
       await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(filtered));
-      console.log('[Storage] ✅ Deleted property from AsyncStorage');
+      await addPending({ op: 'delete', entityType: 'properties', id });
+      console.log('[Storage] ✅ Deleted property from AsyncStorage and queued for sync');
     } else {
       // Backward compatibility: if no id, clear all
       await AsyncStorage.removeItem(PROPERTY_KEY);
