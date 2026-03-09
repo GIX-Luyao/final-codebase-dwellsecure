@@ -48,8 +48,10 @@ For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `
 ## API Endpoints
 
 - `GET /health` - Health check
-- `POST /api/auth/register` - Register (body: `email`, `password`, optional `name`, `photo`). Returns `{ user, token }`. Password stored hashed (bcrypt).
-- `POST /api/auth/login` - Login (body: `email`, `password`). Returns `{ user, token }`.
+- `POST /api/auth/register` - Register (body: `email`, `password`, optional `name`, `photo`). Returns `{ user, token }`. Password stored hashed (bcrypt). **Validation:** email required and valid format; password required and min 6 chars; **400** invalid email format; **409** if email already registered.
+- `POST /api/auth/login` - Login (body: `email`, `password`). Returns `{ user, token }`. **Validation:** email and password required, email must be valid format; **400** invalid email format; **401** if invalid email or password.
+- `POST /api/auth/forgot-password` - Forgot password (body: `email`). **Validation:** email required and valid format; **400** invalid email format. If the email exists in the database, a reset token is created and stored (expires in 1 hour); the API always returns 200 with a generic message (does not reveal whether the email exists). **Email service is not yet connected** — see *Forgot password / Reset password* below.
+- `POST /api/auth/reset-password` - Reset password (body: `token`, `newPassword`). Validates the token (must exist and not be expired), updates the user's password in the database, then deletes the token. **400** if token missing, password missing, password &lt; 6 chars, or invalid/expired token.
 - `GET /api/shutoffs` - Get all shutoffs
 - `GET /api/shutoffs/:id` - Get a specific shutoff
 - `POST /api/shutoffs` - Create or update a shutoff
@@ -62,6 +64,12 @@ For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `
 - `POST /api/ai/voice-note` - Transcribe and summarize a voice note (requires `OPENAI_API_KEY`)
 
 **Note:** If the app shows "Voice note API not available" (404), redeploy this server so the deployed instance includes the `/api/ai/voice-note` route.
+
+### Forgot password / Reset password
+
+- **Forgot password** (`POST /api/auth/forgot-password`): The server checks whether the given email exists in the `users` collection. If it does, a reset token is generated, stored in the `password_reset_tokens` collection with an expiry (e.g. 1 hour), and can later be used to change the password. The API always returns the same success response so that attackers cannot discover valid email addresses. If the email is not in the database, no token is created and the response is still success.
+- **Reset password** (`POST /api/auth/reset-password`): The client sends the `token` (obtained from the user, e.g. via a link) and the new `newPassword`. The server verifies the token (exists and not expired), updates the user’s password in the database, and then deletes the token.
+- **Email service (to be connected later):** Currently, the server does **not** send any email. When a user requests a password reset, the token is only stored in the database. To complete the flow in production, an email service (e.g. SendGrid, nodemailer with SMTP) must be connected so that the server can send the user a reset link (e.g. `https://yourapp.com/reset-password?token=...`) containing the token. Until then, the reset flow can be tested by obtaining the token from the database or by building a separate client screen that accepts the token (e.g. from email sent by another tool) and calls `POST /api/auth/reset-password`.
 
 ## Testing
 

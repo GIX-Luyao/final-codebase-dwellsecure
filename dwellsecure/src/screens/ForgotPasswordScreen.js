@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { isValidEmail } from '../utils/validation';
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
@@ -29,13 +31,24 @@ export default function ForgotPasswordScreen() {
       Alert.alert('Error', 'Please enter your email.');
       return;
     }
+    if (!isValidEmail(trimmedEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
     setLoading(true);
     try {
-      // Simulated: in production, call your password-reset API
-      await new Promise((r) => setTimeout(r, 800));
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.forgotPassword}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed: ${res.status}`);
+      }
       setSent(true);
     } catch (e) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Error', e.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

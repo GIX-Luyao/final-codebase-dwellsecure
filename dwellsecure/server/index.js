@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -13,6 +14,15 @@ const { encryptAddressFields, decryptAddressFields, isEncryptionEnabled } = requ
 const { jwtSecret } = config;
 const BCRYPT_ROUNDS = 10;
 const TOKEN_EXPIRES_IN = '7d';
+const PASSWORD_RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_MAX_LENGTH = 254;
+function isValidEmail(str) {
+  if (typeof str !== 'string') return false;
+  const t = str.trim();
+  return t.length > 0 && t.length <= EMAIL_MAX_LENGTH && EMAIL_REGEX.test(t);
+}
 
 // #region agent log
 const DEBUG_LOG_PATH = path.join(__dirname, '..', '.cursor', 'debug.log');
@@ -165,6 +175,10 @@ async function connectDB() {
       await db.createCollection('users');
       console.log('📦 Created collection: users');
     }
+    if (!collectionNames.includes('password_reset_tokens')) {
+      await db.createCollection('password_reset_tokens');
+      console.log('📦 Created collection: password_reset_tokens');
+    }
     // Unique index on email for users (one account per email)
     try {
       await db.collection('users').createIndex({ email: 1 }, { unique: true });
@@ -245,6 +259,7 @@ app.post('/api/auth/register', async (req, res) => {
     const { email, password, name, photo } = req.body || {};
     const emailNorm = (email && typeof email === 'string') ? email.trim().toLowerCase() : '';
     if (!emailNorm) return res.status(400).json({ error: 'Email is required' });
+    if (!isValidEmail(emailNorm)) return res.status(400).json({ error: 'Invalid email format' });
     if (!password || typeof password !== 'string') return res.status(400).json({ error: 'Password is required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
@@ -281,6 +296,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!emailNorm || !password || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required' });
     }
+    if (!isValidEmail(emailNorm)) return res.status(400).json({ error: 'Invalid email format' });
 
     const collection = db.collection('users');
     const user = await collection.findOne({ email: emailNorm });
@@ -297,6 +313,64 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('Error /api/auth/login:', error);
     res.status(500).json({ error: 'Login failed', details: error.message });
+  }
+});
+
+// Forgot password: check if email exists in DB; if so, create a reset token and store it. Always return same success (do not reveal if email exists). Email service to send the link is to be connected later.
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: 'Database not connected' });
+    const { email } = req.body || {};
+    const emailNorm = (email && typeof email === 'string') ? email.trim().toLowerCase() : '';
+    if (!emailNorm) return res.status(400).json({ error: 'Email is required' });
+    if (!isValidEmail(emailNorm)) return res.status(400).json({ error: 'Invalid email format' });
+
+    const user = await db.collection('users').findOne({ email: emailNorm });
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRY_MS);
+      await db.collection('password_reset_tokens').insertOne({
+        token,
+        email: emailNorm,
+        expiresAt,
+      });
+      console.log(`[API] POST /api/auth/forgot-password - Token created for: ${emailNorm}`);
+      // TODO: connect email service (SendGrid/nodemailer) to send reset link containing this token to the user
+    } else {
+      console.log(`[API] POST /api/auth/forgot-password - Unknown email (no leak): ${emailNorm}`);
+    }
+    res.json({ ok: true, message: 'If an account exists, you will receive reset instructions.' });
+  } catch (error) {
+    console.error('Error /api/auth/forgot-password:', error);
+    res.status(500).json({ error: 'Request failed', details: error.message });
+  }
+});
+
+// Reset password: accept token + newPassword; validate token (exists and not expired), update user password in DB, then delete token.
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: 'Database not connected' });
+    const { token, newPassword } = req.body || {};
+    if (!token || typeof token !== 'string') return res.status(400).json({ error: 'Reset token is required' });
+    if (!newPassword || typeof newPassword !== 'string') return res.status(400).json({ error: 'New password is required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    const coll = db.collection('password_reset_tokens');
+    const record = await coll.findOne({ token, expiresAt: { $gt: new Date() } });
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid or expired reset link' });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await db.collection('users').updateOne(
+      { email: record.email },
+      { $set: { password: hashedPassword } }
+    );
+    await coll.deleteOne({ token });
+    console.log(`[API] POST /api/auth/reset-password - Password updated for: ${record.email}`);
+    res.json({ ok: true, message: 'Password has been updated.' });
+  } catch (error) {
+    console.error('Error /api/auth/reset-password:', error);
+    res.status(500).json({ error: 'Request failed', details: error.message });
   }
 });
 
