@@ -374,21 +374,24 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
-// Shutoffs routes
+// Shutoffs routes (when authenticated, only shutoffs belonging to user's properties)
 app.get('/api/shutoffs', async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Database not connected' });
     }
     const collection = db.collection('shutoffs');
-    
-    // Support filtering by type query parameter
     const query = {};
     if (req.query.type) {
       query.type = req.query.type;
       console.log(`[API] GET /api/shutoffs?type=${req.query.type} - Filtering by type`);
     }
-    
+    if (req.userId) {
+      const userProps = await db.collection('properties').find({ userId: req.userId }).project({ id: 1 }).toArray();
+      const userPropertyIds = userProps.map((p) => p.id);
+      query.propertyId = { $in: userPropertyIds };
+      console.log(`[API] GET /api/shutoffs - Scoped to user: ${req.userId}, ${userPropertyIds.length} properties`);
+    }
     const shutoffs = await collection.find(query).toArray();
     console.log(`[API] GET /api/shutoffs - Found ${shutoffs.length} shutoffs`);
     res.json(shutoffs);
@@ -407,6 +410,12 @@ app.get('/api/shutoffs/:id', async (req, res) => {
     const shutoff = await collection.findOne({ id: req.params.id });
     if (!shutoff) {
       return res.status(404).json({ error: 'Shutoff not found' });
+    }
+    if (req.userId && shutoff.propertyId) {
+      const prop = await db.collection('properties').findOne({ id: shutoff.propertyId }, { projection: { userId: 1 } });
+      if (!prop || prop.userId !== req.userId) {
+        return res.status(404).json({ error: 'Shutoff not found' });
+      }
     }
     res.json(shutoff);
   } catch (error) {
@@ -513,14 +522,21 @@ app.delete('/api/shutoffs/:id', async (req, res) => {
   }
 });
 
-// Utilities routes
+// Utilities routes (when authenticated, only utilities belonging to user's properties)
 app.get('/api/utilities', async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Database not connected' });
     }
     const collection = db.collection('utilities');
-    const utilities = await collection.find({}).toArray();
+    const query = {};
+    if (req.userId) {
+      const userProps = await db.collection('properties').find({ userId: req.userId }).project({ id: 1 }).toArray();
+      const userPropertyIds = userProps.map((p) => p.id);
+      query.propertyId = { $in: userPropertyIds };
+      console.log(`[API] GET /api/utilities - Scoped to user: ${req.userId}, ${userPropertyIds.length} properties`);
+    }
+    const utilities = await collection.find(query).toArray();
     console.log(`[API] GET /api/utilities - Found ${utilities.length} utilities`);
     res.json(utilities);
   } catch (error) {
@@ -538,6 +554,12 @@ app.get('/api/utilities/:id', async (req, res) => {
     const utility = await collection.findOne({ id: req.params.id });
     if (!utility) {
       return res.status(404).json({ error: 'Utility not found' });
+    }
+    if (req.userId && utility.propertyId) {
+      const prop = await db.collection('properties').findOne({ id: utility.propertyId }, { projection: { userId: 1 } });
+      if (!prop || prop.userId !== req.userId) {
+        return res.status(404).json({ error: 'Utility not found' });
+      }
     }
     res.json(utility);
   } catch (error) {
@@ -795,21 +817,36 @@ app.delete('/api/properties/:id', async (req, res) => {
   }
 });
 
-// Reminders routes
+// Reminders routes (when authenticated, only reminders whose shutoff/utility belongs to user's properties)
 app.get('/api/reminders', async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Database not connected' });
     }
     const collection = db.collection('reminders');
-    
-    // Support filtering by shutoffId query parameter
-    const query = {};
+    let query = {};
     if (req.query.shutoffId) {
       query.shutoffId = req.query.shutoffId;
       console.log(`[API] GET /api/reminders?shutoffId=${req.query.shutoffId} - Filtering by shutoffId`);
     }
-    
+    if (req.userId) {
+      const userProps = await db.collection('properties').find({ userId: req.userId }).project({ id: 1 }).toArray();
+      const userPropertyIds = userProps.map((p) => p.id);
+      const shutoffs = await db.collection('shutoffs').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
+      const utilities = await db.collection('utilities').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
+      const allowedShutoffIds = shutoffs.map((s) => s.id);
+      const allowedUtilityIds = utilities.map((u) => u.id);
+      const orParts = [];
+      if (allowedShutoffIds.length) orParts.push({ shutoffId: { $in: allowedShutoffIds } });
+      if (allowedUtilityIds.length) orParts.push({ utilityId: { $in: allowedUtilityIds } });
+      if (req.query.shutoffId) {
+        if (allowedShutoffIds.indexOf(req.query.shutoffId) === -1) query = { _id: null };
+        else query.shutoffId = req.query.shutoffId;
+      } else {
+        query = orParts.length ? { $or: orParts } : { _id: null };
+      }
+      console.log(`[API] GET /api/reminders - Scoped to user: ${req.userId}`);
+    }
     const reminders = await collection.find(query).toArray();
     console.log(`[API] GET /api/reminders - Found ${reminders.length} reminders`);
     res.json(reminders);
@@ -828,6 +865,24 @@ app.get('/api/reminders/:id', async (req, res) => {
     const reminder = await collection.findOne({ id: req.params.id });
     if (!reminder) {
       return res.status(404).json({ error: 'Reminder not found' });
+    }
+    if (req.userId) {
+      let allowed = false;
+      if (reminder.shutoffId) {
+        const shutoff = await db.collection('shutoffs').findOne({ id: reminder.shutoffId }, { projection: { propertyId: 1 } });
+        if (shutoff?.propertyId) {
+          const prop = await db.collection('properties').findOne({ id: shutoff.propertyId }, { projection: { userId: 1 } });
+          if (prop?.userId === req.userId) allowed = true;
+        }
+      }
+      if (!allowed && reminder.utilityId) {
+        const utility = await db.collection('utilities').findOne({ id: reminder.utilityId }, { projection: { propertyId: 1 } });
+        if (utility?.propertyId) {
+          const prop = await db.collection('properties').findOne({ id: utility.propertyId }, { projection: { userId: 1 } });
+          if (prop?.userId === req.userId) allowed = true;
+        }
+      }
+      if (!allowed) return res.status(404).json({ error: 'Reminder not found' });
     }
     res.json(reminder);
   } catch (error) {

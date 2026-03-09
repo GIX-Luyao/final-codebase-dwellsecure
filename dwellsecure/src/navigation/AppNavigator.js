@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../contexts/AuthContext';
+import { SyncProvider } from '../contexts/SyncContext';
 import FeatureTourContext from '../contexts/FeatureTourContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -497,11 +498,13 @@ export default function AppNavigator() {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      <RootStack.Screen name="MainStack" component={MainStack} />
-      <RootStack.Screen name="Profile" component={ProfileScreen} />
-      <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
-    </RootStack.Navigator>
+    <SyncProvider>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="MainStack" component={MainStack} />
+        <RootStack.Screen name="Profile" component={ProfileScreen} />
+        <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
+      </RootStack.Navigator>
+    </SyncProvider>
   );
 }
 

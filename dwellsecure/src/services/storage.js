@@ -776,35 +776,14 @@ export const resetFeatureTour = async () => {
 };
 
 /**
- * Fetch property list. When user is signed in, API returns only that user's properties (server filters by userId from JWT).
- * When signed out or API unavailable, falls back to AsyncStorage (local list).
+ * Fetch property list from local cache (offline-first; sync job fills cache when online).
  */
 export const getProperties = async () => {
   try {
-    // Try API first (apiClient sends Authorization: Bearer when signed in → server filters by req.userId)
-    if (getApiAvailability()) {
-      try {
-        return await apiGet('/api/properties');
-      } catch (error) {
-        if (error.message !== 'API_UNAVAILABLE') {
-          console.warn('[Storage] API fetch failed, falling back to AsyncStorage:', error.message);
-        }
-        // Fall through to AsyncStorage
-      }
-    }
-    
-    // Fallback to AsyncStorage
     const data = await AsyncStorage.getItem(PROPERTY_KEY);
     if (!data) return [];
-    
     const parsed = JSON.parse(data);
-    // Handle backward compatibility: if it's a single object, convert to array
-    if (Array.isArray(parsed)) {
-      return parsed;
-    } else {
-      // Old format: single object, convert to array
-      return [parsed];
-    }
+    return Array.isArray(parsed) ? parsed : [parsed];
   } catch (error) {
     console.error('Error getting properties:', error);
     return [];
