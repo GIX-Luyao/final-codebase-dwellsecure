@@ -77,6 +77,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    const { clearPending } = await import('../services/syncService');
+    await clearPending();
     await clearAuth();
     setTokenState(null);
     setUserState(null);

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { getAppMode, EMERGENCY_MODE } from './modeService';
 import { apiGet, apiPost, apiPostForce, apiPut, apiDelete, getApiAvailability, setApiAvailability } from './apiClient';
+import { addPending } from './syncService';
 
 const SHUTOFFS_KEY = '@dwellsecure:shutoffs';
 const REMINDERS_KEY = '@dwellsecure:reminders';
@@ -270,7 +271,8 @@ export const saveShutoff = async (shutoff) => {
     }
     
     await AsyncStorage.setItem(SHUTOFFS_KEY, JSON.stringify(shutoffs));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'shutoffs', payload: normalizedShutoff });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving shutoff:', error);
     throw error;
@@ -319,8 +321,8 @@ export const deleteShutoff = async (id) => {
     const shutoffs = await getAllShutoffsRaw();
     const filtered = shutoffs.filter((s) => s.id !== id);
     await AsyncStorage.setItem(SHUTOFFS_KEY, JSON.stringify(filtered));
-    
-    console.log('[Storage] ✅ Deleted shutoff from AsyncStorage');
+    await addPending({ op: 'delete', entityType: 'shutoffs', id });
+    console.log('[Storage] ✅ Deleted shutoff from AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error deleting shutoff:', error);
     throw error;
@@ -477,7 +479,9 @@ export const saveReminder = async (reminder) => {
     }
     
     await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
-    console.log('[Storage] Saved to AsyncStorage');
+    const { _id: _r, __v, ...reminderPayload } = reminder;
+    await addPending({ op: 'upsert', entityType: 'reminders', payload: reminderPayload });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving reminder:', error);
     throw error;
@@ -513,6 +517,7 @@ export const deleteReminder = async (id) => {
     const reminders = await getReminders();
     const filtered = reminders.filter((r) => r.id !== id);
     await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(filtered));
+    await addPending({ op: 'delete', entityType: 'reminders', id });
   } catch (error) {
     console.error('Error deleting reminder:', error);
     throw error;
@@ -649,7 +654,8 @@ export const saveUtility = async (utility) => {
     }
 
     await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(utilities));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'utilities', payload: utilityWithoutMongoId });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error saving utility:', error);
     throw error;
@@ -698,8 +704,8 @@ export const deleteUtility = async (id) => {
     const utilities = await getUtilities();
     const filtered = utilities.filter((u) => u.id !== id);
     await AsyncStorage.setItem(UTILITIES_KEY, JSON.stringify(filtered));
-    
-    console.log('[Storage] ✅ Deleted utility from AsyncStorage');
+    await addPending({ op: 'delete', entityType: 'utilities', id });
+    console.log('[Storage] ✅ Deleted utility from AsyncStorage and queued for sync');
   } catch (error) {
     console.error('Error deleting utility:', error);
     throw error;
@@ -866,7 +872,8 @@ export const saveProperty = async (property) => {
     }
     
     await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
-    console.log('[Storage] Saved to AsyncStorage');
+    await addPending({ op: 'upsert', entityType: 'properties', payload: propertyWithoutMongoId });
+    console.log('[Storage] Saved to AsyncStorage and queued for sync');
   } catch (error) {
     console.error('[Storage] Error saving property:', error);
     throw error;
@@ -952,7 +959,8 @@ export const deleteProperty = async (id) => {
       const properties = await getProperties();
       const filtered = properties.filter((p) => p.id !== id);
       await AsyncStorage.setItem(PROPERTY_KEY, JSON.stringify(filtered));
-      console.log('[Storage] ✅ Deleted property from AsyncStorage');
+      await addPending({ op: 'delete', entityType: 'properties', id });
+      console.log('[Storage] ✅ Deleted property from AsyncStorage and queued for sync');
     } else {
       // Backward compatibility: if no id, clear all
       await AsyncStorage.removeItem(PROPERTY_KEY);

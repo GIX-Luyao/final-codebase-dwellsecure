@@ -817,36 +817,37 @@ app.delete('/api/properties/:id', async (req, res) => {
   }
 });
 
-// Reminders routes (when authenticated, only reminders whose shutoff/utility belongs to user's properties)
+// Reminders routes: only return reminders for user's properties; unauthenticated gets none
 app.get('/api/reminders', async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Database not connected' });
     }
     const collection = db.collection('reminders');
-    let query = {};
+    if (!req.userId) {
+      console.log('[API] GET /api/reminders - No userId (missing/invalid token), returning []');
+      return res.json([]);
+    }
+    const userProps = await db.collection('properties').find({ userId: req.userId }).project({ id: 1 }).toArray();
+    const userPropertyIds = userProps.map((p) => p.id);
+    const shutoffs = await db.collection('shutoffs').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
+    const utilities = await db.collection('utilities').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
+    const allowedShutoffIds = shutoffs.map((s) => s.id);
+    const allowedUtilityIds = utilities.map((u) => u.id);
+    const orParts = [];
+    if (allowedShutoffIds.length) orParts.push({ shutoffId: { $in: allowedShutoffIds } });
+    if (allowedUtilityIds.length) orParts.push({ utilityId: { $in: allowedUtilityIds } });
+    let query;
     if (req.query.shutoffId) {
-      query.shutoffId = req.query.shutoffId;
-      console.log(`[API] GET /api/reminders?shutoffId=${req.query.shutoffId} - Filtering by shutoffId`);
-    }
-    if (req.userId) {
-      const userProps = await db.collection('properties').find({ userId: req.userId }).project({ id: 1 }).toArray();
-      const userPropertyIds = userProps.map((p) => p.id);
-      const shutoffs = await db.collection('shutoffs').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
-      const utilities = await db.collection('utilities').find({ propertyId: { $in: userPropertyIds } }).project({ id: 1 }).toArray();
-      const allowedShutoffIds = shutoffs.map((s) => s.id);
-      const allowedUtilityIds = utilities.map((u) => u.id);
-      const orParts = [];
-      if (allowedShutoffIds.length) orParts.push({ shutoffId: { $in: allowedShutoffIds } });
-      if (allowedUtilityIds.length) orParts.push({ utilityId: { $in: allowedUtilityIds } });
-      if (req.query.shutoffId) {
-        if (allowedShutoffIds.indexOf(req.query.shutoffId) === -1) query = { _id: null };
-        else query.shutoffId = req.query.shutoffId;
+      if (allowedShutoffIds.indexOf(req.query.shutoffId) === -1) {
+        query = { _id: null };
       } else {
-        query = orParts.length ? { $or: orParts } : { _id: null };
+        query = { shutoffId: req.query.shutoffId };
       }
-      console.log(`[API] GET /api/reminders - Scoped to user: ${req.userId}`);
+    } else {
+      query = orParts.length ? { $or: orParts } : { _id: null };
     }
+    console.log(`[API] GET /api/reminders - user ${req.userId}, ${userPropertyIds.length} properties, ${allowedShutoffIds.length} shutoffs, ${allowedUtilityIds.length} utilities → ${orParts.length} or-parts`);
     const reminders = await collection.find(query).toArray();
     console.log(`[API] GET /api/reminders - Found ${reminders.length} reminders`);
     res.json(reminders);

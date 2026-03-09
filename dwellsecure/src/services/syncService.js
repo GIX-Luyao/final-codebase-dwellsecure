@@ -45,8 +45,24 @@ export async function addPending(item) {
   await setPending(pending);
 }
 
+/** Clear pending queue (e.g. on sign out so next user does not push previous user's data). */
+export async function clearPending() {
+  await setPending([]);
+}
+
+const ENTITY_ORDER = { properties: 0, shutoffs: 1, utilities: 2, reminders: 3 };
+
 async function pushPending() {
-  const pending = await getPending();
+  let pending = await getPending();
+  // Upserts: properties first (shutoffs/utilities/reminders reference them). Deletes: reverse order.
+  pending = pending.slice().sort((a, b) => {
+    const orderA = ENTITY_ORDER[a.entityType] ?? 4;
+    const orderB = ENTITY_ORDER[b.entityType] ?? 4;
+    if (a.op === 'delete' && b.op === 'delete') return orderB - orderA; // reminders, utilities, shutoffs, properties
+    if (a.op === 'delete') return 1;
+    if (b.op === 'delete') return -1;
+    return orderA - orderB;
+  });
   const remaining = [];
   for (const item of pending) {
     try {
