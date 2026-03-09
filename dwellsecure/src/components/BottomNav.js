@@ -9,7 +9,7 @@ const TABS = [
   { index: 0, label: 'Property', icon: 'home-outline', iconActive: 'home' },
   { index: 1, label: 'Reminders', icon: 'calendar-outline', iconActive: 'calendar' },
   { index: 2, label: 'Finder', icon: 'search-outline', iconActive: 'search' },
-  { index: 3, label: 'Share', icon: 'share-outline', iconActive: 'share-social' },
+  { index: 3, label: 'Profile', icon: 'person-outline', iconActive: 'person' },
 ];
 
 export default function BottomNav() {
@@ -42,7 +42,7 @@ export default function BottomNav() {
     if (['PropertyList', 'ShutoffsList', 'Shutoffs', 'UtilitiesList', 'Utilities', 'Property', 'PropertyDetail', 'ShutoffDetail', 'UtilityDetail', 'PersonDetail'].includes(routeName)) return 0;
     if (routeName === 'Reminders') return 1;
     if (['AIAssistance', 'Finder'].includes(routeName)) return 2;
-    if (routeName === 'Share') return 3;
+    if (['Profile', 'Share'].includes(routeName)) return 3;
     return -1;
   };
 
@@ -52,7 +52,7 @@ export default function BottomNav() {
   const hideNavScreens = [
     'AddProperty', 'AddPerson', 'EditProperty', 'EmergencyMode',
     'MapPicker', 'Success', 'AddEditShutoff', 'AddEditUtility',
-    'PropertyPhoto', 'Profile',
+    'PropertyPhoto',
   ];
   if (currentRoute && hideNavScreens.includes(currentRoute)) {
     return null;
@@ -63,7 +63,7 @@ export default function BottomNav() {
       case 0: navigation.navigate('Property'); break;
       case 1: navigation.navigate('Reminders'); break;
       case 2: navigation.navigate('AIAssistance'); break;
-      case 3: navigation.navigate('Share'); break;
+      case 3: navigation.navigate('Profile'); break;
       default: break;
     }
   };

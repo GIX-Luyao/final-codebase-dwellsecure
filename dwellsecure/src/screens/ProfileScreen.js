@@ -211,6 +211,15 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
+              onPress={() => navigation.navigate('Share')}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.menuLabel}>Share</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuRow}
               onPress={() => Alert.alert('Help', 'Help and FAQ will be available in a future update.')}
             >
               <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />

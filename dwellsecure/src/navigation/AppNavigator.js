@@ -135,6 +135,15 @@ function UtilitiesStack() {
   );
 }
 
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Share" component={ShareScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function PropertyStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -311,7 +320,7 @@ function MainStack() {
           <Stack.Screen name="Property" component={PropertyStack} />
           <Stack.Screen name="Reminders" component={RemindersScreen} />
           <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
-          <Stack.Screen name="Share" component={ShareScreen} />
+          <Stack.Screen name="Profile" component={ProfileStack} />
         </Stack.Navigator>
 
         <View style={styles.bottomNavContainer}>

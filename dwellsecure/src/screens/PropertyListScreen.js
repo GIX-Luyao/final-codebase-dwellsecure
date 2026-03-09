@@ -169,16 +169,9 @@ export default function PropertyListScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => navigation.getParent()?.navigate('Profile')}
-            style={styles.profileButton}
-            accessibilityLabel="Open profile"
-          >
-            <Ionicons name="person-circle-outline" size={28} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.headerLeftSpacer} />
           <View style={styles.headerTextContainer}>
-            <Text style={styles.welcomeTitle}>Welcome to</Text>
-            <Text style={styles.appTitle}>Dwell Secure</Text>
+            <Text style={styles.headerTitle}>Dwell Secure</Text>
             <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
           </View>
           <TouchableOpacity
@@ -240,18 +233,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     overflow: 'visible',
   },
+  headerLeftSpacer: {
+    width: 40,
+  },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     overflow: 'visible',
-  },
-  profileButton: {
-    minWidth: 44,
-    padding: spacing.sm,
-    marginTop: 4,
-    marginRight: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTextContainer: {
     flex: 1,
@@ -265,20 +253,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  welcomeTitle: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  appTitle: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 26,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
   },
   headerSubtitle: {
     fontSize: 14,
     color: colors.textMuted,
+    marginTop: 6,
   },
   content: { flex: 1 },
   contentContainer: {
