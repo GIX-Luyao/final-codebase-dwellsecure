@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { isValidEmail } from '../utils/validation';
 
 export default function SignUpScreen() {
   const navigation = useNavigation();
@@ -32,6 +33,10 @@ export default function SignUpScreen() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       Alert.alert('Error', 'Please enter your email.');
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address.');
       return;
     }
     if (!password) {

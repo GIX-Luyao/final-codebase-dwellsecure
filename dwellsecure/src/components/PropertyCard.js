@@ -18,7 +18,7 @@ export default function PropertyCard({ property, onPress, onLongPress }) {
           <Image source={{ uri: property.imageUri }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Ionicons name="image-outline" size={56} color={colors.textMuted} />
+            <Ionicons name="image-outline" size={40} color={colors.textMuted} />
           </View>
         )}
       </View>
@@ -38,14 +38,14 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    padding: spacing.xl,
+    padding: spacing.lg,
     marginBottom: spacing.lg,
     ...shadows.card,
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1.5,
-    marginBottom: spacing.lg,
+    aspectRatio: 2.5,
+    marginBottom: spacing.md,
   },
   image: {
     width: '100%',
@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoContainer: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   address: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   indicators: {
     flexDirection: 'row',

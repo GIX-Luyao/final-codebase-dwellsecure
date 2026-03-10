@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../contexts/AuthContext';
+import { SyncProvider } from '../contexts/SyncContext';
 import FeatureTourContext from '../contexts/FeatureTourContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -130,6 +131,15 @@ function UtilitiesStack() {
         name="AddEditUtility"
         component={AddEditUtilityScreen}
       />
+    </Stack.Navigator>
+  );
+}
+
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Share" component={ShareScreen} />
     </Stack.Navigator>
   );
 }
@@ -310,7 +320,7 @@ function MainStack() {
           <Stack.Screen name="Property" component={PropertyStack} />
           <Stack.Screen name="Reminders" component={RemindersScreen} />
           <Stack.Screen name="AIAssistance" component={AIAssistanceScreen} />
-          <Stack.Screen name="Share" component={ShareScreen} />
+          <Stack.Screen name="Profile" component={ProfileStack} />
         </Stack.Navigator>
 
         <View style={styles.bottomNavContainer}>
@@ -403,7 +413,10 @@ export default function AppNavigator() {
   }, [showOnboarding]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn) {
+      setIsLoading(false);
+      return;
+    }
     checkOnboarding();
   }, [isSignedIn]);
 
@@ -494,11 +507,13 @@ export default function AppNavigator() {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      <RootStack.Screen name="MainStack" component={MainStack} />
-      <RootStack.Screen name="Profile" component={ProfileScreen} />
-      <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
-    </RootStack.Navigator>
+    <SyncProvider>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="MainStack" component={MainStack} />
+        <RootStack.Screen name="ProfileStandalone" component={ProfileScreen} />
+        <RootStack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
+      </RootStack.Navigator>
+    </SyncProvider>
   );
 }
 

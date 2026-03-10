@@ -9,7 +9,7 @@ const TABS = [
   { index: 0, label: 'Property', icon: 'home-outline', iconActive: 'home' },
   { index: 1, label: 'Reminders', icon: 'calendar-outline', iconActive: 'calendar' },
   { index: 2, label: 'Finder', icon: 'search-outline', iconActive: 'search' },
-  { index: 3, label: 'Share', icon: 'share-outline', iconActive: 'share-social' },
+  { index: 3, label: 'Profile', icon: 'person-outline', iconActive: 'person' },
 ];
 
 export default function BottomNav() {
@@ -21,6 +21,15 @@ export default function BottomNav() {
     if (!state) return null;
     const currentRoute = state.routes[state.index];
     if (!currentRoute) return null;
+    // When we're on MainStack (tab container), use the active tab as the "current" route so the tab bar highlights correctly
+    if (currentRoute.name === 'MainStack') {
+      if (currentRoute.state?.routes?.length) {
+        const tabIndex = currentRoute.state.index ?? 0;
+        const tabRoute = currentRoute.state.routes[tabIndex];
+        if (tabRoute?.name) return tabRoute.name;
+      }
+      return 'Property'; // Fallback when state not yet set (e.g. just returned from EmergencyMode)
+    }
     if (currentRoute.state?.routes) {
       const nestedIndex = currentRoute.state.index;
       if (nestedIndex !== undefined && currentRoute.state.routes[nestedIndex]) {
@@ -39,31 +48,34 @@ export default function BottomNav() {
 
   const getActiveIndex = () => {
     const routeName = getCurrentRoute();
+    if (routeName === 'MainStack') return 0; // First load: MainStack is the container, initial tab is Property
     if (['PropertyList', 'ShutoffsList', 'Shutoffs', 'UtilitiesList', 'Utilities', 'Property', 'PropertyDetail', 'ShutoffDetail', 'UtilityDetail', 'PersonDetail'].includes(routeName)) return 0;
     if (routeName === 'Reminders') return 1;
     if (['AIAssistance', 'Finder'].includes(routeName)) return 2;
-    if (routeName === 'Share') return 3;
+    if (['Profile', 'Share'].includes(routeName)) return 3;
     return -1;
   };
 
   const currentRoute = getCurrentRoute();
   const activeIndex = getActiveIndex();
 
-  const hideNavScreens = [
-    'AddProperty', 'AddPerson', 'EditProperty', 'EmergencyMode',
-    'MapPicker', 'Success', 'AddEditShutoff', 'AddEditUtility',
-    'PropertyPhoto', 'Profile',
-  ];
-  if (currentRoute && hideNavScreens.includes(currentRoute)) {
-    return null;
-  }
+  // Navigation bar is shown on all screens
 
   const handleNavPress = (index) => {
+    // Always navigate within MainStack so the bottom nav stays visible (never push RootStack's Profile)
     switch (index) {
-      case 0: navigation.navigate('Property'); break;
-      case 1: navigation.navigate('Reminders'); break;
-      case 2: navigation.navigate('AIAssistance'); break;
-      case 3: navigation.navigate('Share'); break;
+      case 0:
+        navigation.navigate('MainStack', { screen: 'Property', params: { screen: 'PropertyList' } });
+        break;
+      case 1:
+        navigation.navigate('MainStack', { screen: 'Reminders' });
+        break;
+      case 2:
+        navigation.navigate('MainStack', { screen: 'AIAssistance' });
+        break;
+      case 3:
+        navigation.navigate('MainStack', { screen: 'Profile' });
+        break;
       default: break;
     }
   };

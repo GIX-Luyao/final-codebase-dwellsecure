@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
+import { colors, spacing, typography, borderRadius, shadows, BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user, signOut, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -61,19 +62,37 @@ export default function ProfileScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+  const canGoBack = navigation.canGoBack();
 
-      <ScrollView
+  return (
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeContent} edges={['bottom']}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) + spacing.md }]}>
+          {canGoBack ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.backButton} />
+          )}
+          <View style={styles.titleRow}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="person" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.titleTextBlock}>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <Text style={styles.headerSubtitle}>Manage your account</Text>
+          </View>
+        </View>
+        </View>
+
+        <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: (insets.bottom || 0) + BOTTOM_NAV_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -81,23 +100,47 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile information</Text>
           <View style={styles.card}>
-            <View style={styles.avatarRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(name || email || '?').charAt(0).toUpperCase()}
-                </Text>
+            <View style={styles.profileCardRow}>
+              <View style={styles.profileCardLeft}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(name || email || '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                {!isEditingProfile ? (
+                  <>
+                    <Text style={styles.displayName}>{name || 'No name set'}</Text>
+                    <Text style={styles.displayEmail}>{email || '—'}</Text>
+                    <TouchableOpacity
+                      style={styles.profileCardAction}
+                      onPress={() => setIsEditingProfile(true)}
+                      accessibilityLabel="Edit profile"
+                    >
+                      <Ionicons name="pencil" size={16} color={colors.primary} />
+                      <Text style={styles.profileCardActionText}>Edit</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </>
+                ) : null}
               </View>
-              {!isEditingProfile ? (
+              <View style={styles.profileCardRight}>
+                <View style={styles.shareSectionAvatar}>
+                  <Ionicons name="people-outline" size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.shareSectionTitle}>Sharing & People</Text>
+                <Text style={styles.shareSectionSubtitle}>Manage who has access</Text>
                 <TouchableOpacity
-                  style={styles.editProfileButton}
-                  onPress={() => setIsEditingProfile(true)}
+                  style={styles.profileCardAction}
+                  onPress={() => navigation.getParent()?.navigate('Share')}
+                  accessibilityLabel="Open Sharing & People"
                 >
-                  <Ionicons name="pencil" size={18} color={colors.primary} />
-                  <Text style={styles.editProfileText}>Edit</Text>
+                  <Ionicons name="open-outline" size={16} color={colors.primary} />
+                  <Text style={styles.profileCardActionText}>Open</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
-              ) : null}
+              </View>
             </View>
-            {isEditingProfile ? (
+            {isEditingProfile && (
               <View style={styles.editFields}>
                 <Text style={styles.label}>Name</Text>
                 <TextInput
@@ -141,11 +184,6 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              <>
-                <Text style={styles.displayName}>{name || 'No name set'}</Text>
-                <Text style={styles.displayEmail}>{email || '—'}</Text>
-              </>
             )}
           </View>
         </View>
@@ -200,6 +238,15 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
+              onPress={() => Alert.alert('Share', 'Share property information with family members will be available in a future update.')}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.menuLabel}>Share</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuRow}
               onPress={() => Alert.alert('Help', 'Help and FAQ will be available in a future update.')}
             >
               <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
@@ -233,36 +280,64 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footerVersion}>Dwell Secure</Text>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  safeContent: {
+    flex: 1,
     backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  headerIconWrap: {
     width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleTextBlock: {
+    flex: 1,
+    gap: 0,
   },
   headerTitle: {
-    ...typography.title,
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text,
   },
-  headerSpacer: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: 12,
+    color: colors.primary,
   },
   scroll: {
     flex: 1,
@@ -286,49 +361,84 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.card,
   },
-  avatarRow: {
+  profileCardRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  profileCardLeft: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  profileCardRight: {
+    flex: 1,
+    paddingLeft: spacing.lg,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.borderLight,
+    justifyContent: 'flex-start',
+  },
+  shareSectionAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  shareSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  shareSectionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   avatarText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.primary,
   },
-  editProfileButton: {
+  displayName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  displayEmail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  profileCardAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    marginTop: 2,
   },
-  editProfileText: {
-    fontSize: 14,
+  profileCardActionText: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
   },
-  displayName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  displayEmail: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
   editFields: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   label: {
     ...typography.label,

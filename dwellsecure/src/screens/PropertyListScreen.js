@@ -7,18 +7,21 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
 import { getProperties, deleteProperty, resetOnboarding, resetAllData, resetFeatureTour } from '../services/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import { useFeatureTour } from '../contexts/FeatureTourContext';
-import { colors, spacing, typography } from '../constants/theme';
+import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
-  const { signOut } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { signOut, user } = useAuth();
+  const { lastSyncAt } = useSync();
   const { requestShowFeatureTour } = useFeatureTour();
   const [properties, setProperties] = useState([]);
 
@@ -27,6 +30,9 @@ export default function PropertyListScreen() {
       loadProperties();
     }, [])
   );
+
+  React.useEffect(() => { loadProperties(); }, [user?.id]);
+  React.useEffect(() => { loadProperties(); }, [lastSyncAt]);
 
   const loadProperties = async () => {
     const data = await getProperties();
@@ -161,31 +167,22 @@ export default function PropertyListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => navigation.getParent()?.navigate('Profile')}
-            style={styles.profileButton}
-            accessibilityLabel="Open profile"
-          >
-            <Ionicons name="person-circle-outline" size={28} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.welcomeTitle}>Welcome to</Text>
-            <Text style={styles.appTitle}>Dwell Secure</Text>
-            <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleSettingsPress}
-            style={styles.settingsButton}
-            accessibilityLabel="Settings"
-          >
-            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
+        <View style={styles.headerTextContainer} pointerEvents="box-none">
+          <Text style={styles.headerTitle}>Dwell Secure</Text>
+          <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
         </View>
+        <TouchableOpacity
+          onPress={handleSettingsPress}
+          style={styles.settingsButton}
+          accessibilityLabel="Settings"
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
+      <View style={styles.contentWrap}>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {properties.length > 0 ? (
           <View style={styles.propertyContainer}>
@@ -219,61 +216,58 @@ export default function PropertyListScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.background,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xxl,
-    overflow: 'visible',
-  },
-  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    overflow: 'visible',
-  },
-  profileButton: {
-    minWidth: 44,
-    padding: spacing.sm,
-    marginTop: 4,
-    marginRight: 4,
-    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xl,
+    minHeight: 72,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    position: 'relative',
+  },
+  contentWrap: {
+    flex: 1,
+    backgroundColor: colors.backgroundSecondary,
   },
   headerTextContainer: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 56,
+    paddingTop: spacing.xxl + spacing.lg,
   },
   settingsButton: {
-    minWidth: 44,
-    padding: spacing.sm,
-    marginTop: 4,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 'auto',
   },
-  welcomeTitle: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  appTitle: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 26,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.textMuted,
+    color: colors.primary,
+    marginTop: 4,
   },
   content: { flex: 1 },
   contentContainer: {
