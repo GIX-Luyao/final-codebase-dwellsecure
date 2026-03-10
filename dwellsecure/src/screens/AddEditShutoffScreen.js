@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   Animated,
+  PanResponder,
   FlatList,
   Modal,
   Keyboard,
@@ -42,7 +43,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const shutoffType = initialType === 'fire' ? 'gas' : initialType === 'power' ? 'electric' : initialType;
 
   const [step, setStep] = useState(initialStep ?? 1);
-  const [guideStep, setGuideStep] = useState(1); // Track which guide image (1 or 2)
+  const [guideStep, setGuideStep] = useState(1); // Track which guide image page
   const [description, setDescription] = useState(''); // kept for backward compat
   const [steps, setSteps] = useState(['', '']);
   const [location, setLocation] = useState('');
@@ -495,32 +496,39 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   };
 
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const TOTAL_GUIDE_STEPS = 3;
 
   const handleGuideArrow = (direction) => {
     // Left/Right arrows only control image switching (guide step)
-    if (direction === 'right' && guideStep === 1) {
-      // Slide left to show second guide
-      Animated.timing(slideAnim, {
-        toValue: -1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setGuideStep(2);
-        // Keep the animation at -1 to maintain the second guide position
-        slideAnim.setValue(-1);
-      });
-    } else if (direction === 'left' && guideStep === 2) {
-      // Slide right to show first guide
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setGuideStep(1);
-        slideAnim.setValue(0);
-      });
-    }
+    const nextGuideStep =
+      direction === 'right'
+        ? Math.min(guideStep + 1, TOTAL_GUIDE_STEPS)
+        : Math.max(guideStep - 1, 1);
+
+    if (nextGuideStep === guideStep) return;
+
+    const nextSlideValue = -(nextGuideStep - 1);
+    Animated.timing(slideAnim, {
+      toValue: nextSlideValue,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setGuideStep(nextGuideStep);
+      slideAnim.setValue(nextSlideValue);
+    });
   };
+
+  const guideSwipeResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      Math.abs(gestureState.dx) > 8 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx <= -30) {
+        handleGuideArrow('right');
+      } else if (gestureState.dx >= 30) {
+        handleGuideArrow('left');
+      }
+    },
+  });
 
   const handleAddContact = () => {
     setNewContactName('');
@@ -541,12 +549,13 @@ export default function AddEditShutoffScreen({ route, navigation }) {
 
   const handleBack = () => {
     if (step === 1 && guideStep > 1) {
-      // If on guide step 2, go back to guide step 1
-      setGuideStep(1);
+      // In the guide, go back one image page
+      handleGuideArrow('left');
     } else if (step > 1) {
       setStep(step - 1);
       // Reset guide step when going back to step 1
       setGuideStep(1);
+      slideAnim.setValue(0);
     } else {
       navigation.goBack();
     }
@@ -688,23 +697,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       return typeLabels[selectedType] || 'gas';
     };
 
-    // Determine progress bars based on guide step
-    // First page: left blue, right gray
-    // Second page: left gray, right blue
-    const totalGuideSteps = 2;
-    const progressBars = [];
-    for (let i = 1; i <= totalGuideSteps; i++) {
-      const isActive = (guideStep === 1 && i === 1) || (guideStep === 2 && i === 2);
-      progressBars.push(
-        <View 
-          key={i} 
-          style={[
-            styles.progressBar, 
-            isActive && styles.progressBarActive
-          ]} 
-        />
-      );
-    }
+    const totalGuideSteps = TOTAL_GUIDE_STEPS;
 
     return (
       <View style={styles.stepContainer}>
@@ -719,6 +712,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         <ScrollView
           style={styles.stepContent}
           contentContainerStyle={styles.step1ContentContainer}
+          scrollEnabled={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -730,8 +724,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Info Card with Diagram */}
           <View style={styles.infoCard}>
             <View style={styles.diagramContainer}>
-              {/* Left Arrow - show on second page */}
-              {guideStep === 2 ? (
+              {/* Left Arrow - show from second page */}
+              {guideStep > 1 ? (
                 <TouchableOpacity 
                   style={styles.navArrowLeft}
                   onPress={() => handleGuideArrow('left')}
@@ -744,7 +738,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               )}
               
               {/* Slide Container */}
-              <View style={styles.slideContainer}>
+              <View style={styles.slideContainer} {...guideSwipeResponder.panHandlers}>
                 <Animated.View
                   style={[
                     styles.slideWrapper,
@@ -752,38 +746,39 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                       transform: [
                         {
                           translateX: slideAnim.interpolate({
-                            inputRange: [-1, 0, 1],
-                            outputRange: [-280, 0, 280],
+                            inputRange: [-2, -1, 0],
+                            outputRange: [-560, -280, 0],
                           }),
                         },
                       ],
                     },
                   ]}
                 >
-                  {/* First Guide - Yellow Box with Diagram */}
-                  <View style={styles.diagramPlaceholder}>
-                    <View style={styles.diagramMain}>
-                      <View style={styles.diagramPipe} />
-                      <View style={styles.diagramValve} />
-                    </View>
-                    {/* Detail elements */}
-                    <View style={styles.diagramDetail1}>
-                      <View style={styles.detailIcon} />
-                    </View>
-                    <View style={styles.diagramDetail2}>
-                      <View style={styles.detailIcon} />
-                    </View>
-                  </View>
+                  {/* First Guide - Actual shutoff diagram image */}
+                  <Image
+                    source={require('../../assets/diagram/1gas1.png')}
+                    style={styles.diagramImage}
+                    resizeMode="contain"
+                  />
                   
-                  {/* Second Guide - Yellow Box with Green Circle */}
-                  <View style={styles.diagramPlaceholder}>
-                    <View style={styles.greenCircle} />
-                  </View>
+                  {/* Second Guide */}
+                  <Image
+                    source={require('../../assets/diagram/1gas2.png')}
+                    style={styles.diagramImage}
+                    resizeMode="contain"
+                  />
+
+                  {/* Third Guide */}
+                  <Image
+                    source={require('../../assets/diagram/1gas3.png')}
+                    style={styles.diagramImage}
+                    resizeMode="contain"
+                  />
                 </Animated.View>
               </View>
               
-              {/* Right Arrow - show on first page */}
-              {guideStep === 1 ? (
+              {/* Right Arrow - show until last page */}
+              {guideStep < totalGuideSteps ? (
                 <TouchableOpacity 
                   style={styles.navArrowRight}
                   onPress={() => handleGuideArrow('right')}
@@ -795,11 +790,6 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 <View style={styles.arrowPlaceholder} />
               )}
             </View>
-          </View>
-
-          {/* Progress Bars - correspond to guide steps */}
-          <View style={styles.progressBars}>
-            {progressBars}
           </View>
         </ScrollView>
         {/* Fixed Action Buttons */}
@@ -1841,7 +1831,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 450,
     height: 380,
-    padding: 50,
+    paddingHorizontal: 50,
+    paddingVertical: 20,
     borderRadius: 30,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -1868,7 +1859,7 @@ const styles = StyleSheet.create({
   },
   slideWrapper: {
     flexDirection: 'row',
-    width: 560, // 280 * 2
+    width: 840, // 280 * 3
     height: 280,
   },
   navArrowLeft: {
@@ -1899,7 +1890,7 @@ const styles = StyleSheet.create({
   },
   slideWrapper: {
     flexDirection: 'row',
-    width: 560, // 280 * 2
+    width: 840, // 280 * 3
     height: 280,
   },
   navArrowLeft: {
@@ -1930,6 +1921,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     position: 'relative',
     overflow: 'hidden',
+    alignSelf: 'center',
+  },
+  diagramImage: {
+    width: 280,
+    height: 280,
+    borderRadius: 10,
     alignSelf: 'center',
   },
   diagramMain: {
