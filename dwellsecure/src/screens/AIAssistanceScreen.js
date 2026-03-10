@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
@@ -29,7 +28,6 @@ try {
 }
 
 export default function AIAssistanceScreen() {
-  const navigation = useNavigation();
   const [inputText, setInputText] = useState('');
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -317,13 +315,6 @@ export default function AIAssistanceScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="chevron-back" size={26} color={colors.text} />
-          </TouchableOpacity>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
               <Ionicons name="sparkles" size={22} color={colors.primary} />
@@ -500,11 +491,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.sm,
-    marginRight: spacing.xs,
-    marginLeft: -spacing.sm,
   },
   headerLeft: {
     flexDirection: 'row',

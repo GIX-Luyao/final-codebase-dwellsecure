@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   Animated,
+  PanResponder,
   FlatList,
   Modal,
   Keyboard,
@@ -31,6 +32,24 @@ import { geocodeAddress } from '../utils/geocode';
 import { startVoiceRecording, stopRecordingWithBase64 } from '../utils/voiceRecording';
 import { submitVoiceNoteForSteps } from '../services/openai';
 
+const GUIDE_IMAGES_BY_TYPE = {
+  gas: [
+    require('../../assets/diagram/1gas1.png'),
+    require('../../assets/diagram/1gas2.png'),
+    require('../../assets/diagram/1gas3.png'),
+  ],
+  electric: [
+    require('../../assets/diagram/1electricity1.png'),
+    require('../../assets/diagram/1electricity2.png'),
+    require('../../assets/diagram/1electricity3.png'),
+  ],
+  water: [
+    require('../../assets/diagram/1water1.png'),
+    require('../../assets/diagram/1water2.png'),
+    require('../../assets/diagram/1water3.png'),
+  ],
+};
+
 export default function AddEditShutoffScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { shutoff, type, propertyId, initialStep } = route.params || {};
@@ -42,7 +61,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const shutoffType = initialType === 'fire' ? 'gas' : initialType === 'power' ? 'electric' : initialType;
 
   const [step, setStep] = useState(initialStep ?? 1);
-  const [guideStep, setGuideStep] = useState(1); // Track which guide image (1 or 2)
+  const [guideStep, setGuideStep] = useState(1); // Track which guide image page
   const [description, setDescription] = useState(''); // kept for backward compat
   const [steps, setSteps] = useState(['', '']);
   const [location, setLocation] = useState('');
@@ -74,13 +93,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const [verificationStatus, setVerificationStatus] = useState('unverified');
   const [isInEmergencyMode, setIsInEmergencyMode] = useState(false);
   const [selectedType, setSelectedType] = useState(shutoffType); // Allow type to be changed
+  const guideImages = GUIDE_IMAGES_BY_TYPE[selectedType] || GUIDE_IMAGES_BY_TYPE.gas;
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const recordingRef = useRef(null);
 
   // Step-by-step helpers
   const addStep = () => setSteps(prev => [...prev, '']);
-  const removeStep = (index) => setSteps(prev => prev.length > 2 ? prev.filter((_, i) => i !== index) : prev);
+  const removeStep = (index) => setSteps(prev => {
+    if (index === 0) return prev; // Step 1 is permanent
+    return prev.filter((_, i) => i !== index);
+  });
   const updateStep = (index, value) => setSteps(prev => { const s = [...prev]; s[index] = value; return s; });
 
   const handleVoiceNotePress = async () => {
@@ -235,7 +258,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     if (data) {
       setDescription(data.description || '');
       const loadedSteps = (data.description || '').split('\n').map(s => s.trim()).filter(s => s.length > 0);
-      setSteps(loadedSteps.length > 0 ? loadedSteps : ['']);
+      setSteps(loadedSteps.length > 0 ? loadedSteps : ['', '']);
       setLocation(data.location || '');
       // Try to parse location string to extract coordinates, or use stored coordinates
       if (data.latitude && data.longitude) {
@@ -493,31 +516,43 @@ export default function AddEditShutoffScreen({ route, navigation }) {
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    setGuideStep(1);
+    slideAnim.setValue(0);
+  }, [selectedType, slideAnim]);
+
   const handleGuideArrow = (direction) => {
     // Left/Right arrows only control image switching (guide step)
-    if (direction === 'right' && guideStep === 1) {
-      // Slide left to show second guide
-      Animated.timing(slideAnim, {
-        toValue: -1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setGuideStep(2);
-        // Keep the animation at -1 to maintain the second guide position
-        slideAnim.setValue(-1);
-      });
-    } else if (direction === 'left' && guideStep === 2) {
-      // Slide right to show first guide
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setGuideStep(1);
-        slideAnim.setValue(0);
-      });
-    }
+    const totalGuideSteps = guideImages.length;
+    const nextGuideStep =
+      direction === 'right'
+        ? Math.min(guideStep + 1, totalGuideSteps)
+        : Math.max(guideStep - 1, 1);
+
+    if (nextGuideStep === guideStep) return;
+
+    const nextSlideValue = -(nextGuideStep - 1);
+    Animated.timing(slideAnim, {
+      toValue: nextSlideValue,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setGuideStep(nextGuideStep);
+      slideAnim.setValue(nextSlideValue);
+    });
   };
+
+  const guideSwipeResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      Math.abs(gestureState.dx) > 8 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx <= -30) {
+        handleGuideArrow('right');
+      } else if (gestureState.dx >= 30) {
+        handleGuideArrow('left');
+      }
+    },
+  });
 
   const handleAddContact = () => {
     setNewContactName('');
@@ -538,12 +573,13 @@ export default function AddEditShutoffScreen({ route, navigation }) {
 
   const handleBack = () => {
     if (step === 1 && guideStep > 1) {
-      // If on guide step 2, go back to guide step 1
-      setGuideStep(1);
+      // In the guide, go back one image page
+      handleGuideArrow('left');
     } else if (step > 1) {
       setStep(step - 1);
       // Reset guide step when going back to step 1
       setGuideStep(1);
+      slideAnim.setValue(0);
     } else {
       navigation.goBack();
     }
@@ -685,23 +721,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       return typeLabels[selectedType] || 'gas';
     };
 
-    // Determine progress bars based on guide step
-    // First page: left blue, right gray
-    // Second page: left gray, right blue
-    const totalGuideSteps = 2;
-    const progressBars = [];
-    for (let i = 1; i <= totalGuideSteps; i++) {
-      const isActive = (guideStep === 1 && i === 1) || (guideStep === 2 && i === 2);
-      progressBars.push(
-        <View 
-          key={i} 
-          style={[
-            styles.progressBar, 
-            isActive && styles.progressBarActive
-          ]} 
-        />
-      );
-    }
+    const totalGuideSteps = guideImages.length;
+    const maxGuideOffset = Math.max(totalGuideSteps - 1, 1);
 
     return (
       <View style={styles.stepContainer}>
@@ -716,6 +737,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         <ScrollView
           style={styles.stepContent}
           contentContainerStyle={styles.step1ContentContainer}
+          scrollEnabled={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -727,8 +749,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
           {/* Info Card with Diagram */}
           <View style={styles.infoCard}>
             <View style={styles.diagramContainer}>
-              {/* Left Arrow - show on second page */}
-              {guideStep === 2 ? (
+              {/* Left Arrow - show from second page */}
+              {guideStep > 1 ? (
                 <TouchableOpacity 
                   style={styles.navArrowLeft}
                   onPress={() => handleGuideArrow('left')}
@@ -741,46 +763,36 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               )}
               
               {/* Slide Container */}
-              <View style={styles.slideContainer}>
+              <View style={styles.slideContainer} {...guideSwipeResponder.panHandlers}>
                 <Animated.View
                   style={[
                     styles.slideWrapper,
                     {
+                      width: 280 * totalGuideSteps,
                       transform: [
                         {
                           translateX: slideAnim.interpolate({
-                            inputRange: [-1, 0, 1],
-                            outputRange: [-280, 0, 280],
+                            inputRange: [-maxGuideOffset, 0],
+                            outputRange: [-280 * maxGuideOffset, 0],
                           }),
                         },
                       ],
                     },
                   ]}
                 >
-                  {/* First Guide - Yellow Box with Diagram */}
-                  <View style={styles.diagramPlaceholder}>
-                    <View style={styles.diagramMain}>
-                      <View style={styles.diagramPipe} />
-                      <View style={styles.diagramValve} />
-                    </View>
-                    {/* Detail elements */}
-                    <View style={styles.diagramDetail1}>
-                      <View style={styles.detailIcon} />
-                    </View>
-                    <View style={styles.diagramDetail2}>
-                      <View style={styles.detailIcon} />
-                    </View>
-                  </View>
-                  
-                  {/* Second Guide - Yellow Box with Green Circle */}
-                  <View style={styles.diagramPlaceholder}>
-                    <View style={styles.greenCircle} />
-                  </View>
+                  {guideImages.map((imageSource, index) => (
+                    <Image
+                      key={`guide-image-${selectedType}-${index}`}
+                      source={imageSource}
+                      style={styles.diagramImage}
+                      resizeMode="contain"
+                    />
+                  ))}
                 </Animated.View>
               </View>
               
-              {/* Right Arrow - show on first page */}
-              {guideStep === 1 ? (
+              {/* Right Arrow - show until last page */}
+              {guideStep < totalGuideSteps ? (
                 <TouchableOpacity 
                   style={styles.navArrowRight}
                   onPress={() => handleGuideArrow('right')}
@@ -793,19 +805,12 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               )}
             </View>
           </View>
-
-          {/* Progress Bars - correspond to guide steps */}
-          <View style={styles.progressBars}>
-            {progressBars}
-          </View>
         </ScrollView>
         {/* Fixed Action Buttons */}
         <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.helpButton}
-            onPress={() => {
-              Alert.alert('Help', 'Help information will be available here.');
-            }}
+            onPress={() => navigation.navigate('AIAssistance')}
             activeOpacity={0.7}
           >
             <Text style={styles.helpButtonText}>Need help finding it?</Text>
@@ -880,7 +885,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                     onSubmitEditing={() => Keyboard.dismiss()}
                   />
                 </View>
-                {steps.length > 2 && (
+                {index > 0 && (
                   <TouchableOpacity onPress={() => removeStep(index)} style={styles.stepDeleteButton}>
                     <Ionicons name="close-circle" size={22} color="#ccc" />
                   </TouchableOpacity>
@@ -1840,7 +1845,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 450,
     height: 380,
-    padding: 50,
+    paddingHorizontal: 50,
+    paddingVertical: 20,
     borderRadius: 30,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -1867,7 +1873,7 @@ const styles = StyleSheet.create({
   },
   slideWrapper: {
     flexDirection: 'row',
-    width: 560, // 280 * 2
+    width: 840, // 280 * 3
     height: 280,
   },
   navArrowLeft: {
@@ -1898,7 +1904,7 @@ const styles = StyleSheet.create({
   },
   slideWrapper: {
     flexDirection: 'row',
-    width: 560, // 280 * 2
+    width: 840, // 280 * 3
     height: 280,
   },
   navArrowLeft: {
@@ -1929,6 +1935,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     position: 'relative',
     overflow: 'hidden',
+    alignSelf: 'center',
+  },
+  diagramImage: {
+    width: 280,
+    height: 280,
+    borderRadius: 10,
     alignSelf: 'center',
   },
   diagramMain: {

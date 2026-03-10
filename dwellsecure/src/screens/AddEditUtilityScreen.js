@@ -72,7 +72,10 @@ export default function AddEditUtilityScreen({ route, navigation }) {
 
   // Step-by-step helpers
   const addStep = () => setSteps(prev => [...prev, '']);
-  const removeStep = (index) => setSteps(prev => prev.length > 2 ? prev.filter((_, i) => i !== index) : prev);
+  const removeStep = (index) => setSteps(prev => {
+    if (index === 0) return prev; // Step 1 is permanent
+    return prev.filter((_, i) => i !== index);
+  });
   const updateStep = (index, value) => setSteps(prev => { const s = [...prev]; s[index] = value; return s; });
 
   const handleVoiceNotePress = async () => {
@@ -216,7 +219,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       setUtilityIcon(data.utilityIcon || null);
       setDescription(data.description || '');
       const loadedSteps = (data.description || '').split('\n').map(s => s.trim()).filter(s => s.length > 0);
-      setSteps(loadedSteps.length > 0 ? loadedSteps : ['']);
+      setSteps(loadedSteps.length > 0 ? loadedSteps : ['', '']);
       setLocation(data.location || '');
       if (data.latitude && data.longitude) {
         setLocationCoords({
@@ -1060,7 +1063,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                     onSubmitEditing={() => Keyboard.dismiss()}
                   />
                 </View>
-                {steps.length > 2 && (
+                {index > 0 && (
                   <TouchableOpacity onPress={() => removeStep(index)} style={styles.stepDeleteButton}>
                     <Ionicons name="close-circle" size={22} color="#ccc" />
                   </TouchableOpacity>

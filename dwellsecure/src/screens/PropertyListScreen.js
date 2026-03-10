@@ -11,32 +11,63 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PropertyCard from '../components/PropertyCard';
-import { getProperties, deleteProperty, resetOnboarding, resetAllData, resetFeatureTour } from '../services/storage';
+import { getProperties, deleteProperty } from '../services/storage';
+import { checkApiHealth } from '../services/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
-import { useFeatureTour } from '../contexts/FeatureTourContext';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function PropertyListScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { signOut, user } = useAuth();
+  const { user } = useAuth();
   const { lastSyncAt } = useSync();
-  const { requestShowFeatureTour } = useFeatureTour();
   const [properties, setProperties] = useState([]);
+  const [isDbConnected, setIsDbConnected] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
   useFocusEffect(
     React.useCallback(() => {
       loadProperties();
+      refreshConnectionStatus();
     }, [])
   );
 
   React.useEffect(() => { loadProperties(); }, [user?.id]);
   React.useEffect(() => { loadProperties(); }, [lastSyncAt]);
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const runCheck = async () => {
+      if (isMounted) {
+        setIsCheckingConnection(true);
+      }
+      const connected = await checkApiHealth();
+      if (isMounted) {
+        setIsDbConnected(connected);
+        setIsCheckingConnection(false);
+      }
+    };
+
+    runCheck();
+    const interval = setInterval(runCheck, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const loadProperties = async () => {
     const data = await getProperties();
     setProperties(data);
+  };
+
+  const refreshConnectionStatus = async () => {
+    setIsCheckingConnection(true);
+    const connected = await checkApiHealth();
+    setIsDbConnected(connected);
+    setIsCheckingConnection(false);
   };
 
   const handleLongPress = (property) => {
@@ -80,106 +111,23 @@ export default function PropertyListScreen() {
     );
   };
 
-  const handleSettingsPress = async () => {
-    Alert.alert(
-      'Settings',
-      'What would you like to do?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign out',
-          onPress: async () => {
-            Alert.alert(
-              'Sign out',
-              'Are you sure you want to sign out?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Sign out', onPress: () => signOut() },
-              ]
-            );
-          },
-        },
-        {
-          text: 'Show guide again',
-          onPress: async () => {
-            try {
-              await resetFeatureTour();
-              requestShowFeatureTour();
-            } catch (e) {
-              Alert.alert('Error', 'Could not reset guide');
-            }
-          },
-        },
-        {
-          text: 'Reset Onboarding',
-          onPress: async () => {
-            Alert.alert(
-              'Reset Onboarding',
-              'Do you want to go back to the onboarding screen?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Reset',
-                  onPress: async () => {
-                    try {
-                      await resetOnboarding();
-                      Alert.alert('Success', 'Onboarding has been reset. You will be taken to the onboarding screen.', [
-                        { text: 'OK' }
-                      ]);
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to reset onboarding');
-                    }
-                  },
-                },
-              ]
-            );
-          },
-        },
-        {
-          text: 'Reset All Data',
-          style: 'destructive',
-          onPress: async () => {
-            Alert.alert(
-              'Reset All Data',
-              'This will delete all your properties, shutoffs, utilities, people, and reminders. This action cannot be undone. Are you sure?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Reset All',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await resetAllData();
-                      Alert.alert('Success', 'All data has been reset. You will be taken to the onboarding screen.', [
-                        { text: 'OK' }
-                      ]);
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to reset data');
-                    }
-                  },
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
         <View style={styles.headerTextContainer} pointerEvents="box-none">
           <Text style={styles.headerTitle}>Dwell Secure</Text>
           <Text style={styles.headerSubtitle}>All your critical property data in one place</Text>
+          <View style={[styles.connectionIndicator, isDbConnected ? styles.connectionConnected : styles.connectionDisconnected]}>
+            <View style={[styles.connectionDot, isDbConnected ? styles.connectionDotConnected : styles.connectionDotDisconnected]} />
+            <Text style={styles.connectionText}>
+              {isCheckingConnection
+                ? 'Checking backend...'
+                : isDbConnected
+                  ? 'Database connected'
+                  : 'Database disconnected'}
+            </Text>
+          </View>
         </View>
-        <TouchableOpacity
-          onPress={handleSettingsPress}
-          style={styles.settingsButton}
-          accessibilityLabel="Settings"
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.contentWrap}>
@@ -230,8 +178,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xl,
-    minHeight: 72,
+    paddingBottom: spacing.xxl,
+    minHeight: 150,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -250,14 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 56,
-    paddingTop: spacing.xxl + spacing.lg,
-  },
-  settingsButton: {
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 'auto',
+    paddingTop: spacing.xxl + spacing.xxl,
   },
   headerTitle: {
     fontSize: 26,
@@ -266,8 +207,39 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.primary,
+    color: colors.textMuted,
     marginTop: 4,
+  },
+  connectionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  connectionConnected: {
+    backgroundColor: '#e8f5e9',
+  },
+  connectionDisconnected: {
+    backgroundColor: '#fff3e0',
+  },
+  connectionDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 6,
+  },
+  connectionDotConnected: {
+    backgroundColor: '#2e7d32',
+  },
+  connectionDotDisconnected: {
+    backgroundColor: '#ef6c00',
+  },
+  connectionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   content: { flex: 1 },
   contentContainer: {

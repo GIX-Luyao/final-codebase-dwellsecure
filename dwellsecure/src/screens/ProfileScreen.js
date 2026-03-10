@@ -15,12 +15,15 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureTour } from '../contexts/FeatureTourContext';
+import { resetOnboarding, resetAllData, resetFeatureTour } from '../services/storage';
 import { colors, spacing, typography, borderRadius, shadows, BOTTOM_NAV_HEIGHT } from '../constants/theme';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, signOut, updateProfile } = useAuth();
+  const { requestShowFeatureTour } = useFeatureTour();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -62,23 +65,96 @@ export default function ProfileScreen() {
     );
   };
 
-  const canGoBack = navigation.canGoBack();
+  const handleSettingsPress = async () => {
+    Alert.alert(
+      'Settings',
+      'What would you like to do?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          onPress: async () => {
+            Alert.alert(
+              'Sign out',
+              'Are you sure you want to sign out?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign out', onPress: () => signOut() },
+              ]
+            );
+          },
+        },
+        {
+          text: 'Show guide again',
+          onPress: async () => {
+            try {
+              await resetFeatureTour();
+              requestShowFeatureTour();
+            } catch (e) {
+              Alert.alert('Error', 'Could not reset guide');
+            }
+          },
+        },
+        {
+          text: 'Reset Onboarding',
+          onPress: async () => {
+            Alert.alert(
+              'Reset Onboarding',
+              'Do you want to go back to the onboarding screen?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Reset',
+                  onPress: async () => {
+                    try {
+                      await resetOnboarding();
+                      Alert.alert('Success', 'Onboarding has been reset. You will be taken to the onboarding screen.', [
+                        { text: 'OK' },
+                      ]);
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to reset onboarding');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+        {
+          text: 'Reset All Data',
+          style: 'destructive',
+          onPress: async () => {
+            Alert.alert(
+              'Reset All Data',
+              'This will delete all your properties, shutoffs, utilities, people, and reminders. This action cannot be undone. Are you sure?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Reset All',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await resetAllData();
+                      Alert.alert('Success', 'All data has been reset. You will be taken to the onboarding screen.', [
+                        { text: 'OK' },
+                      ]);
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to reset data');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeContent} edges={['bottom']}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) + spacing.md }]}>
-          {canGoBack ? (
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              accessibilityLabel="Go back"
-            >
-              <Ionicons name="chevron-back" size={26} color={colors.text} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.backButton} />
-          )}
           <View style={styles.titleRow}>
           <View style={styles.headerIconWrap}>
             <Ionicons name="person" size={22} color={colors.primary} />
@@ -88,6 +164,13 @@ export default function ProfileScreen() {
             <Text style={styles.headerSubtitle}>Manage your account</Text>
           </View>
         </View>
+          <TouchableOpacity
+            style={styles.headerSettingsButton}
+            onPress={handleSettingsPress}
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -305,16 +388,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  backButton: {
-    padding: spacing.sm,
-    marginRight: spacing.xs,
-    marginLeft: -spacing.sm,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     flex: 1,
+  },
+  headerSettingsButton: {
+    width: 40,
+    height: 40,
+    marginLeft: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIconWrap: {
     width: 40,

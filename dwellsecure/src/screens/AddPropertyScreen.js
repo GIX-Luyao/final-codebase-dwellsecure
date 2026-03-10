@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
+import { colors, spacing, typography, borderRadius, shadows, BOTTOM_NAV_HEIGHT } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,18 +24,12 @@ import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { getMapboxToken, suggestAddresses } from '../utils/addressSuggest';
 
 const PROPERTY_TYPES = [
-  { id: 'single-family', label: 'Single family house', icon: 'home' },
-  { id: 'townhouse', label: 'Townhouse', icon: 'business' },
-  { id: 'condo', label: 'Condo', icon: 'layers' },
-  { id: 'apartment', label: 'Apartment', icon: 'storefront' },
-];
-
-const MORE_PROPERTY_TYPES = [
-  { id: 'duplex-triplex-fourplex', label: 'Duplex/Triplex/Fourplex', icon: 'albums' },
-  { id: 'low-rise-apartment', label: 'Low-rise Apartment', icon: 'storefront' },
-  { id: 'high-rise-apartment', label: 'High-rise Apartment', icon: 'business' },
-  { id: 'villa', label: 'Villa', icon: 'home' },
-  { id: 'condo', label: 'Condo', icon: 'layers' },
+  { id: 'single-family', label: 'Single family house', icon: 'home', description: 'Standalone home' },
+  { id: 'townhouse', label: 'Townhouse', icon: 'business', description: 'Attached multi-floor home' },
+  { id: 'condo', label: 'Condo', icon: 'layers', description: 'Privately owned unit' },
+  { id: 'apartment', label: 'Apartment', icon: 'storefront', description: 'Rental unit in a building' },
+  { id: 'duplex-triplex-fourplex', label: 'Duplex / Triplex', icon: 'albums', description: 'Multi-unit residential' },
+  { id: 'mobile', label: 'Mobile Home', icon: 'bus', description: 'Manufactured or RV-style home' },
 ];
 
 export default function AddPropertyScreen({ route }) {
@@ -57,10 +51,8 @@ export default function AddPropertyScreen({ route }) {
   const [country, setCountry] = useState('USA');
   const [imageUri, setImageUri] = useState(property?.imageUri || null);
   const [people, setPeople] = useState([]);
-  const [moreOptionsPressed, setMoreOptionsPressed] = useState(false);
   const [isCompletePressed, setIsCompletePressed] = useState(false);
   const [pressedPropertyType, setPressedPropertyType] = useState(null);
-  const [cameFromMoreOptions, setCameFromMoreOptions] = useState(false);
   const [location, setLocation] = useState(
     property?.latitude && property?.longitude
       ? { latitude: property.latitude, longitude: property.longitude }
@@ -181,7 +173,6 @@ export default function AddPropertyScreen({ route }) {
         if (prop.propertyType) {
           let normalizedType = prop.propertyType;
           if (normalizedType === 'house') normalizedType = 'single-family';
-          if (normalizedType === 'mobile') normalizedType = 'single-family';
           setPropertyType(normalizedType);
         }
         if (prop?.latitude != null && prop?.longitude != null) {
@@ -314,7 +305,6 @@ export default function AddPropertyScreen({ route }) {
 
   const handlePropertyTypeSelect = (type) => {
     setPropertyType(type);
-    setCameFromMoreOptions(false);
     // Show visual feedback
     setPressedPropertyType(type);
     // Add a short delay to let user see the blue selection state change
@@ -322,16 +312,6 @@ export default function AddPropertyScreen({ route }) {
       setStep(3);
       setPressedPropertyType(null);
     }, 300); // 300ms delay - very short but enough to see the visual feedback
-  };
-
-  const handleMorePropertyTypeSelect = (type) => {
-    setPropertyType(type);
-    setCameFromMoreOptions(true);
-    setPressedPropertyType(type);
-    setTimeout(() => {
-      setStep(3);
-      setPressedPropertyType(null);
-    }, 300);
   };
 
   const handleAddressSubmit = () => {
@@ -446,13 +426,17 @@ export default function AddPropertyScreen({ route }) {
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Add your property</Text>
+      <Text style={styles.stepTitle}>Select Your Property Type</Text>
       
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.propertyTypeIntroCard}>
+          <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
+          <Text style={styles.propertyTypeIntroText}>Choose the option that best matches your home</Text>
+        </View>
         <View style={styles.propertyTypesContainer}>
           {PROPERTY_TYPES.map((type) => (
             <TouchableOpacity
@@ -467,93 +451,41 @@ export default function AddPropertyScreen({ route }) {
               onPressOut={handlePropertyTypePressOut}
               activeOpacity={0.8}
             >
-              <View style={styles.propertyIconContainer}>
+              <View style={[
+                styles.propertyIconContainer,
+                propertyType === type.id && styles.propertyIconContainerSelected,
+              ]}>
                 <Ionicons 
                   name={type.icon} 
-                  size={60} 
-                  color={pressedPropertyType === type.id ? "#fff" : (propertyType === type.id ? "#1095EE" : "#999")} 
+                  size={34} 
+                  color={pressedPropertyType === type.id ? colors.white : colors.primary} 
                 />
               </View>
-              <Text style={[
-                styles.propertyLabel,
-                propertyType === type.id && styles.propertyLabelSelected,
-                pressedPropertyType === type.id && styles.propertyLabelPressed
-              ]}>
-                {type.label}
-              </Text>
+              <View style={styles.propertyLabelBlock}>
+                <Text style={[
+                  styles.propertyLabel,
+                  propertyType === type.id && styles.propertyLabelSelected,
+                  pressedPropertyType === type.id && styles.propertyLabelPressed
+                ]}>
+                  {type.label}
+                </Text>
+                <Text style={[
+                  styles.propertyDescription,
+                  pressedPropertyType === type.id && styles.propertyDescriptionPressed,
+                ]}>
+                  {type.description}
+                </Text>
+              </View>
+              {propertyType === type.id ? (
+                <View style={styles.propertySelectedBadge}>
+                  <Ionicons name="checkmark" size={14} color={colors.primary} />
+                </View>
+              ) : null}
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
       
-      <View style={styles.actionSection}>
-        <TouchableOpacity 
-          style={[
-            styles.moreOptionsButton,
-            moreOptionsPressed && styles.moreOptionsButtonPressed
-          ]}
-          onPress={() => {
-            setMoreOptionsPressed(true);
-            // Add a short delay to let user see the blue selection state change
-            setTimeout(() => {
-              setStep(2); // More options page
-              setMoreOptionsPressed(false);
-            }, 300); // 300ms delay - same as property type selection
-          }}
-        >
-          <Text style={[
-            styles.moreOptionsButtonText,
-            moreOptionsPressed && styles.moreOptionsButtonTextPressed
-          ]}>
-            More options
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Add your property</Text>
-      <Text style={styles.stepSubtitle}>More property types</Text>
-      
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.propertyTypesContainer}>
-          {MORE_PROPERTY_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                styles.propertyTypeOption,
-                propertyType === type.id && styles.propertyTypeOptionSelected,
-                pressedPropertyType === type.id && styles.propertyTypeOptionPressed
-              ]}
-              onPress={() => handleMorePropertyTypeSelect(type.id)}
-              onPressIn={() => handlePropertyTypePressIn(type.id)}
-              onPressOut={handlePropertyTypePressOut}
-              activeOpacity={0.8}
-            >
-              <View style={styles.propertyIconContainer}>
-                <Ionicons 
-                  name={type.icon} 
-                  size={60} 
-                  color={pressedPropertyType === type.id ? "#fff" : (propertyType === type.id ? "#1095EE" : "#999")} 
-                />
-              </View>
-              <Text style={[
-                styles.propertyLabel,
-                propertyType === type.id && styles.propertyLabelSelected,
-                pressedPropertyType === type.id && styles.propertyLabelPressed
-              ]}>
-                {type.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
     </View>
   );
 
@@ -569,11 +501,16 @@ export default function AddPropertyScreen({ route }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <Text style={styles.stepTitle}>Add your property</Text>
-        
+        <Text style={styles.stepTitle}>Enter address</Text>
+
         <View style={styles.addressForm}>
+          <View style={styles.formSectionHeader}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name="home-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.formSectionTitle}>Property type</Text>
+          </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Property type</Text>
             <TouchableOpacity
               style={styles.dropdown}
               activeOpacity={0.8}
@@ -585,7 +522,7 @@ export default function AddPropertyScreen({ route }) {
               <Ionicons
                 name={isPropertyTypeDropdownOpen ? 'chevron-up' : 'chevron-down'}
                 size={20}
-                color="#8E8E93"
+                color={colors.textMuted}
               />
             </TouchableOpacity>
             {isPropertyTypeDropdownOpen && (
@@ -618,6 +555,12 @@ export default function AddPropertyScreen({ route }) {
         </View>
 
         <View style={styles.addressForm}>
+          <View style={styles.formSectionHeader}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name="map-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.formSectionTitle}>Address</Text>
+          </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
               Address line 1<Text style={styles.required}>*</Text>
@@ -632,14 +575,14 @@ export default function AddPropertyScreen({ route }) {
                 setTimeout(() => setAddressSuggestions([]), 220);
               }}
               placeholder="Type address for suggestions"
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
             />
             {addressSuggestLoading && addressSuggestions.length === 0 && (
               <View style={styles.suggestLoadingRow}>
-                <ActivityIndicator size="small" color="#30ACFF" />
+                <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.suggestLoadingText}>Searching…</Text>
               </View>
             )}
@@ -661,7 +604,7 @@ export default function AddPropertyScreen({ route }) {
                       Keyboard.dismiss();
                     }}
                   >
-                    <Ionicons name="location-outline" size={18} color="#8E8E93" />
+                    <Ionicons name="location-outline" size={18} color={colors.textMuted} />
                     <Text style={styles.suggestItemText} numberOfLines={2}>{sug.place_name}</Text>
                   </TouchableOpacity>
                 ))}
@@ -676,7 +619,7 @@ export default function AddPropertyScreen({ route }) {
               value={addressLine2}
               onChangeText={setAddressLine2}
               placeholder="Apartment, suite, etc."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
@@ -692,7 +635,7 @@ export default function AddPropertyScreen({ route }) {
               value={city}
               onChangeText={setCity}
               placeholder="Enter city"
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
@@ -709,7 +652,7 @@ export default function AddPropertyScreen({ route }) {
                 value={state}
                 onChangeText={setState}
                 placeholder="State"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={colors.textMuted}
                 returnKeyType="done"
                 blurOnSubmit={true}
                 onSubmitEditing={() => Keyboard.dismiss()}
@@ -724,7 +667,7 @@ export default function AddPropertyScreen({ route }) {
                 value={zipCode}
                 onChangeText={setZipCode}
                 placeholder="12345"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 returnKeyType="done"
                 blurOnSubmit={true}
@@ -742,7 +685,7 @@ export default function AddPropertyScreen({ route }) {
               value={country}
               onChangeText={setCountry}
               placeholder="Country"
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
@@ -751,7 +694,7 @@ export default function AddPropertyScreen({ route }) {
 
           <View style={styles.formActions}>
             <TouchableOpacity 
-              style={[styles.continueButton, !isFormValid && styles.continueButtonDisabled]}
+              style={[styles.continueButton, styles.continueButtonFull, !isFormValid && styles.continueButtonDisabled]}
               onPress={handleAddressSubmit}
               disabled={!isFormValid}
             >
@@ -776,15 +719,28 @@ export default function AddPropertyScreen({ route }) {
 
     return (
       <ScrollView style={styles.stepContainer} contentContainerStyle={[styles.step3Content, { paddingBottom: bottomPadding }]}>
-        <View style={styles.addressHeader}>
-          <Text style={styles.addressTitle}>{addressLine1.trim() || 'Address'}</Text>
-          {secondaryAddress ? (
-            <Text style={styles.addressSubtitle}>{secondaryAddress}</Text>
-          ) : null}
+        <View style={styles.reviewHeroCard}>
+          <View style={styles.reviewHeroTopRow}>
+            <View style={styles.reviewHeroIconWrap}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.reviewHeroTitle}>Review your property</Text>
+          </View>
+          <View style={styles.addressHeader}>
+            <Text style={styles.addressTitle}>{addressLine1.trim() || 'Address'}</Text>
+            {secondaryAddress ? (
+              <Text style={styles.addressSubtitle}>{secondaryAddress}</Text>
+            ) : null}
+          </View>
         </View>
         
         <View style={styles.mapSection}>
-          <Text style={styles.sectionLabel}>Map</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name="map-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionLabel}>Map Location</Text>
+          </View>
           <TouchableOpacity 
             style={styles.mapPlaceholder}
             onPress={handleMapPress}
@@ -793,7 +749,7 @@ export default function AddPropertyScreen({ route }) {
           >
             {isGeocoding ? (
               <View style={styles.mapGeocodingContainer}>
-                <ActivityIndicator size="large" color="#30ACFF" />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.mapPlaceholderText}>Locating address…</Text>
               </View>
             ) : location ? (
@@ -805,7 +761,7 @@ export default function AddPropertyScreen({ route }) {
                 />
                 <View style={styles.mapOverlay}>
                   <View style={styles.mapOverlayContent}>
-                    <Ionicons name="location" size={20} color="#30ACFF" />
+                    <Ionicons name="location" size={20} color={colors.primary} />
                     <Text style={styles.mapOverlayText}>
                       {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                     </Text>
@@ -815,30 +771,48 @@ export default function AddPropertyScreen({ route }) {
               </View>
             ) : (
               <>
-                <Ionicons name="location-outline" size={80} color="#ccc" />
+                <Ionicons name="location-outline" size={72} color={colors.textMuted} />
                 <Text style={styles.mapPlaceholderText}>Enter address above or tap to select location</Text>
               </>
             )}
           </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={handleMapPress} activeOpacity={0.85}>
+            <Ionicons name="navigate-outline" size={18} color={colors.primary} />
+            <Text style={styles.secondaryActionButtonText}>Adjust map pin</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.photoSection}>
-          <Text style={styles.sectionLabel}>Photo</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name="image-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionLabel}>Property Photo</Text>
+          </View>
           <TouchableOpacity style={styles.photoUploadBox} onPress={pickImage}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={styles.uploadedImage} />
             ) : (
-              <Ionicons name="add" size={32} color="#999" />
+              <Ionicons name="add" size={32} color={colors.textMuted} />
             )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={pickImage} activeOpacity={0.85}>
+            <Ionicons name={imageUri ? 'refresh-outline' : 'camera-outline'} size={18} color={colors.primary} />
+            <Text style={styles.secondaryActionButtonText}>{imageUri ? 'Change photo' : 'Add photo'}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.peopleSection}>
-          <Text style={styles.sectionLabel}>People</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name="people-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionLabel}>People</Text>
+          </View>
           {people.map((person, index) => (
             <View key={index} style={styles.personItem}>
               <View style={styles.personAvatar}>
-                <Ionicons name="person" size={24} color="#999" />
+                <Ionicons name="person" size={24} color={colors.textMuted} />
               </View>
               <Text style={styles.personName}>{person.name || 'Person'}</Text>
             </View>
@@ -846,11 +820,10 @@ export default function AddPropertyScreen({ route }) {
           <TouchableOpacity 
             style={styles.addPersonButton}
             onPress={() => navigation.navigate('AddPerson')}
+            activeOpacity={0.85}
           >
-            <View style={styles.personInputPlaceholder} />
-            <TouchableOpacity style={styles.addIconButton}>
-              <Ionicons name="add-circle-outline" size={28} color="#999" />
-            </TouchableOpacity>
+            <Ionicons name="person-add-outline" size={18} color={colors.white} />
+            <Text style={styles.addPersonButtonText}>Add person</Text>
           </TouchableOpacity>
         </View>
 
@@ -864,8 +837,8 @@ export default function AddPropertyScreen({ route }) {
           onPressOut={handleCompletePressOut}
           activeOpacity={0.8}
         >
-          <Ionicons name="checkmark" size={24} color="#fff" />
-          <Text style={styles.completeButtonText}>Done</Text>
+          <Ionicons name="checkmark" size={24} color={colors.white} />
+          <Text style={styles.completeButtonText}>Save Property</Text>
         </TouchableOpacity>
     </ScrollView>
     );
@@ -887,7 +860,7 @@ export default function AddPropertyScreen({ route }) {
     }
     if (step > 1) {
       if (step === 3) {
-        setStep(cameFromMoreOptions ? 2 : 1);
+        setStep(1);
       } else if (step === 4) {
         setStep(3);
       } else {
@@ -904,16 +877,15 @@ export default function AddPropertyScreen({ route }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Ionicons name="chevron-back" size={28} color="#333" />
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) + spacing.sm }]}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dwell Secure</Text>
-        <View style={{ width: 28 }} />
+        <Text style={styles.headerTitle}>{isEditing ? 'Edit Property' : 'Add Property'}</Text>
+        <View style={styles.backButtonSpacer} />
       </View>
 
       {step === 1 && renderStep1()}
-      {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
       {step === 4 && renderStep4()}
     </View>
@@ -923,26 +895,42 @@ export default function AddPropertyScreen({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.card,
+  },
+  backButtonSpacer: {
+    width: 36,
+    height: 36,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   stepContainer: {
     flex: 1,
-    padding: 20,
-    paddingTop: 20,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.lg,
   },
   addressFormScroll: {
     flex: 1,
@@ -951,31 +939,25 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...typography.title,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   stepSubtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...typography.bodySmall,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   addressHeader: {
     marginBottom: 16,
   },
   addressTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...typography.title,
     textAlign: 'center',
     marginBottom: 4,
   },
   addressSubtitle: {
-    fontSize: 14,
-    color: '#999',
+    ...typography.bodySmall,
     textAlign: 'center',
   },
   divider: {
@@ -984,49 +966,102 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   propertyTypesContainer: {
-    paddingTop: 10,
-    paddingBottom: 10,
-    gap: 27,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
   },
-  propertyTypeOption: {
+  propertyTypeIntroCard: {
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '2e',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 30,
-    padding: 30,
-    borderRadius: 15,
-    backgroundColor: '#F5F5F5',
-    borderWidth: 3,
-    borderColor: 'transparent',
+    gap: spacing.sm,
+  },
+  propertyTypeIntroText: {
+    flex: 1,
+    ...typography.bodySmall,
+    color: colors.primaryDark,
+  },
+  propertyTypeOption: {
+    width: '100%',
+    minHeight: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.card,
   },
   propertyTypeOptionSelected: {
-    backgroundColor: '#E1F3FF',
-    borderColor: '#92C3E4',
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary + '55',
   },
   propertyTypeOptionPressed: {
-    backgroundColor: '#30ACFF',
-    borderColor: '#30ACFF',
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.97 }],
   },
   propertyIconContainer: {
-    // Icon container styling handled inline
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '2e',
+  },
+  propertyIconContainerSelected: {
+    backgroundColor: colors.background,
+    borderColor: colors.primary + '66',
+  },
+  propertyLabelBlock: {
+    flex: 1,
+    gap: 2,
   },
   propertyLabel: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#6B6B6B',
-    flex: 1,
+    color: colors.primary,
   },
   propertyLabelSelected: {
-    color: '#1095EE',
+    color: colors.primaryDark,
   },
   propertyLabelPressed: {
-    color: '#fff',
+    color: colors.primaryDark,
+  },
+  propertyDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  propertyDescriptionPressed: {
+    color: colors.textSecondary,
+  },
+  propertySelectedBadge: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.primary + '44',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionSection: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   scrollView: {
     flex: 1,
@@ -1036,98 +1071,129 @@ const styles = StyleSheet.create({
   },
   moreOptionsButton: {
     borderWidth: 1,
-    borderColor: '#E8E8E8',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: 'transparent',
+    borderColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.primary,
+    ...shadows.button,
   },
   moreOptionsButtonPressed: {
-    backgroundColor: '#E1F3FF',
-    borderColor: '#92C3E4',
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primaryDark,
     borderWidth: 1,
   },
   moreOptionsButtonText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 15,
+    color: colors.white,
+    fontWeight: '600',
   },
   moreOptionsButtonTextPressed: {
-    color: '#1095EE',
+    color: colors.white,
   },
   step2Content: {
     paddingBottom: 40,
   },
+  addressHeroCard: {
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '2e',
+    backgroundColor: colors.primaryLight,
+  },
+  formSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  formSectionHint: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
   addressForm: {
-    paddingTop: 10,
-    gap: 20,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.card,
   },
   inputGroup: {
     width: '100%',
-    gap: 8,
+    gap: spacing.sm,
   },
   inputLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E1E1E',
+    ...typography.label,
+    fontSize: 15,
+    color: colors.text,
   },
   required: {
-    color: '#D75757',
+    color: colors.error,
     marginLeft: 4,
   },
   addressInput: {
     width: '100%',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#C7C7CC',
-    backgroundColor: '#F2F2F7',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
     fontSize: 16,
-    color: '#1E1E1E',
+    color: colors.text,
   },
   addressInputFocused: {
-    borderColor: '#30ACFF',
+    borderColor: colors.primary,
   },
   suggestLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     marginTop: 6,
     paddingVertical: 4,
   },
   suggestLoadingText: {
-    fontSize: 14,
-    color: '#8E8E93',
+    ...typography.caption,
   },
   suggestDropdown: {
     marginTop: 4,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#C7C7CC',
-    backgroundColor: '#FFF',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     overflow: 'hidden',
     maxHeight: 220,
   },
   suggestItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: colors.borderLight,
   },
   suggestItemText: {
     flex: 1,
     fontSize: 15,
-    color: '#1E1E1E',
+    color: colors.text,
   },
   suggestItemLast: {
     borderBottomWidth: 0,
   },
   formRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: spacing.md,
   },
   formRowItem: {
     flex: 1,
@@ -1135,92 +1201,130 @@ const styles = StyleSheet.create({
   formActions: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 20,
-    marginTop: 8,
+    paddingTop: spacing.md,
+  },
+  continueButtonFull: {
+    width: '100%',
   },
   dropdown: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#C7C7CC',
-    backgroundColor: '#F2F2F7',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   dropdownText: {
     fontSize: 16,
-    color: '#1E1E1E',
+    color: colors.text,
     flex: 1,
     marginRight: 8,
   },
   dropdownOptionsContainer: {
-    marginTop: 8,
-    borderRadius: 12,
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#C7C7CC',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     overflow: 'hidden',
   },
   dropdownOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   dropdownOptionSelected: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
   },
   dropdownOptionText: {
     fontSize: 16,
-    color: '#1E1E1E',
+    color: colors.text,
   },
   dropdownOptionTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#30ACFF',
-    borderRadius: 30,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
     minWidth: 180,
-    minHeight: 56,
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 6,
+    minHeight: 52,
+    ...shadows.button,
   },
   continueButtonDisabled: {
-    backgroundColor: '#C7C7CC',
-    opacity: 0.5,
+    backgroundColor: colors.textMuted,
+    opacity: 0.55,
   },
   continueButtonText: {
-    color: '#fff',
-    fontSize: 20,
+    color: colors.white,
+    fontSize: 18,
     fontWeight: '700',
   },
   arrow: {
-    fontSize: 24,
-    color: '#fff',
+    fontSize: 22,
+    color: colors.white,
     marginLeft: 6,
   },
   step3Content: {
     paddingBottom: 100,
   },
+  reviewHeroCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  reviewHeroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 6,
+  },
+  reviewHeroIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewHeroTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  reviewHeroSubtitle: {
+    ...typography.bodySmall,
+    marginBottom: spacing.md,
+  },
   mapSection: {
-    marginBottom: 30,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    ...shadows.card,
   },
   mapPlaceholder: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
     overflow: 'hidden',
-    marginTop: 15,
+    marginTop: spacing.sm,
     height: 200,
     position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   mapGeocodingContainer: {
     flex: 1,
@@ -1231,7 +1335,7 @@ const styles = StyleSheet.create({
   mapPlaceholderText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   mapThumbnailContainer: {
@@ -1248,10 +1352,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.62)',
     padding: 12,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: borderRadius.md,
+    borderBottomRightRadius: borderRadius.md,
   },
   mapOverlayContent: {
     flexDirection: 'row',
@@ -1262,97 +1366,146 @@ const styles = StyleSheet.create({
   },
   mapOverlayText: {
     fontSize: 12,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
   },
   mapOverlayHint: {
     fontSize: 10,
-    color: '#fff',
+    color: colors.white,
     textAlign: 'center',
-    opacity: 0.8,
+    opacity: 0.85,
   },
   photoSection: {
-    marginBottom: 30,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    ...shadows.card,
   },
   photoUploadBox: {
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
+    borderWidth: 1.5,
+    borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     height: 150,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    marginTop: 15,
+    backgroundColor: colors.backgroundSecondary,
+    marginTop: spacing.sm,
   },
   uploadedImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: borderRadius.sm,
   },
   peopleSection: {
-    marginBottom: 30,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    ...shadows.card,
   },
   personItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8E8E8',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   personAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#D0D0D0',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.sm,
   },
   personName: {
     fontSize: 16,
-    color: '#000',
+    color: colors.text,
     flex: 1,
   },
   addPersonButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 15,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+    ...shadows.button,
   },
-  personInputPlaceholder: {
-    flex: 1,
-    height: 50,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    marginRight: 10,
+  addPersonButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '700',
   },
-  addIconButton: {
-    padding: 5,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 15,
-  },
-  completeButton: {
-    backgroundColor: '#A8A8A8',
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    alignSelf: 'center',
-    marginTop: 20,
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
+  },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  secondaryActionButton: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    backgroundColor: colors.primaryLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  secondaryActionButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sectionLabel: {
+    ...typography.label,
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 0,
+  },
+  completeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minWidth: '100%',
+    justifyContent: 'center',
+    ...shadows.button,
   },
   completeButtonActive: {
-    backgroundColor: '#30ACFF',
-    transform: [{ scale: 0.98 }],
+    backgroundColor: colors.primaryDark,
+    transform: [{ scale: 0.985 }],
   },
   completeButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

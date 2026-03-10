@@ -141,7 +141,7 @@ export default function PropertyDetailScreen({ route }) {
           </View>
           <View style={[styles.headerSide, styles.headerActions]}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('EditProperty', { property, initialStep: 2 })}
+              onPress={() => navigation.navigate('EditProperty', { property, initialStep: 3 })}
               style={styles.editButton}
               disabled={!property}
             >

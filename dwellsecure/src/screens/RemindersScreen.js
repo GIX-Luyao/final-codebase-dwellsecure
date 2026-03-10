@@ -120,13 +120,6 @@ export default function RemindersScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </TouchableOpacity>
         <View style={styles.titleRow}>
           <View style={styles.headerIconWrap}>
             <Ionicons name="calendar" size={22} color={colors.primary} />
@@ -184,7 +177,7 @@ export default function RemindersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
 
   /* Header */
@@ -197,11 +190,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.sm,
-    marginRight: spacing.xs,
-    marginLeft: -spacing.sm,
   },
   titleRow: {
     flexDirection: 'row',
@@ -234,7 +222,10 @@ const styles = StyleSheet.create({
   },
 
   /* Scroll */
-  scrollView: { flex: 1 },
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.backgroundSecondary,
+  },
   contentContainer: {
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.xl,
