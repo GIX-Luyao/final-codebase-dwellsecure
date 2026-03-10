@@ -28,6 +28,7 @@ import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
 import { startVoiceRecording, stopRecordingWithBase64 } from '../utils/voiceRecording';
 import { submitVoiceNoteForSteps } from '../services/openai';
+import { uploadMedia } from '../services/mediaService';
 
 export default function AddEditUtilityScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -46,6 +47,7 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   const [floor, setFloor] = useState('');
   const [photos, setPhotos] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [utilityId] = useState(utility?.id || Date.now().toString());
   const [maintenanceDate, setMaintenanceDate] = useState(null);
   const [maintenanceTime, setMaintenanceTime] = useState(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -283,7 +285,17 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 copyToCacheDirectory: true,
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setPhotos([...photos, result.assets[0].uri]);
+                const asset = result.assets[0];
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `utilities/${utilityId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setPhotos([...photos, url]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                }
               }
             },
           },
@@ -307,7 +319,17 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 copyToCacheDirectory: true,
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setPhotos([...photos, result.assets[0].uri]);
+                const asset = result.assets[0];
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `utilities/${utilityId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setPhotos([...photos, url]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                }
               }
             },
           },
@@ -320,7 +342,17 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                   copyToCacheDirectory: true,
                 });
                 if (!result.canceled && result.assets && result.assets.length > 0) {
-                  setPhotos([...photos, result.assets[0].uri]);
+                  const asset = result.assets[0];
+                  try {
+                    const url = await uploadMedia({
+                      uri: asset.uri,
+                      path: `utilities/${utilityId}/photos/${Date.now()}.jpg`,
+                      contentType: asset.mimeType || 'image/jpeg',
+                    });
+                    setPhotos([...photos, url]);
+                  } catch (e) {
+                    Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                  }
                 }
               } catch (error) {
                 Alert.alert('Error', 'Failed to pick image');
@@ -372,10 +404,19 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
-                setVideos([...videos, {
-                  uri: asset.uri,
-                  thumbnailUri: asset.thumbnailUri || asset.uri,
-                }]);
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `utilities/${utilityId}/videos/${Date.now()}.mp4`,
+                    contentType: asset.mimeType || 'video/mp4',
+                  });
+                  setVideos([...videos, {
+                    uri: url,
+                    thumbnailUri: url,
+                  }]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                }
               }
             },
           },
@@ -400,10 +441,19 @@ export default function AddEditUtilityScreen({ route, navigation }) {
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
-                setVideos([...videos, {
-                  uri: asset.uri,
-                  thumbnailUri: asset.thumbnailUri || asset.uri,
-                }]);
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `utilities/${utilityId}/videos/${Date.now()}.mp4`,
+                    contentType: asset.mimeType || 'video/mp4',
+                  });
+                  setVideos([...videos, {
+                    uri: url,
+                    thumbnailUri: url,
+                  }]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                }
               }
             },
           },
@@ -417,10 +467,19 @@ export default function AddEditUtilityScreen({ route, navigation }) {
                 });
                 if (!result.canceled && result.assets && result.assets.length > 0) {
                   const asset = result.assets[0];
-                  setVideos([...videos, {
-                    uri: asset.uri,
-                    thumbnailUri: asset.uri,
-                  }]);
+                  try {
+                    const url = await uploadMedia({
+                      uri: asset.uri,
+                      path: `utilities/${utilityId}/videos/${Date.now()}.mp4`,
+                      contentType: asset.mimeType || 'video/mp4',
+                    });
+                    setVideos([...videos, {
+                      uri: url,
+                      thumbnailUri: url,
+                    }]);
+                  } catch (e) {
+                    Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                  }
                 }
               } catch (error) {
                 Alert.alert('Error', 'Failed to pick video');
@@ -495,10 +554,9 @@ export default function AddEditUtilityScreen({ route, navigation }) {
       return;
     }
 
-    const utilityId = isEditing ? utility.id : Date.now().toString();
-    
+    const utilityIdToUse = isEditing ? utility.id : utilityId;
     const utilityData = {
-      id: utilityId,
+      id: utilityIdToUse,
       // Step 2 information
       title: title.trim(),
       utilityIcon: utilityIcon || null,
@@ -534,9 +592,9 @@ export default function AddEditUtilityScreen({ route, navigation }) {
         reminderDate.setSeconds(0);
         reminderDate.setMilliseconds(0);
         
-        const reminder = {
+          const reminder = {
           id: reminderIdToUse,
-          utilityId: utilityId,
+            utilityId: utilityIdToUse,
           title: `Utility Maintenance`,
           description: `Maintenance reminder for utility${location ? ` at ${location}` : ''}`,
           date: reminderDate.toISOString(),

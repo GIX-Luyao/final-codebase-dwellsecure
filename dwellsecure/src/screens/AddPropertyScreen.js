@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { saveProperty, getPeople } from '../services/storage';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { geocodeAddress } from '../utils/geocode';
+import { uploadMedia } from '../services/mediaService';
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { getMapboxToken, suggestAddresses } from '../utils/addressSuggest';
 
@@ -41,6 +42,7 @@ export default function AddPropertyScreen({ route }) {
   const isEditing = !!property;
   
   const [step, setStep] = useState(initialStep || 1);
+  const [propertyId] = useState(property?.id || Date.now().toString());
   const [propertyType, setPropertyType] = useState(property?.propertyType || '');
   const [address, setAddress] = useState(property?.address || '');
   const [addressLine1, setAddressLine1] = useState('');
@@ -226,9 +228,20 @@ export default function AddPropertyScreen({ route }) {
 
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 // Get the local URI (file:// or content://)
-                const uri = result.assets[0].uri;
+                const asset = result.assets[0];
+                const uri = asset.uri;
                 console.log('[AddProperty] Camera image URI:', uri);
-                setImageUri(uri);
+                try {
+                  const url = await uploadMedia({
+                    uri,
+                    path: `properties/${propertyId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setImageUri(url);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                  setImageUri(uri);
+                }
               }
             } catch (error) {
               console.error('[AddProperty] Camera error:', error);
@@ -257,9 +270,20 @@ export default function AddPropertyScreen({ route }) {
 
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 // Get the local URI (file:// or content://)
-                const uri = result.assets[0].uri;
+                const asset = result.assets[0];
+                const uri = asset.uri;
                 console.log('[AddProperty] Image picker URI:', uri);
-                setImageUri(uri);
+                try {
+                  const url = await uploadMedia({
+                    uri,
+                    path: `properties/${propertyId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setImageUri(url);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                  setImageUri(uri);
+                }
               }
             } catch (error) {
               console.error('[AddProperty] Image picker error:', error);
@@ -278,9 +302,20 @@ export default function AddPropertyScreen({ route }) {
 
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 // Get the local URI (file:// or content://)
-                const uri = result.assets[0].uri;
+                const asset = result.assets[0];
+                const uri = asset.uri;
                 console.log('[AddProperty] Document picker URI:', uri);
-                setImageUri(uri);
+                try {
+                  const url = await uploadMedia({
+                    uri,
+                    path: `properties/${propertyId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setImageUri(url);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                  setImageUri(uri);
+                }
               }
             } catch (error) {
               console.error('[AddProperty] Document picker error:', error);
@@ -371,8 +406,9 @@ export default function AddPropertyScreen({ route }) {
       country.trim()
     ].filter(Boolean).join(', ');
 
+    const propertyIdToUse = isEditing ? property.id : propertyId;
     const propertyData = {
-      id: isEditing ? property.id : Date.now().toString(),
+      id: propertyIdToUse,
       // Store combined address for backward compatibility
       address: fullAddress,
       // Store individual address fields for structured data
@@ -383,7 +419,7 @@ export default function AddPropertyScreen({ route }) {
       zipCode: zipCode.trim(),
       country: country.trim() || 'USA',
       propertyType,
-      // Store image URI (local file:// or content:// URI)
+      // Store image URI (Firebase Storage URL when available)
       imageUri: imageUri || null,
       // Store location coordinates
       latitude: location?.latitude || null,

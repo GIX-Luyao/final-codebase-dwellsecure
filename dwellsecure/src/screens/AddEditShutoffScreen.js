@@ -31,6 +31,7 @@ import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
 import { startVoiceRecording, stopRecordingWithBase64 } from '../utils/voiceRecording';
 import { submitVoiceNoteForSteps } from '../services/openai';
+import { uploadMedia } from '../services/mediaService';
 
 const GUIDE_IMAGES_BY_TYPE = {
   gas: [
@@ -61,6 +62,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const shutoffType = initialType === 'fire' ? 'gas' : initialType === 'power' ? 'electric' : initialType;
 
   const [step, setStep] = useState(initialStep ?? 1);
+  const [shutoffId] = useState(shutoff?.id || Date.now().toString());
   const [guideStep, setGuideStep] = useState(1); // Track which guide image page
   const [description, setDescription] = useState(''); // kept for backward compat
   const [steps, setSteps] = useState(['', '']);
@@ -339,7 +341,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 copyToCacheDirectory: true,
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setPhotos([...photos, result.assets[0].uri]);
+                const asset = result.assets[0];
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `shutoffs/${shutoffId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setPhotos([...photos, url]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                }
               }
             },
           },
@@ -363,7 +375,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 copyToCacheDirectory: true,
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setPhotos([...photos, result.assets[0].uri]);
+                const asset = result.assets[0];
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `shutoffs/${shutoffId}/photos/${Date.now()}.jpg`,
+                    contentType: asset.mimeType || 'image/jpeg',
+                  });
+                  setPhotos([...photos, url]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                }
               }
             },
           },
@@ -376,7 +398,17 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                   copyToCacheDirectory: true,
                 });
                 if (!result.canceled && result.assets && result.assets.length > 0) {
-                  setPhotos([...photos, result.assets[0].uri]);
+                  const asset = result.assets[0];
+                  try {
+                    const url = await uploadMedia({
+                      uri: asset.uri,
+                      path: `shutoffs/${shutoffId}/photos/${Date.now()}.jpg`,
+                      contentType: asset.mimeType || 'image/jpeg',
+                    });
+                    setPhotos([...photos, url]);
+                  } catch (e) {
+                    Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+                  }
                 }
               } catch (error) {
                 Alert.alert('Error', 'Failed to pick image');
@@ -429,10 +461,19 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
-                setVideos([...videos, {
-                  uri: asset.uri,
-                  thumbnailUri: asset.thumbnailUri || asset.uri, // Use thumbnailUri if available
-                }]);
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `shutoffs/${shutoffId}/videos/${Date.now()}.mp4`,
+                    contentType: asset.mimeType || 'video/mp4',
+                  });
+                  setVideos([...videos, {
+                    uri: url,
+                    thumbnailUri: url,
+                  }]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                }
               }
             },
           },
@@ -457,10 +498,19 @@ export default function AddEditShutoffScreen({ route, navigation }) {
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
-                setVideos([...videos, {
-                  uri: asset.uri,
-                  thumbnailUri: asset.thumbnailUri || asset.uri, // Use thumbnailUri if available
-                }]);
+                try {
+                  const url = await uploadMedia({
+                    uri: asset.uri,
+                    path: `shutoffs/${shutoffId}/videos/${Date.now()}.mp4`,
+                    contentType: asset.mimeType || 'video/mp4',
+                  });
+                  setVideos([...videos, {
+                    uri: url,
+                    thumbnailUri: url,
+                  }]);
+                } catch (e) {
+                  Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                }
               }
             },
           },
@@ -474,12 +524,19 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                 });
                 if (!result.canceled && result.assets && result.assets.length > 0) {
                   const asset = result.assets[0];
-                  // For DocumentPicker, we don't have thumbnailUri, so we'll use the video URI
-                  // In a real app, you might want to generate a thumbnail using expo-av
-                  setVideos([...videos, {
-                    uri: asset.uri,
-                    thumbnailUri: asset.uri, // Use video URI as placeholder, could generate thumbnail later
-                  }]);
+                  try {
+                    const url = await uploadMedia({
+                      uri: asset.uri,
+                      path: `shutoffs/${shutoffId}/videos/${Date.now()}.mp4`,
+                      contentType: asset.mimeType || 'video/mp4',
+                    });
+                    setVideos([...videos, {
+                      uri: url,
+                      thumbnailUri: url,
+                    }]);
+                  } catch (e) {
+                    Alert.alert('Upload failed', e.message || 'Could not upload video.');
+                  }
                 }
               } catch (error) {
                 Alert.alert('Error', 'Failed to pick video');
@@ -606,11 +663,10 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       return;
     }
 
-    const shutoffId = isEditing ? shutoff.id : Date.now().toString();
-    
+    const shutoffIdToUse = isEditing ? shutoff.id : shutoffId;
     // Prepare shutoff data with all step2 information
     const shutoffData = {
-      id: shutoffId,
+      id: shutoffIdToUse,
       type: selectedType, // gas/electric/water from step selection
       // Step 2 information
       description: steps.map(s => s.trim()).filter(s => s.length > 0).join('\n'),
@@ -657,9 +713,9 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         reminderDate.setMilliseconds(0);
         
         // Prepare reminder with all step3 information
-        const reminder = {
+          const reminder = {
           id: reminderIdToUse,
-          shutoffId: shutoffId, // Link to shutoff
+            shutoffId: shutoffIdToUse, // Link to shutoff
           title: `${getShutoffTypeLabel()} Shutoff Maintenance`,
           description: `Maintenance reminder for ${getShutoffTypeLabel().toLowerCase()} shutoff${location ? ` at ${location}` : ''}`,
           date: reminderDate.toISOString(),

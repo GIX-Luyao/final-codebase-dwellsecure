@@ -18,6 +18,7 @@ npm install
    - **PORT** – server port (default 3000).
    - **CORS_ORIGIN** – comma-separated allowed origins (optional).
    - **JWT_SECRET** – secret for signing auth tokens (required in production; dev default exists).
+   - **Firebase Storage (media uploads):** To enable `POST /api/upload-media`, set **FIREBASE_STORAGE_BUCKET** (e.g. `project-28a12e1f-d31f-47d3-834.firebasestorage.app`) and one of: **FIREBASE_SERVICE_ACCOUNT_JSON** (stringified JSON key) or **FIREBASE_SERVICE_ACCOUNT_PATH** (path to the JSON key file). If unset, upload-media returns 503.
    - **ADDRESS_ENCRYPTION_KEY** – 32-byte key so address/geo are stored **encrypted** in MongoDB (API still returns plain text for map/UI). If unset, addresses are stored in **plain**. Generate one with:
      ```bash
      node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -62,6 +63,7 @@ For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `
 - `POST /api/utilities` - Create or update a utility
 - `DELETE /api/utilities/:id` - Delete a utility
 - `POST /api/ai/voice-note` - Transcribe and summarize a voice note (requires `OPENAI_API_KEY`)
+- `POST /api/upload-media` - Upload a file to Firebase Storage (multipart: `file`, `path`; requires auth and Firebase env). Returns `{ url }`.
 
 **Note:** If the app shows "Voice note API not available" (404), redeploy this server so the deployed instance includes the `/api/ai/voice-note` route.
 

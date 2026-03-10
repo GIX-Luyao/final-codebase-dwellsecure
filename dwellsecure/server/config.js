@@ -35,9 +35,38 @@ const corsOptions = process.env.CORS_ORIGIN
 /** JWT secret for auth tokens. Set JWT_SECRET in production. */
 const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
+/** Firebase Storage: bucket name (e.g. project-28a12e1f-d31f-47d3-834.firebasestorage.app). */
+const firebaseStorageBucket = process.env.FIREBASE_STORAGE_BUCKET || '';
+
+/**
+ * Firebase Admin credential for Storage uploads.
+ * Set one of: FIREBASE_SERVICE_ACCOUNT_JSON (stringified JSON), or FIREBASE_SERVICE_ACCOUNT_PATH (file path).
+ */
+function getFirebaseCredential() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (raw && typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+  const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  if (keyPath) {
+    try {
+      return require(keyPath);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   PORT,
   mongoUri,
   corsOptions,
   jwtSecret,
+  firebaseStorageBucket,
+  getFirebaseCredential,
 };

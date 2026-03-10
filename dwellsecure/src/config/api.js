@@ -5,10 +5,14 @@
 import { Platform } from 'react-native';
 
 // --- Base URL (this branch: psdwell.onrender.com) ---
-const PRODUCTION_DEFAULT = 'https://dwellsecuregix.onrender.com';
-const DEV_WEB = 'https://dwellsecuregix.onrender.com';
-const DEV_ANDROID = 'https://dwellsecuregix.onrender.com';
-const DEV_IOS = 'https://dwellsecuregix.onrender.com';
+// const PRODUCTION_DEFAULT = 'https://dwellsecuregix.onrender.com';
+// const DEV_WEB = 'https://dwellsecuregix.onrender.com';
+// const DEV_ANDROID = 'https://dwellsecuregix.onrender.com';
+// const DEV_IOS = 'https://dwellsecuregix.onrender.com';
+const PRODUCTION_DEFAULT = 'https://psdwell.onrender.com';
+const DEV_WEB = 'https://psdwell.onrender.com';
+const DEV_ANDROID = 'https://psdwell.onrender.com';
+const DEV_IOS = 'https://psdwell.onrender.com'; 
 const DEV_FALLBACK = 'http://localhost:3000';
 
 export function getApiBaseUrl() {
@@ -39,4 +43,5 @@ export const API_ENDPOINTS = {
   utilities: '/api/utilities',
   reminders: '/api/reminders',
   properties: '/api/properties',
+  uploadMedia: '/api/upload-media',
 };

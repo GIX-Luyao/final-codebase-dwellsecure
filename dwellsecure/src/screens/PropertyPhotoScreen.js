@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { getProperty, saveProperty } from '../services/storage';
+import { uploadMedia } from '../services/mediaService';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function PropertyPhotoScreen({ route }) {
@@ -121,9 +122,24 @@ export default function PropertyPhotoScreen({ route }) {
 
   const savePropertyWithImage = async (uri) => {
     if (!property) return;
+    let finalUri = uri || null;
+    if (uri) {
+      try {
+        const url = await uploadMedia({
+          uri,
+          path: `properties/${propertyId}/photos/${Date.now()}.jpg`,
+          contentType: 'image/jpeg',
+        });
+        finalUri = url;
+      } catch (e) {
+        Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+        // Fall back to local URI so user still sees something on this device
+        finalUri = uri;
+      }
+    }
     const updated = {
       ...property,
-      imageUri: uri || null,
+      imageUri: finalUri,
       updatedAt: new Date().toISOString(),
     };
     await saveProperty(updated);

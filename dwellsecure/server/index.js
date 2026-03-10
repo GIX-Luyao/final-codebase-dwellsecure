@@ -10,8 +10,11 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
 const { encryptAddressFields, decryptAddressFields, isEncryptionEnabled } = require('./addressCrypto');
+const multer = require('multer');
+const admin = require('firebase-admin');
 
-const { jwtSecret } = config;
+const { jwtSecret, firebaseStorageBucket, getFirebaseCredential } = config;
+const uploadMem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25 MB
 const BCRYPT_ROUNDS = 10;
 const TOKEN_EXPIRES_IN = '7d';
 const PASSWORD_RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
@@ -1163,6 +1166,44 @@ Do not output any steps in that case — that phrase will be shown as a popup to
     }
   } catch (error) {
     console.error('Error /api/ai/voice-note:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// ----- Upload media to Firebase Storage (server-side) -----
+function getFirebaseBucket() {
+  if (!firebaseStorageBucket || !getFirebaseCredential()) return null;
+  if (!admin.apps.length) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert(getFirebaseCredential()),
+        storageBucket: firebaseStorageBucket,
+      });
+    } catch (e) {
+      console.error('Firebase Admin init failed:', e.message);
+      return null;
+    }
+  }
+  return admin.storage().bucket();
+}
+
+app.post('/api/upload-media', uploadMem.single('file'), async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: 'Authentication required' });
+    const storagePath = req.body && typeof req.body.path === 'string' ? req.body.path.trim() : '';
+    if (!storagePath) return res.status(400).json({ error: 'path required' });
+    if (!req.file || !req.file.buffer) return res.status(400).json({ error: 'file required' });
+    const bucket = getFirebaseBucket();
+    if (!bucket) return res.status(503).json({ error: 'Firebase Storage not configured' });
+    const file = bucket.file(storagePath);
+    await file.save(req.file.buffer, {
+      metadata: { contentType: req.file.mimetype || 'application/octet-stream' },
+      resumable: false,
+    });
+    const [url] = await file.getSignedUrl({ action: 'read', expires: '01-01-2030' });
+    res.json({ url });
+  } catch (error) {
+    console.error('Error /api/upload-media:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
