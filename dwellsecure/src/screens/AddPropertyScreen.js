@@ -136,7 +136,8 @@ export default function AddPropertyScreen({ route }) {
       }
       // Initialize address fields if editing (use latest params so we don't rely on stale closure)
       if (prop) {
-        if (stepParam != null && stepParam >= 1 && stepParam <= 4) {
+        // Only sync step from params when it wouldn't move backward (e.g. user clicked Continue to step 4)
+        if (stepParam != null && stepParam >= 1 && stepParam <= 4 && stepParam >= step) {
           setStep(stepParam);
         }
         // Prefer structured address fields if available
