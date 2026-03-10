@@ -806,9 +806,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
         <View style={[styles.fixedActionButtons, { paddingBottom: bottomPadding }]}>
           <TouchableOpacity 
             style={styles.helpButton}
-            onPress={() => {
-              Alert.alert('Help', 'Help information will be available here.');
-            }}
+            onPress={() => navigation.navigate('AIAssistance')}
             activeOpacity={0.7}
           >
             <Text style={styles.helpButtonText}>Need help finding it?</Text>

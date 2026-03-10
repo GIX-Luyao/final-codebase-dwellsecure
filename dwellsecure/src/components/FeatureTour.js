@@ -33,7 +33,7 @@ const TOUR_STEPS = [
     id: 'bottom-nav',
     icon: 'navigate',
     title: 'Bottom navigation',
-    description: 'Property (home), Reminders, Finder (AI assistance), and Share. Switch between main sections using the bottom bar.',
+    description: 'Property (home), Reminders, Assistant (AI assistance), and Share. Switch between main sections using the bottom bar.',
   },
   {
     id: 'emergency',

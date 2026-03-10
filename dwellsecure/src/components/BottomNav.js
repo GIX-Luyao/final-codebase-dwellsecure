@@ -8,7 +8,7 @@ import { colors, spacing, typography } from '../constants/theme';
 const TABS = [
   { index: 0, label: 'Property', icon: 'home-outline', iconActive: 'home' },
   { index: 1, label: 'Reminders', icon: 'calendar-outline', iconActive: 'calendar' },
-  { index: 2, label: 'Finder', icon: 'search-outline', iconActive: 'search' },
+  { index: 2, label: 'Assistant', icon: 'search-outline', iconActive: 'search' },
   { index: 3, label: 'Profile', icon: 'person-outline', iconActive: 'person' },
 ];
 
