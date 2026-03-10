@@ -13,11 +13,13 @@ import {
   Modal,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { saveUtility, getUtility, saveReminder, deleteReminder, getAllUtilitiesRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
@@ -902,11 +904,11 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 28 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
@@ -1241,11 +1243,11 @@ export default function AddEditUtilityScreen({ route, navigation }) {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 28 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
@@ -1483,18 +1485,17 @@ export default function AddEditUtilityScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
-    </View>
+    </SafeAreaView>
   );
 }
 
-// Copy all styles from AddEditShutoffScreen
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
   },
   stepContainer: {
     flex: 1,
@@ -1503,10 +1504,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.card,
   },
   stepContent: {
     flex: 1,
@@ -1538,8 +1552,8 @@ const styles = StyleSheet.create({
   stepNumberBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#1095EE',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1547,7 +1561,7 @@ const styles = StyleSheet.create({
   stepNumberText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   stepInput: {
     flex: 1,
@@ -1570,34 +1584,34 @@ const styles = StyleSheet.create({
   },
   addStepText: {
     fontSize: 14,
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   progressTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     textAlign: 'center',
   },
   progressSubtitle: {
     fontSize: 13,
-    color: '#888',
+    color: colors.textMuted,
     textAlign: 'center',
-    marginTop: -5,
+    marginTop: -4,
   },
   progressIndicator: {
     width: 289,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E0E0E0',
+    height: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.border,
   },
   inputRect: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 16,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -1608,10 +1622,10 @@ const styles = StyleSheet.create({
   iconPickerButton: {
     width: 52,
     height: 52,
-    borderRadius: 10,
-    backgroundColor: '#F5F5F5',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1626,39 +1640,35 @@ const styles = StyleSheet.create({
   iconPickerPanel: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     padding: 10,
     marginBottom: 16,
     gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    ...shadows.card,
   },
   iconPickerItem: {
     width: '22%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.backgroundSecondary,
   },
   iconPickerItemSelected: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#1095EE',
+    borderColor: colors.primary,
   },
   iconPickerLabel: {
     fontSize: 10,
-    color: '#555',
+    color: colors.textMuted,
     marginTop: 4,
   },
   iconPickerLabelSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   voiceNoteContainer: {
@@ -1670,22 +1680,22 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#1095EE',
+    borderColor: colors.primary,
   },
   voiceNoteHint: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 17,
   },
   textInput: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     minHeight: 40,
   },
   textInputMultiline: {
@@ -1705,9 +1715,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
+    marginBottom: 6,
   },
   locationButton: {
     aspectRatio: 220 / 152,
@@ -1715,8 +1726,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1095EE',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
     borderStyle: 'dashed',
   },
   locationMapPlaceholder: {
@@ -1735,21 +1746,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     minHeight: 40,
   },
   floorSelectText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   floorSelectTextPlaceholder: {
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '400',
     textTransform: 'none',
   },
@@ -1758,50 +1769,46 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     marginTop: 4,
     maxHeight: 200,
     zIndex: 1000,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    ...shadows.card,
   },
   floorDropdownItem: {
-    padding: 15,
+    padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.borderLight,
   },
   floorDropdownItemSelected: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.primaryLight,
   },
   floorDropdownItemText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   floorDropdownItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
   },
   floorInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 15,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
     minHeight: 40,
   },
   floorInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
@@ -1815,12 +1822,12 @@ const styles = StyleSheet.create({
   mediaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    borderWidth: 2,
-    borderColor: '#C7C7CC',
+    borderWidth: 1.5,
+    borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 15,
-    backgroundColor: '#FAFAFA',
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    backgroundColor: colors.background,
   },
   mediaItem: {
     width: 80,
@@ -1833,13 +1840,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 8,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.borderLight,
   },
   videoPlaceholder: {
     width: '100%',
     height: '100%',
     borderRadius: 8,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1858,7 +1865,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 12,
   },
   addMediaButton: {
@@ -1866,47 +1873,43 @@ const styles = StyleSheet.create({
     height: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
     marginRight: 10,
     marginBottom: 10,
   },
   addMediaText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     marginTop: 4,
   },
   actionButtons: {
     flexDirection: 'column',
-    gap: 20,
+    gap: 16,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 400,
     marginBottom: 20,
   },
   fixedActionButtons: {
     flexDirection: 'column',
-    gap: 20,
+    gap: 16,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 400,
     paddingHorizontal: 30,
-    paddingBottom: 80,
-    paddingTop: 20,
-    backgroundColor: '#fff',
+    paddingBottom: 60,
+    paddingTop: 16,
+    backgroundColor: colors.backgroundSecondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   continueButton: {
     width: 120,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#30ACFF',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    ...shadows.button,
   },
   maintenanceSection: {
     marginBottom: 20,
@@ -1919,9 +1922,9 @@ const styles = StyleSheet.create({
   optionalLabel: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#999',
-    marginTop: 4,
-    marginBottom: 15,
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: 12,
   },
   dateTimeRow: {
     flexDirection: 'row',
@@ -1934,15 +1937,15 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   pickerButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     minHeight: 50,
   },
   pickerButtonContent: {
@@ -1952,17 +1955,17 @@ const styles = StyleSheet.create({
   },
   pickerButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '500',
   },
   pickerButtonTextDisabled: {
-    color: '#999',
+    color: colors.textMuted,
   },
   resetButton: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 6,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
     paddingVertical: 6,
     paddingHorizontal: 12,
     marginLeft: 12,
@@ -1973,16 +1976,16 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   notesSquare: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   notesInput: {
     minHeight: 60,
@@ -1995,43 +1998,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   contactDropdownText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
   },
   dropdownList: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     padding: 10,
-    marginBottom: 15,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   dropdownItem: {
     padding: 10,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: colors.text,
   },
   addContactButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.primary + '33',
   },
   addContactText: {
     marginLeft: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.primary,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -2044,8 +2048,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   addContactModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
     padding: 24,
     width: '100%',
     maxWidth: 340,
@@ -2053,18 +2057,18 @@ const styles = StyleSheet.create({
   addContactModalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     marginBottom: 20,
   },
   addContactInput: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 15,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: 14,
     fontSize: 16,
-    color: '#333',
-    marginBottom: 15,
+    color: colors.text,
+    marginBottom: 14,
   },
   addContactModalButtons: {
     flexDirection: 'row',
@@ -2074,26 +2078,26 @@ const styles = StyleSheet.create({
   addContactCancelButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     alignItems: 'center',
   },
   addContactCancelText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
   },
   addContactConfirmButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#1095EE',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   addContactConfirmText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
   },
   calendarOverlay: {
     position: 'absolute',
@@ -2113,18 +2117,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   customCalendar: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     paddingTop: 15,
     paddingHorizontal: 15,
     paddingBottom: 0,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    borderColor: colors.border,
+    ...shadows.cardHover,
     width: '100%',
     maxWidth: 350,
   },
@@ -2149,14 +2149,14 @@ const styles = StyleSheet.create({
   calendarMonthText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
     paddingHorizontal: 10,
   },
   calendarYearText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
   },
   calendarWeekDays: {
@@ -2173,7 +2173,7 @@ const styles = StyleSheet.create({
   calendarWeekDayText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   calendarGrid: {
@@ -2197,21 +2197,21 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDaySelected: {
-    backgroundColor: '#1095EE',
+    backgroundColor: colors.primary,
   },
   calendarDayToday: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
   },
   calendarDayText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text,
   },
   calendarDayTextSelected: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
   },
   calendarDayTextToday: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   monthPickerGrid: {
@@ -2225,16 +2225,16 @@ const styles = StyleSheet.create({
     aspectRatio: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: borderRadius.sm,
     marginBottom: 8,
     marginHorizontal: '1%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   monthPickerItemSelected: {
-    backgroundColor: '#1095EE',
-    borderColor: '#1095EE',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   monthPickerItemLastRow: {
     marginBottom: 0,
@@ -2242,10 +2242,10 @@ const styles = StyleSheet.create({
   monthPickerItemText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   monthPickerItemTextSelected: {
-    color: '#fff',
+    color: colors.white,
   },
   yearPickerScroll: {
     maxHeight: 300,
@@ -2260,18 +2260,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.borderLight,
   },
   yearPickerItemSelected: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
   },
   yearPickerItemText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: colors.text,
   },
   yearPickerItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   timePickerFloatingContainer: {
@@ -2283,18 +2283,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   customTimePicker: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     paddingTop: 15,
     paddingHorizontal: 15,
     paddingBottom: 15,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    borderColor: colors.border,
+    ...shadows.cardHover,
     width: '100%',
     maxWidth: 350,
   },
@@ -2309,7 +2305,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
   },
   timePickerCloseButton: {
@@ -2327,7 +2323,7 @@ const styles = StyleSheet.create({
   timePickerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 10,
   },
   timePickerWheelContainer: {
@@ -2349,11 +2345,11 @@ const styles = StyleSheet.create({
   },
   timePickerWheelItemText: {
     fontSize: 18,
-    color: '#666',
+    color: colors.textMuted,
     fontWeight: '400',
   },
   timePickerWheelItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
     fontSize: 20,
   },

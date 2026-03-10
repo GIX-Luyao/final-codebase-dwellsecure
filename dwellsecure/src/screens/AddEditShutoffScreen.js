@@ -14,12 +14,14 @@ import {
   Modal,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { saveShutoff, getShutoff, saveReminder, deleteReminder, getAllShutoffsRaw, getProperties, getProperty } from '../services/storage';
 import { isEmergencyMode } from '../services/modeService';
+import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 import { getMapThumbnailUrl } from '../utils/mapStatic';
 import { geocodeAddress } from '../utils/geocode';
@@ -655,11 +657,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 28 }} />
+          <View style={{ width: 36 }} />
         </View>
         
         <ScrollView
@@ -789,11 +791,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 28 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
@@ -1461,11 +1463,11 @@ export default function AddEditShutoffScreen({ route, navigation }) {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 28 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
@@ -1704,18 +1706,18 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
   },
   stepContainer: {
     flex: 1,
@@ -1724,15 +1726,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.card,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   stepContent: {
     flex: 1,
@@ -1769,7 +1784,7 @@ const styles = StyleSheet.create({
     height: 380,
     padding: 50,
     borderRadius: 30,
-    backgroundColor: '#E1F3FF', // var(--blue-5)
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 25,
@@ -1933,12 +1948,12 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     maxWidth: 150,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E0E0E0', // var(--gray-2)
+    height: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.border,
   },
   progressBarActive: {
-    backgroundColor: '#30ACFF', // Active progress bar color
+    backgroundColor: colors.primary,
   },
   actionButtons: {
     flexDirection: 'column',
@@ -1950,43 +1965,41 @@ const styles = StyleSheet.create({
   },
   fixedActionButtons: {
     flexDirection: 'column',
-    gap: 20,
+    gap: 16,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 400,
     paddingHorizontal: 30,
-    paddingBottom: 80,
-    paddingTop: 20,
-    backgroundColor: '#fff',
+    paddingBottom: 60,
+    paddingTop: 16,
+    backgroundColor: colors.backgroundSecondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   helpButton: {
     width: '100%',
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#333',
-    backgroundColor: 'transparent',
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.card,
   },
   helpButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   continueButton: {
     width: 120,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#30ACFF',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    ...shadows.button,
   },
   instructionPlaceholder: {
     width: '100%',
@@ -1996,12 +2009,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   inputRect: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 16,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   voiceNoteContainer: {
     alignItems: 'center',
@@ -2012,15 +2025,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#1095EE',
+    borderColor: colors.primary,
   },
   voiceNoteHint: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 17,
@@ -2028,12 +2041,12 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   textInput: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     minHeight: 40,
   },
   photoVideoSection: {
@@ -2048,12 +2061,12 @@ const styles = StyleSheet.create({
   mediaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    borderWidth: 2,
-    borderColor: '#C7C7CC',
+    borderWidth: 1.5,
+    borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 15,
-    backgroundColor: '#FAFAFA',
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    backgroundColor: colors.background,
   },
   mediaItem: {
     width: 80,
@@ -2121,11 +2134,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pickerButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     minHeight: 50,
   },
   pickerButtonContent: {
@@ -2165,12 +2178,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   notesSquare: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   notesInput: {
     minHeight: 60,
@@ -2183,43 +2196,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   contactDropdownText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
   },
   dropdownList: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     padding: 10,
-    marginBottom: 15,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   dropdownItem: {
     padding: 10,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: colors.text,
   },
   addContactButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.primary + '33',
   },
   addContactText: {
     marginLeft: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.primary,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -2274,8 +2288,8 @@ const styles = StyleSheet.create({
   addContactConfirmButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#1095EE',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   addContactConfirmText: {
@@ -2429,8 +2443,8 @@ const styles = StyleSheet.create({
   stepNumberBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#1095EE',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -2438,7 +2452,7 @@ const styles = StyleSheet.create({
   stepNumberText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   stepInput: {
     flex: 1,
@@ -2461,20 +2475,20 @@ const styles = StyleSheet.create({
   },
   addStepText: {
     fontSize: 14,
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   progressTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     textAlign: 'center',
   },
   progressSubtitle: {
     fontSize: 13,
-    color: '#888',
+    color: colors.textMuted,
     textAlign: 'center',
-    marginTop: -5,
+    marginTop: -4,
   },
   progressIndicator: {
     width: 289,
@@ -2495,16 +2509,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
+    marginBottom: 6,
   },
   optionalLabel: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#999',
-    marginTop: 4,
-    marginBottom: 15,
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: 12,
   },
   locationButton: {
     aspectRatio: 220 / 152,
@@ -2574,16 +2589,16 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   floorDropdownItemSelected: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.primaryLight,
   },
   floorDropdownItemText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   floorDropdownItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
   },
   floorInputContainer: {
     flexDirection: 'row',
@@ -2722,21 +2737,21 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDaySelected: {
-    backgroundColor: '#1095EE',
+    backgroundColor: colors.primary,
   },
   calendarDayToday: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
   },
   calendarDayText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text,
   },
   calendarDayTextSelected: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
   },
   calendarDayTextToday: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   monthPickerGrid: {
@@ -2758,8 +2773,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   monthPickerItemSelected: {
-    backgroundColor: '#1095EE',
-    borderColor: '#1095EE',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   monthPickerItemLastRow: {
     marginBottom: 0,
@@ -2788,15 +2803,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   yearPickerItemSelected: {
-    backgroundColor: '#E1F3FF',
+    backgroundColor: colors.primaryLight,
   },
   yearPickerItemText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: colors.text,
   },
   yearPickerItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
   },
   timePickerFloatingContainer: {
@@ -2910,7 +2925,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   timePickerWheelItemTextSelected: {
-    color: '#1095EE',
+    color: colors.primary,
     fontWeight: '600',
     fontSize: 20,
   },
