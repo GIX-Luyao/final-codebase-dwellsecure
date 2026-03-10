@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography } from '../constants/theme';
+import { colors, spacing, typography, borderRadius } from '../constants/theme';
 
 export default function ShareScreen() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
 
   const handleShare = () => {
@@ -15,8 +17,22 @@ export default function ShareScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Share</Text>
-        <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.titleRow}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="share-social" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.titleTextBlock}>
+            <Text style={styles.headerTitle}>Share</Text>
+            <Text style={styles.headerSubtitle}>Share your property information with family members</Text>
+          </View>
+        </View>
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -88,22 +104,48 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    paddingTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  backButton: {
+    padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  headerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleTextBlock: {
+    flex: 1,
+    gap: 0,
+  },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: 6,
+    fontSize: 12,
+    color: colors.primary,
   },
   scrollView: { flex: 1 },
   contentContainer: {

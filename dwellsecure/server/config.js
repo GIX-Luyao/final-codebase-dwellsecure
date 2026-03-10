@@ -32,8 +32,12 @@ const corsOptions = process.env.CORS_ORIGIN
   ? { origin: process.env.CORS_ORIGIN.split(',').map(s => s.trim()) }
   : {};
 
+/** JWT secret for auth tokens. Set JWT_SECRET in production. */
+const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+
 module.exports = {
   PORT,
   mongoUri,
   corsOptions,
+  jwtSecret,
 };

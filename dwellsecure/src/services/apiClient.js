@@ -2,9 +2,11 @@
  * API Client for backend communication
  * Falls back to AsyncStorage if API is unavailable
  * Base URL and health settings come from config/api.js
+ * When user is signed in, requests include Authorization: Bearer <token> for user-scoped data (e.g. properties).
  */
 import { Platform } from 'react-native';
 import { API_BASE_URL, HEALTH_PATH, HEALTH_TIMEOUT_MS } from '../config/api';
+import { getAuthToken } from './authStorage';
 
 export { API_BASE_URL };
 
@@ -66,29 +68,31 @@ const apiRequest = async (endpoint, options = {}) => {
   const method = options.method || 'GET';
   const url = `${API_BASE_URL}${endpoint}`;
   const startTime = Date.now();
-  
+
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
   try {
-    // Log outgoing request
+    const token = await getAuthToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch (_) {}
+
+  try {
     console.log(`[API] → ${method} ${endpoint}`);
     if (method === 'POST' && options.body) {
       try {
         const bodyData = JSON.parse(options.body);
-        console.log(`[API] → POST body:`, { 
-          id: bodyData.id, 
+        console.log(`[API] → POST body:`, {
+          id: bodyData.id,
           type: bodyData.type,
-          description: bodyData.description?.substring(0, 30) + '...' 
+          description: bodyData.description?.substring(0, 30) + '...'
         });
       } catch (e) {
         // Ignore parse errors
       }
     }
-    
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     const duration = Date.now() - startTime;
@@ -144,6 +148,17 @@ export const apiPost = async (endpoint, data) => {
     throw new Error('API_UNAVAILABLE');
   }
   console.log(`[API] POST ${endpoint}`, data);
+  return apiRequest(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+/**
+ * POST without availability check (e.g. save property always tries server so upload works after Render wake-up).
+ */
+export const apiPostForce = async (endpoint, data) => {
+  console.log(`[API] POST (force) ${endpoint}`);
   return apiRequest(endpoint, {
     method: 'POST',
     body: JSON.stringify(data),

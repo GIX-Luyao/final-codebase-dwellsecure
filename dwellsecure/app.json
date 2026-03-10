@@ -26,6 +26,7 @@
       "package": "com.dwellsecure.app",
       "permissions": [
         "NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ]

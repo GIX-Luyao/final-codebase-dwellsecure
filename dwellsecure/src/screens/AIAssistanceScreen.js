@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { identifyShutoffFromImage, askAboutShutoffs } from '../services/openai';
-import { saveShutoff } from '../services/storage';
 import { colors, spacing, borderRadius, shadows } from '../constants/theme';
 
 // Dynamically import expo-image-picker (handle if not installed)
@@ -29,13 +29,13 @@ try {
 }
 
 export default function AIAssistanceScreen() {
+  const navigation = useNavigation();
   const [inputText, setInputText] = useState('');
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [messages, setMessages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showUploadSection, setShowUploadSection] = useState(false);
   const scrollViewRef = useRef(null);
-  const testRecordCreated = useRef(false);
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -48,47 +48,6 @@ export default function AIAssistanceScreen() {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
-
-  // Test: Create a test record when screen loads
-  useEffect(() => {
-    const createTestRecord = async () => {
-      // Only create once
-      if (testRecordCreated.current) {
-        return;
-      }
-      testRecordCreated.current = true;
-
-      try {
-        console.log('[AI Chat] 🧪 Creating test record for database connection...');
-        
-        const testShutoff = {
-          id: `test-ai-chat-${Date.now()}`,
-          type: 'electric',
-          description: 'Test record created from AI Chat screen',
-          location: 'Test Location',
-          verification_status: 'unverified',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          notes: 'This is an automatic test record to verify MongoDB connection',
-        };
-
-        console.log('[AI Chat] Test shutoff data:', testShutoff);
-        await saveShutoff(testShutoff);
-        console.log('[AI Chat] ✅ Test record created successfully!');
-        console.log('[AI Chat] Check MongoDB Atlas to verify the record exists.');
-      } catch (error) {
-        console.error('[AI Chat] ❌ Failed to create test record:', error);
-        console.error('[AI Chat] Error details:', error.message);
-      }
-    };
-
-    // Create test record after a short delay to ensure screen is mounted
-    const timer = setTimeout(() => {
-      createTestRecord();
-    }, 1000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -358,11 +317,18 @@ export default function AIAssistanceScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="chevron-back" size={26} color={colors.text} />
+          </TouchableOpacity>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Ionicons name="sparkles" size={22} color={colors.primary} />
             </View>
-            <View>
+            <View style={styles.titleTextBlock}>
               <Text style={styles.headerTitle}>AI Assistant</Text>
               <Text style={styles.headerSubtitle}>Powered by OpenAI</Text>
             </View>
@@ -528,7 +494,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
@@ -536,30 +501,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  backButton: {
+    padding: spacing.sm,
+    marginRight: spacing.xs,
+    marginLeft: -spacing.sm,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
+    flex: 1,
   },
   headerIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleTextBlock: {
+    flex: 1,
+    gap: 0,
+  },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 12,
     color: colors.primary,
-    fontWeight: '500',
-    marginTop: 1,
+    marginTop: 0,
   },
 
   // ─── Chat area ────────────────────────────────────────────

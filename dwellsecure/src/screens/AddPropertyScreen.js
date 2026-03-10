@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { BOTTOM_NAV_HEIGHT } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +21,7 @@ import { saveProperty, getPeople } from '../services/storage';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { geocodeAddress } from '../utils/geocode';
 import { getMapThumbnailUrl } from '../utils/mapStatic';
+import { getMapboxToken, suggestAddresses } from '../utils/addressSuggest';
 
 const PROPERTY_TYPES = [
   { id: 'single-family', label: 'Single family house', icon: 'home' },
@@ -37,8 +40,10 @@ const MORE_PROPERTY_TYPES = [
 
 export default function AddPropertyScreen({ route }) {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const onboarding = useOnboarding();
   const { property, initialStep, onboardingMode } = route?.params || {};
+  const bottomPadding = (insets.bottom || 0) + BOTTOM_NAV_HEIGHT;
   const isEditing = !!property;
   
   const [step, setStep] = useState(initialStep || 1);
@@ -64,6 +69,38 @@ export default function AddPropertyScreen({ route }) {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const geocodeTimeoutRef = useRef(null);
   const [isPropertyTypeDropdownOpen, setIsPropertyTypeDropdownOpen] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [addressSuggestLoading, setAddressSuggestLoading] = useState(false);
+  const addressSuggestTimeoutRef = useRef(null);
+  const addressInputFocusedRef = useRef(false);
+
+  // Fetch Mapbox token for address suggestions (existing backend /api/mapbox-token)
+  useEffect(() => {
+    let cancelled = false;
+    getMapboxToken().then((t) => { if (!cancelled) setMapboxToken(t || ''); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Address suggestions: debounced fetch when user types in address line 1
+  useEffect(() => {
+    const q = (addressLine1 || '').trim();
+    if (addressSuggestTimeoutRef.current) clearTimeout(addressSuggestTimeoutRef.current);
+    if (q.length < 2 || !mapboxToken) {
+      setAddressSuggestions([]);
+      return;
+    }
+    addressSuggestTimeoutRef.current = setTimeout(async () => {
+      addressSuggestTimeoutRef.current = null;
+      setAddressSuggestLoading(true);
+      const list = await suggestAddresses(q, mapboxToken);
+      setAddressSuggestions(list);
+      setAddressSuggestLoading(false);
+    }, 350);
+    return () => {
+      if (addressSuggestTimeoutRef.current) clearTimeout(addressSuggestTimeoutRef.current);
+    };
+  }, [addressLine1, mapboxToken]);
 
   // When the user enters a complete address, geocode and autolocate the pin on the map
   useEffect(() => {
@@ -413,7 +450,7 @@ export default function AddPropertyScreen({ route }) {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.propertyTypesScrollContent}
+        contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.propertyTypesContainer}>
@@ -482,7 +519,7 @@ export default function AddPropertyScreen({ route }) {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.propertyTypesScrollContent}
+        contentContainerStyle={[styles.propertyTypesScrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.propertyTypesContainer}>
@@ -527,7 +564,7 @@ export default function AddPropertyScreen({ route }) {
     return (
       <ScrollView
         style={styles.stepContainer}
-        contentContainerStyle={styles.step2Content}
+        contentContainerStyle={[styles.step2Content, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -589,12 +626,47 @@ export default function AddPropertyScreen({ route }) {
               style={styles.addressInput}
               value={addressLine1}
               onChangeText={setAddressLine1}
-              placeholder="Enter street address"
+              onFocus={() => { addressInputFocusedRef.current = true; }}
+              onBlur={() => {
+                addressInputFocusedRef.current = false;
+                setTimeout(() => setAddressSuggestions([]), 220);
+              }}
+              placeholder="Type address for suggestions"
               placeholderTextColor="#8E8E93"
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => Keyboard.dismiss()}
             />
+            {addressSuggestLoading && addressSuggestions.length === 0 && (
+              <View style={styles.suggestLoadingRow}>
+                <ActivityIndicator size="small" color="#30ACFF" />
+                <Text style={styles.suggestLoadingText}>Searching…</Text>
+              </View>
+            )}
+            {addressSuggestions.length > 0 && (
+              <View style={styles.suggestDropdown}>
+                {addressSuggestions.map((sug, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.suggestItem, idx === addressSuggestions.length - 1 && styles.suggestItemLast]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setAddressLine1(sug.addressLine1 || sug.place_name);
+                      setCity(sug.city || '');
+                      setState(sug.state || '');
+                      setZipCode(sug.zipCode || '');
+                      setCountry(sug.country || 'USA');
+                      setLocation({ latitude: sug.latitude, longitude: sug.longitude });
+                      setAddressSuggestions([]);
+                      Keyboard.dismiss();
+                    }}
+                  >
+                    <Ionicons name="location-outline" size={18} color="#8E8E93" />
+                    <Text style={styles.suggestItemText} numberOfLines={2}>{sug.place_name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -703,7 +775,7 @@ export default function AddPropertyScreen({ route }) {
     const secondaryAddress = secondaryAddressParts.join(', ');
 
     return (
-      <ScrollView style={styles.stepContainer} contentContainerStyle={styles.step3Content}>
+      <ScrollView style={styles.stepContainer} contentContainerStyle={[styles.step3Content, { paddingBottom: bottomPadding }]}>
         <View style={styles.addressHeader}>
           <Text style={styles.addressTitle}>{addressLine1.trim() || 'Address'}</Text>
           {secondaryAddress ? (
@@ -1015,6 +1087,43 @@ const styles = StyleSheet.create({
   },
   addressInputFocused: {
     borderColor: '#30ACFF',
+  },
+  suggestLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    paddingVertical: 4,
+  },
+  suggestLoadingText: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  suggestDropdown: {
+    marginTop: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7C7CC',
+    backgroundColor: '#FFF',
+    overflow: 'hidden',
+    maxHeight: 220,
+  },
+  suggestItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  suggestItemText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1E1E1E',
+  },
+  suggestItemLast: {
+    borderBottomWidth: 0,
   },
   formRow: {
     flexDirection: 'row',

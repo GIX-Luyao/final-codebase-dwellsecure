@@ -182,7 +182,8 @@ export default function EmergencyModeScreen({ navigation }) {
     setSelectedPropertyId(null);
     setCurrentInstructionIndex(0);
     setIsConfirmed(false);
-    navigation.goBack();
+    // Navigate to MainStack > Property so the Property tab is clearly active and highlighted
+    navigation.navigate('MainStack', { screen: 'Property', params: { screen: 'PropertyList' } });
   };
 
   const handleSelectShutoff = (type) => {
