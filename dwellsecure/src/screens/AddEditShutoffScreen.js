@@ -32,6 +32,24 @@ import { geocodeAddress } from '../utils/geocode';
 import { startVoiceRecording, stopRecordingWithBase64 } from '../utils/voiceRecording';
 import { submitVoiceNoteForSteps } from '../services/openai';
 
+const GUIDE_IMAGES_BY_TYPE = {
+  gas: [
+    require('../../assets/diagram/1gas1.png'),
+    require('../../assets/diagram/1gas2.png'),
+    require('../../assets/diagram/1gas3.png'),
+  ],
+  electric: [
+    require('../../assets/diagram/1electricity1.png'),
+    require('../../assets/diagram/1electricity2.png'),
+    require('../../assets/diagram/1electricity3.png'),
+  ],
+  water: [
+    require('../../assets/diagram/1water1.png'),
+    require('../../assets/diagram/1water2.png'),
+    require('../../assets/diagram/1water3.png'),
+  ],
+};
+
 export default function AddEditShutoffScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { shutoff, type, propertyId, initialStep } = route.params || {};
@@ -75,6 +93,7 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   const [verificationStatus, setVerificationStatus] = useState('unverified');
   const [isInEmergencyMode, setIsInEmergencyMode] = useState(false);
   const [selectedType, setSelectedType] = useState(shutoffType); // Allow type to be changed
+  const guideImages = GUIDE_IMAGES_BY_TYPE[selectedType] || GUIDE_IMAGES_BY_TYPE.gas;
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const recordingRef = useRef(null);
@@ -496,13 +515,18 @@ export default function AddEditShutoffScreen({ route, navigation }) {
   };
 
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const TOTAL_GUIDE_STEPS = 3;
+
+  useEffect(() => {
+    setGuideStep(1);
+    slideAnim.setValue(0);
+  }, [selectedType, slideAnim]);
 
   const handleGuideArrow = (direction) => {
     // Left/Right arrows only control image switching (guide step)
+    const totalGuideSteps = guideImages.length;
     const nextGuideStep =
       direction === 'right'
-        ? Math.min(guideStep + 1, TOTAL_GUIDE_STEPS)
+        ? Math.min(guideStep + 1, totalGuideSteps)
         : Math.max(guideStep - 1, 1);
 
     if (nextGuideStep === guideStep) return;
@@ -697,7 +721,8 @@ export default function AddEditShutoffScreen({ route, navigation }) {
       return typeLabels[selectedType] || 'gas';
     };
 
-    const totalGuideSteps = TOTAL_GUIDE_STEPS;
+    const totalGuideSteps = guideImages.length;
+    const maxGuideOffset = Math.max(totalGuideSteps - 1, 1);
 
     return (
       <View style={styles.stepContainer}>
@@ -743,37 +768,26 @@ export default function AddEditShutoffScreen({ route, navigation }) {
                   style={[
                     styles.slideWrapper,
                     {
+                      width: 280 * totalGuideSteps,
                       transform: [
                         {
                           translateX: slideAnim.interpolate({
-                            inputRange: [-2, -1, 0],
-                            outputRange: [-560, -280, 0],
+                            inputRange: [-maxGuideOffset, 0],
+                            outputRange: [-280 * maxGuideOffset, 0],
                           }),
                         },
                       ],
                     },
                   ]}
                 >
-                  {/* First Guide - Actual shutoff diagram image */}
-                  <Image
-                    source={require('../../assets/diagram/1gas1.png')}
-                    style={styles.diagramImage}
-                    resizeMode="contain"
-                  />
-                  
-                  {/* Second Guide */}
-                  <Image
-                    source={require('../../assets/diagram/1gas2.png')}
-                    style={styles.diagramImage}
-                    resizeMode="contain"
-                  />
-
-                  {/* Third Guide */}
-                  <Image
-                    source={require('../../assets/diagram/1gas3.png')}
-                    style={styles.diagramImage}
-                    resizeMode="contain"
-                  />
+                  {guideImages.map((imageSource, index) => (
+                    <Image
+                      key={`guide-image-${selectedType}-${index}`}
+                      source={imageSource}
+                      style={styles.diagramImage}
+                      resizeMode="contain"
+                    />
+                  ))}
                 </Animated.View>
               </View>
               
