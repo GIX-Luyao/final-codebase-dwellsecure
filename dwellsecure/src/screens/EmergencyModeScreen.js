@@ -26,6 +26,7 @@ export default function EmergencyModeScreen({ navigation }) {
   const [shutoffs, setShutoffs] = useState([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isMissingShutoff, setIsMissingShutoff] = useState(false);
   const scrollViewRef = useRef(null);
 
   useEffect(() => {
@@ -179,6 +180,7 @@ export default function EmergencyModeScreen({ navigation }) {
     setStep(0);
     setSelectedShutoffType(null);
     setSelectedShutoff(null);
+    setIsMissingShutoff(false);
     setSelectedPropertyId(null);
     setCurrentInstructionIndex(0);
     setIsConfirmed(false);
@@ -195,6 +197,13 @@ export default function EmergencyModeScreen({ navigation }) {
     });
     setSelectedShutoffType(type);
     setSelectedShutoff(shutoff || null);
+    if (!shutoff) {
+      setIsMissingShutoff(true);
+      setStep(3);
+      setCurrentInstructionIndex(0);
+      return;
+    }
+    setIsMissingShutoff(false);
     setStep(1);
     setCurrentInstructionIndex(0);
   };
@@ -229,6 +238,7 @@ export default function EmergencyModeScreen({ navigation }) {
     setIsConfirmed(false);
     setSelectedShutoffType(null);
     setSelectedShutoff(null);
+    setIsMissingShutoff(false);
   };
 
   const handleSuccessDone = async () => {
@@ -237,6 +247,7 @@ export default function EmergencyModeScreen({ navigation }) {
   };
 
   const handleNotConfirmed = () => {
+    setIsMissingShutoff(false);
     setStep(3); // Go to call 911
   };
 
@@ -252,6 +263,7 @@ export default function EmergencyModeScreen({ navigation }) {
       setStep(0);
       setSelectedShutoffType(null);
       setSelectedShutoff(null);
+      setIsMissingShutoff(false);
       setCurrentInstructionIndex(0);
       return;
     }
@@ -525,8 +537,9 @@ export default function EmergencyModeScreen({ navigation }) {
           </View>
           <Text style={styles.call911Title}>Call Emergency Services</Text>
           <Text style={styles.call911Text}>
-            If you were unable to shut off the {getShutoffTypeLabel(selectedShutoffType).toLowerCase()}, 
-            please call 911 immediately.
+            {isMissingShutoff
+              ? `No corresponding ${getShutoffTypeLabel(selectedShutoffType).toLowerCase()} shutoff was found. Please call 911 immediately.`
+              : `If you were unable to shut off the ${getShutoffTypeLabel(selectedShutoffType).toLowerCase()}, please call 911 immediately.`}
           </Text>
         </View>
       </View>

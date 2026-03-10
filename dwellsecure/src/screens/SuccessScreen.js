@@ -6,9 +6,11 @@ import {
   Animated,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 
 export default function SuccessScreen() {
   const navigation = useNavigation();
@@ -49,90 +51,139 @@ export default function SuccessScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
+        <View style={styles.heroBadge}>
+          <Ionicons name="sparkles" size={14} color={colors.primary} />
+          <Text style={styles.heroBadgeText}>Property saved</Text>
+        </View>
         <Text style={styles.title}>All set!</Text>
-        
-        <View style={styles.propertyInfo}>
-          <Text style={styles.address}>
-            {addressLine1 || address || '604 7th Ave'}
-          </Text>
-          <Text style={styles.subtitle}>Added as your property</Text>
+
+        <View style={styles.card}>
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+              },
+            ]}
+          >
+            <View style={styles.checkmarkCircle}>
+              <Ionicons name="checkmark" size={52} color={colors.white} />
+            </View>
+          </Animated.View>
+
+          <View style={styles.propertyInfo}>
+            <Text style={styles.address}>
+              {addressLine1 || address || '604 7th Ave'}
+            </Text>
+            <Text style={styles.subtitle}>Added as your property</Text>
+          </View>
         </View>
 
-        <Animated.View
-          style={[
-            styles.iconContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: opacityAnim,
-            },
-          ]}
+        <TouchableOpacity 
+          style={styles.primaryButton}
+          onPress={handleGoHome}
+          activeOpacity={0.85}
         >
-          <TouchableOpacity 
-            style={styles.checkmarkCircle}
-            onPress={handleGoHome}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="checkmark" size={60} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
+          <Ionicons name="home-outline" size={20} color={colors.white} />
+          <Text style={styles.primaryButtonText}>Go to Home</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: spacing.xl,
   },
   content: {
     alignItems: 'center',
-    gap: 80,
-    maxWidth: 500,
+    gap: spacing.xl,
+    maxWidth: 520,
     width: '100%',
+    alignSelf: 'center',
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+  },
+  heroBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   title: {
-    fontSize: 36,
+    ...typography.titleLarge,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#1E1E1E',
+  },
+  card: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    ...shadows.cardHover,
   },
   propertyInfo: {
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.sm,
   },
   address: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E1E1E',
+    ...typography.body,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xl,
   },
   checkmarkCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#30ACFF',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
+    ...shadows.button,
+  },
+  primaryButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    ...shadows.button,
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
   },
 });

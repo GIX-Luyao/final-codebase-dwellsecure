@@ -148,12 +148,6 @@ export default function PropertyPhotoScreen({ route }) {
     );
   };
 
-  const goToEditProperty = () => {
-    if (property) {
-      navigation.navigate('EditProperty', { property, initialStep: 4 });
-    }
-  };
-
   const addressText = property?.address || '';
 
   return (
@@ -195,16 +189,8 @@ export default function PropertyPhotoScreen({ route }) {
         <View style={styles.actionsSection}>
           <Text style={styles.sectionLabel}>Options</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={pickImage} activeOpacity={0.8}>
-            <Ionicons name="camera" size={22} color="#fff" />
+            <Ionicons name="camera" size={22} color={colors.primary} />
             <Text style={styles.primaryButtonText}>Change or upload photo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={goToEditProperty}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="pencil" size={22} color={colors.primary} />
-            <Text style={styles.secondaryButtonText}>Edit property details</Text>
           </TouchableOpacity>
           {imageUri ? (
             <TouchableOpacity style={styles.removeButton} onPress={removePhoto} activeOpacity={0.8}>
@@ -313,28 +299,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.primaryLight,
     paddingVertical: spacing.lg,
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary,
