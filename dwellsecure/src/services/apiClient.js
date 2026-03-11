@@ -53,8 +53,19 @@ export const checkApiHealth = async () => {
       throw fetchError;
     }
   } catch (error) {
-    console.error('[API] Health check failed:', error.message);
-    console.error('[API] Full error:', error);
+    const msg = error?.message || '';
+    const isServiceUnavailable = msg.includes('503');
+    const isTimeout = msg.includes('Request timeout');
+
+    if (isServiceUnavailable) {
+      console.warn('[API] Health check: backend returned 503 (service unavailable). Using AsyncStorage fallback.');
+    } else if (isTimeout) {
+      console.warn('[API] Health check: request timeout. Backend is waking up or unreachable; using AsyncStorage fallback.');
+    } else {
+      console.error('[API] Health check failed:', msg);
+      console.error('[API] Full error:', error);
+    }
+
     console.warn('[API] Will use AsyncStorage fallback');
     isApiAvailable = false;
     return false;
@@ -101,11 +112,22 @@ const apiRequest = async (endpoint, options = {}) => {
       const errorText = await response.text();
       // For PUT 404, log as info instead of error (expected fallback scenario)
       if (method === 'PUT' && response.status === 404) {
-        console.log(`[API] → ${method} ${endpoint} → ${response.status} (not supported, will fallback)`);
-      } else {
-        console.error(`[API] ✗ ${method} ${endpoint} → ${response.status} ${response.statusText} (${duration}ms)`);
-        console.error(`[API] Error details:`, errorText);
+        console.log(
+          `[API] → ${method} ${endpoint} → ${response.status} (not supported, will fallback)`
+        );
+        return { skipped: true };
       }
+      // For DELETE 404, treat as non-fatal (resource already missing)
+      if (method === 'DELETE' && response.status === 404) {
+        console.log(
+          `[API] → ${method} ${endpoint} → ${response.status} (not found, treat as already deleted)`
+        );
+        return { notFound: true };
+      }
+      console.error(
+        `[API] ✗ ${method} ${endpoint} → ${response.status} ${response.statusText} (${duration}ms)`
+      );
+      console.error('[API] Error details:', errorText);
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
