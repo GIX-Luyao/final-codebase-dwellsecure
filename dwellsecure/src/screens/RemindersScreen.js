@@ -18,74 +18,79 @@ export default function RemindersScreen() {
   );
 
   const loadReminders = async () => {
-    const [allReminders, allShutoffs, allUtilities] = await Promise.all([
-      getReminders(),
-      getShutoffs(),
-      getUtilities(),
-    ]);
+    try {
+      const [allReminders, allShutoffs, allUtilities] = await Promise.all([
+        getReminders(),
+        getShutoffs(),
+        getUtilities(),
+      ]);
 
-    // Dedupe reminders by id (defensive: avoid showing same reminder twice)
-    const byId = new Map();
-    (Array.isArray(allReminders) ? allReminders : []).forEach((r) => { byId.set(r.id, r); });
-    const remindersList = Array.from(byId.values());
+      // Dedupe reminders by id (defensive: avoid showing same reminder twice)
+      const byId = new Map();
+      (Array.isArray(allReminders) ? allReminders : []).forEach((r) => { byId.set(r.id, r); });
+      const remindersList = Array.from(byId.values());
 
-    // Build lookup maps for fast access
-    const shutoffMap = {};
-    allShutoffs.forEach((s) => { shutoffMap[s.id] = s; });
-    const utilityMap = {};
-    allUtilities.forEach((u) => { utilityMap[u.id] = u; });
+      // Build lookup maps for fast access
+      const shutoffMap = {};
+      allShutoffs.forEach((s) => { shutoffMap[s.id] = s; });
+      const utilityMap = {};
+      allUtilities.forEach((u) => { utilityMap[u.id] = u; });
 
-    const getShutoffLabel = (type) => {
-      switch (type) {
-        case 'gas':
-        case 'fire':
-          return { label: 'Gas Shutoff', icon: 'flame-outline' };
-        case 'electric':
-        case 'power':
-          return { label: 'Electricity Shutoff', icon: 'flash-outline' };
-        case 'water':
-          return { label: 'Water Shutoff', icon: 'water-outline' };
-        default:
-          return { label: 'Shutoff', icon: 'construct-outline' };
-      }
-    };
-
-    const grouped = {};
-    remindersList.forEach((reminder) => {
-      if (reminder.completed !== true && reminder.date) {
-        // Enrich with live data from the linked utility/shutoff
-        let enriched = { ...reminder };
-        if (reminder.type === 'utility' && reminder.utilityId) {
-          const utility = utilityMap[reminder.utilityId];
-          if (utility) {
-            enriched.displayTitle = utility.title || utility.name || enriched.title;
-            enriched.displayIcon = utility.utilityIcon || enriched.icon || null;
-          }
-        } else if (reminder.type === 'shutoff' && reminder.shutoffId) {
-          const shutoff = shutoffMap[reminder.shutoffId];
-          if (shutoff) {
-            const { label, icon } = getShutoffLabel(shutoff.type);
-            enriched.displayTitle = label;
-            enriched.displayIcon = icon;
-          }
+      const getShutoffLabel = (type) => {
+        switch (type) {
+          case 'gas':
+          case 'fire':
+            return { label: 'Gas Shutoff', icon: 'flame-outline' };
+          case 'electric':
+          case 'power':
+            return { label: 'Electricity Shutoff', icon: 'flash-outline' };
+          case 'water':
+            return { label: 'Water Shutoff', icon: 'water-outline' };
+          default:
+            return { label: 'Shutoff', icon: 'construct-outline' };
         }
+      };
 
-        const date = new Date(reminder.date);
-        const dateKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(enriched);
-      }
-    });
+      const grouped = {};
+      remindersList.forEach((reminder) => {
+        if (reminder.completed !== true && reminder.date) {
+          // Enrich with live data from the linked utility/shutoff
+          let enriched = { ...reminder };
+          if (reminder.type === 'utility' && reminder.utilityId) {
+            const utility = utilityMap[reminder.utilityId];
+            if (utility) {
+              enriched.displayTitle = utility.title || utility.name || enriched.title;
+              enriched.displayIcon = utility.utilityIcon || enriched.icon || null;
+            }
+          } else if (reminder.type === 'shutoff' && reminder.shutoffId) {
+            const shutoff = shutoffMap[reminder.shutoffId];
+            if (shutoff) {
+              const { label, icon } = getShutoffLabel(shutoff.type);
+              enriched.displayTitle = label;
+              enriched.displayIcon = icon;
+            }
+          }
 
-    const groupedArray = Object.keys(grouped)
-      .sort((a, b) => {
-        const dateA = new Date(grouped[a][0].date);
-        const dateB = new Date(grouped[b][0].date);
-        return dateA - dateB;
-      })
-      .map((dateKey) => ({ date: dateKey, items: grouped[dateKey] }));
+          const date = new Date(reminder.date);
+          const dateKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (!grouped[dateKey]) grouped[dateKey] = [];
+          grouped[dateKey].push(enriched);
+        }
+      });
 
-    setReminders(groupedArray);
+      const groupedArray = Object.keys(grouped)
+        .sort((a, b) => {
+          const dateA = new Date(grouped[a][0].date);
+          const dateB = new Date(grouped[b][0].date);
+          return dateA - dateB;
+        })
+        .map((dateKey) => ({ date: dateKey, items: grouped[dateKey] }));
+
+      setReminders(groupedArray);
+    } catch (e) {
+      console.warn('[Reminders] loadReminders failed:', e?.message);
+      setReminders([]);
+    }
   };
 
   const handleReminderPress = (reminder) => {
