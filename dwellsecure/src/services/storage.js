@@ -357,7 +357,7 @@ export const getReminders = async () => {
     list.forEach((r) => { byId.set(r.id, r); });
     return Array.from(byId.values());
   } catch (error) {
-    console.error('Error getting reminders:', error);
+    console.warn('Error getting reminders:', error?.message ?? error);
     return [];
   }
 };
@@ -394,7 +394,7 @@ export const getRemindersByShutoffId = async (shutoffId) => {
     console.log(`[Storage] Retrieved ${filtered.length} reminders for shutoff ${shutoffId} from AsyncStorage`);
     return filtered;
   } catch (error) {
-    console.error('Error getting reminders by shutoffId:', error);
+    console.warn('Error getting reminders by shutoffId:', error?.message ?? error);
     return [];
   }
 };
@@ -467,7 +467,7 @@ export const saveReminder = async (reminder) => {
         }
         return;
       } catch (error) {
-        console.error('[Storage] API save failed:', error.message);
+        console.warn('[Storage] API save failed:', error.message);
         if (error.message !== 'API_UNAVAILABLE') {
           console.warn('[Storage] Falling back to AsyncStorage due to API error');
         } else {
@@ -501,7 +501,7 @@ export const saveReminder = async (reminder) => {
       scheduleNotification(reminder);
     }
   } catch (error) {
-    console.error('[Storage] Error saving reminder:', error);
+    console.warn('[Storage] Error saving reminder:', error?.message ?? error);
     throw error;
   }
 };
@@ -539,7 +539,7 @@ export const deleteReminder = async (id) => {
     await addPending({ op: 'delete', entityType: 'reminders', id });
     cancelNotification(id);
   } catch (error) {
-    console.error('Error deleting reminder:', error);
+    console.warn('Error deleting reminder:', error?.message ?? error);
     throw error;
   }
 };

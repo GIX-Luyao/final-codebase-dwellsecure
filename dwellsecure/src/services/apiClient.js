@@ -62,8 +62,7 @@ export const checkApiHealth = async () => {
     } else if (isTimeout) {
       console.warn('[API] Health check: request timeout. Backend is waking up or unreachable; using AsyncStorage fallback.');
     } else {
-      console.error('[API] Health check failed:', msg);
-      console.error('[API] Full error:', error);
+      console.warn('[API] Health check failed:', msg);
     }
 
     console.warn('[API] Will use AsyncStorage fallback');
@@ -110,12 +109,12 @@ const apiRequest = async (endpoint, options = {}) => {
     
     if (!response.ok) {
       const errorText = await response.text();
-      // For PUT 404, log as info instead of error (expected fallback scenario)
+      // For PUT 404, log as info but still throw so callers (e.g. saveReminder) can catch and fallback to POST
       if (method === 'PUT' && response.status === 404) {
         console.log(
-          `[API] → ${method} ${endpoint} → ${response.status} (not supported, will fallback)`
+          `[API] → ${method} ${endpoint} → ${response.status} (not supported, caller may fallback to POST)`
         );
-        return { skipped: true };
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
       // For DELETE 404, treat as non-fatal (resource already missing)
       if (method === 'DELETE' && response.status === 404) {
@@ -124,10 +123,10 @@ const apiRequest = async (endpoint, options = {}) => {
         );
         return { notFound: true };
       }
-      console.error(
-        `[API] ✗ ${method} ${endpoint} → ${response.status} ${response.statusText} (${duration}ms)`
+      console.warn(
+        `[API] ✗ ${method} ${endpoint} → ${response.status} ${response.statusText} (${duration}ms)`,
+        errorText ? errorText.slice(0, 120) : ''
       );
-      console.error('[API] Error details:', errorText);
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
@@ -139,13 +138,11 @@ const apiRequest = async (endpoint, options = {}) => {
     if (error.message === 'API_UNAVAILABLE') {
       console.warn(`[API] ✗ ${method} ${endpoint} → API_UNAVAILABLE (${duration}ms)`);
     } else if (error.message.includes('Network request failed') || error.message.includes('fetch failed')) {
-      console.error(`[API] ✗ ${method} ${endpoint} → Network Error (${duration}ms)`);
-      console.error(`[API] Network error details:`, error.message);
+      console.warn(`[API] ✗ ${method} ${endpoint} → Network error (${duration}ms):`, error.message);
     } else if (method === 'PUT' && error.message.includes('404')) {
-      // PUT 404 is expected (method not supported), already logged above, don't log again as error
-      // Just silently re-throw
+      // PUT 404 expected; caller (e.g. saveReminder) will fallback to POST — no extra log
     } else {
-      console.error(`[API] ✗ ${method} ${endpoint} → Error (${duration}ms):`, error.message);
+      console.warn(`[API] ✗ ${method} ${endpoint} → ${duration}ms:`, error.message);
     }
     throw error;
   }
