@@ -27,7 +27,7 @@ export default function ApiStatusIndicator() {
   if (isChecking) {
     return (
       <View style={[styles.container, styles.checking]}>
-        <Text style={styles.text}>检查连接中...</Text>
+        <Text style={styles.text}>Checking connection...</Text>
       </View>
     );
   }
@@ -38,7 +38,7 @@ export default function ApiStatusIndicator() {
       onPress={checkStatus}
     >
       <Text style={styles.text}>
-        {isConnected ? '✅ MongoDB 已连接' : '⚠️ 仅本地存储 (MongoDB 未连接)'}
+        {isConnected ? '✅ MongoDB connected' : '⚠️ Local storage only (MongoDB not connected)'}
       </Text>
     </TouchableOpacity>
   );

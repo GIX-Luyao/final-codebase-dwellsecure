@@ -1,17 +1,17 @@
 # Configuration
 
-## `api.js` – DwellSecure 后端 API 配置
+## `api.js` – DwellSecure backend API config
 
-所有与 **本应用后端 API** 相关的配置集中在此（不含 Builder.io 等第三方）。
+All **backend API** configuration for this app lives here (excluding third parties like Builder.io).
 
-- **getApiBaseUrl()** / **API_BASE_URL**：根据 `__DEV__`、`Platform.OS`、`EXPO_PUBLIC_API_URL` 解析出的 base URL。
-- **HEALTH_PATH**、**HEALTH_TIMEOUT_MS**：健康检查路径与超时。
-- **API_ENDPOINTS**：后端路径常量（auth、shutoffs、utilities、reminders、properties）。
+- **getApiBaseUrl()** / **API_BASE_URL**: Base URL resolved from `__DEV__`, `Platform.OS`, and `EXPO_PUBLIC_API_URL`.
+- **HEALTH_PATH**, **HEALTH_TIMEOUT_MS**: Health-check path and timeout.
+- **API_ENDPOINTS**: Backend path constants (auth, shutoffs, utilities, reminders, properties, uploadMedia).
 
-修改后端地址或路径时只需改此文件。`apiClient.js` 与 `AuthContext` 均从此处读取配置。
+Change the backend URL or paths only in this file. `apiClient.js` and `AuthContext` read from here.
 
-## `keys.js` – 第三方 API 密钥（可选/遗留）
+## `keys.js` – Third-party API keys (optional / legacy)
 
-发布时 **OpenAI 与 Mapbox 均由后端提供**，应用只需配置 `EXPO_PUBLIC_API_URL` 指向后端。  
-`openai.js`、`geocode.js`、地图缩略图与 MapPicker 均通过后端代理，不在前端使用密钥。  
-若仍有代码引用 `keys.js`，仅作兼容保留；新功能勿依赖前端环境变量中的密钥。
+In release, **OpenAI and Mapbox are provided by the backend**; the app only needs `EXPO_PUBLIC_API_URL` pointing at the backend.  
+`openai.js`, `geocode.js`, map thumbnails, and MapPicker use the backend proxy; no keys are used in the frontend.  
+If code still imports `keys.js`, it is for compatibility only; new features should not rely on frontend env keys.

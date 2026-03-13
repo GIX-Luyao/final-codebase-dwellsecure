@@ -9,22 +9,26 @@ Express.js backend server with MongoDB integration.
 npm install
 ```
 
-2. Configure MongoDB and server (all in `config.js`; env loaded via dotenv):
+2. **Environment variables – how to use:**  
+   Copy **`.env.example`** to **`.env`** in this folder (`server/`), then edit `.env` with your values. Do not commit `.env`.
+
+   ```bash
+   cp .env.example .env
+   # Windows: copy .env.example .env
+   ```
+
+   All variables are documented in **`server/.env.example`**. Summary (from `config.js`; dotenv loads `.env` from project root or `server/`):
    - **MONGODB_URI** – full connection string (preferred). Example:
      ```
      MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/dwellsecure?appName=...
      ```
-   - **MONGODB_PASSWORD** – used only when `MONGODB_URI` is not set (default dev user/password in `config.js`).
+   - **MONGODB_PASSWORD** – used only when `MONGODB_URI` is not set (with **MONGODB_USER**; optional **MONGODB_HOST**, **MONGODB_DB**).
    - **PORT** – server port (default 3000).
    - **CORS_ORIGIN** – comma-separated allowed origins (optional).
    - **JWT_SECRET** – secret for signing auth tokens (required in production; dev default exists).
-   - **Firebase Storage (media uploads):** To enable `POST /api/upload-media`, set **FIREBASE_STORAGE_BUCKET** (e.g. `project-28a12e1f-d31f-47d3-834.firebasestorage.app`) and one of: **FIREBASE_SERVICE_ACCOUNT_JSON** (stringified JSON key) or **FIREBASE_SERVICE_ACCOUNT_PATH** (path to the JSON key file). If unset, upload-media returns 503.
-   - **ADDRESS_ENCRYPTION_KEY** – 32-byte key so address/geo are stored **encrypted** in MongoDB (API still returns plain text for map/UI). If unset, addresses are stored in **plain**. Generate one with:
-     ```bash
-     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-     ```
-     Use the 64-character hex string as the env value. On Render: Dashboard → your service → Environment → Add `ADDRESS_ENCRYPTION_KEY` = that value, then redeploy.
-   - Create a `.env` file in the project root (or `server`) for local overrides.
+   - **Firebase Storage (media uploads):** To enable `POST /api/upload-media`, set **FIREBASE_STORAGE_BUCKET** and one of **FIREBASE_SERVICE_ACCOUNT_JSON** or **FIREBASE_SERVICE_ACCOUNT_PATH**. See `.env.example`. If unset, upload-media returns 503.
+   - **ADDRESS_ENCRYPTION_KEY** – 32-byte key (64-char hex) so address/geo are stored encrypted. Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. See `.env.example`.
+   - **OPENAI_API_KEY**, **MAPBOX_ACCESS_TOKEN** / **MAPBOX_TOKEN** – optional; see `.env.example`.
 
 3. Start the server:
 ```bash
@@ -36,7 +40,48 @@ The server will:
 - Create collections if they don't exist
 - Start listening on port 3000
 
-## Deploy to AWS (Step 1 – independent backend)
+## Simple deployment flow (switch to another server)
+
+When you want to run the backend on a **different host** (Render, Railway, AWS, Fly.io, your VPS, etc.):
+
+### 1. Deploy the `server/` folder
+
+- Use **only the `server/`** directory as the deploy root (or ensure the app’s start command runs from `server/`).
+- **Start command:** `npm start` (runs `node index.js`).
+- **Node:** Use a recent Node LTS (e.g. 18 or 20). The host usually sets **`PORT`**; the app uses `process.env.PORT || 3000` and binds to `0.0.0.0`.
+
+### 2. Set environment variables on the host
+
+In the host’s dashboard (e.g. Render → Environment, Railway → Variables), add the same variables as in **`server/.env.example`**:
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `MONGODB_URI` | Yes | Full MongoDB connection string. |
+| `JWT_SECRET` | Yes (production) | Long random string; do not use the dev default. |
+| `PORT` | Often auto-set | Hosts like Render/Railway set this. |
+| `CORS_ORIGIN` | Recommended | Comma-separated frontend URLs (e.g. `https://yourapp.web.app`). Omit to allow all (OK for testing only). |
+| `FIREBASE_STORAGE_BUCKET` | Optional | For photo uploads. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` or `FIREBASE_SERVICE_ACCOUNT_PATH` | Optional | With bucket, for uploads. |
+| `OPENAI_API_KEY` | Optional | For voice-note / AI. |
+| `MAPBOX_ACCESS_TOKEN` or `MAPBOX_TOKEN` | Optional | For geocode and maps. |
+| `ADDRESS_ENCRYPTION_KEY` | Optional | 64-char hex; encrypts address/geo in DB. |
+
+Do **not** upload a `.env` file with secrets; use the platform’s environment UI.
+
+### 3. Point the app at the new backend
+
+- Set the app’s API base URL to your new server URL (e.g. `https://dwellsecure-xxxx.onrender.com`).
+- **Option A:** In the project root `.env`, set `EXPO_PUBLIC_API_URL=https://your-backend-url` and rebuild/restart the app.
+- **Option B:** In `src/config/api.js`, set the base URL and commit (or set `EXPO_PUBLIC_API_URL` in EAS/build env for production).
+
+### 4. Verify
+
+- Open **`https://your-backend-url/health`** in a browser. You should see: `{"status":"ok","db":"connected"}`.
+- Open the app, log in; it should show “MongoDB connected” (or similar) and sync to the new server.
+
+---
+
+## Deploy to AWS (independent backend)
 
 The backend is **independently deployable** (e.g. from the `server` folder only):
 
@@ -44,7 +89,7 @@ The backend is **independently deployable** (e.g. from the `server` folder only)
 - **Bind**: `app.listen(PORT, '0.0.0.0', ...)` so the server is reachable from the network.
 - **Health check**: `GET /health` returns `{ status: 'ok', db: 'connected'|'disconnected' }`.
 
-For production, set in your environment: `PORT`, `MONGODB_URI`, and optionally `CORS_ORIGIN` (comma-separated frontend URLs).
+For production, set in your environment: `PORT`, `MONGODB_URI`, `JWT_SECRET`, and optionally `CORS_ORIGIN` (comma-separated frontend URLs).
 
 ## API Endpoints
 

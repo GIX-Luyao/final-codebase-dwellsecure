@@ -1,30 +1,30 @@
-# 安全说明
+# Security notes
 
-- **HTTPS**：前端到后端必须用 HTTPS（Render 默认提供）。`EXPO_PUBLIC_API_URL` 请使用 `https://...`。
-- **后端到 Atlas**：使用 TLS（MongoDB Atlas 默认）。
-- **密钥不进 GitHub**：`MONGO_URI`、`ADDRESS_ENCRYPTION_KEY` 等只放在 Render 环境变量中，不要写进代码或提交到仓库。
-- **地址加密**：Property 的地址相关字段（address, addressLine1, addressLine2, city, state, zipCode, country）在写入数据库前由后端用 `ADDRESS_ENCRYPTION_KEY`（AES-256-GCM）加密，读取时在服务端解密后再返回给前端。密钥仅存在于服务器环境变量，前端不参与加解密。
-- **不在前端做加密存 DB**：加密密钥若放在 Expo 应用里会被反编译获取，因此加解密只在后端进行。
+- **HTTPS**: Frontend-to-backend must use HTTPS (Render provides this by default). Use `https://...` for `EXPO_PUBLIC_API_URL`.
+- **Backend to Atlas**: TLS is used (MongoDB Atlas default).
+- **No secrets in GitHub**: `MONGO_URI`, `ADDRESS_ENCRYPTION_KEY`, etc. live only in Render environment variables; do not put them in code or commit them to the repo.
+- **Address encryption**: Property address-related fields (address, addressLine1, addressLine2, city, state, zipCode, country) are encrypted by the backend with `ADDRESS_ENCRYPTION_KEY` (AES-256-GCM) before being written to the database; they are decrypted on the server when read and then returned to the frontend. The key exists only in server env; the frontend does not perform encryption or decryption.
+- **No encryption in the frontend for DB**: If the encryption key were in the Expo app it could be obtained via reverse engineering; therefore encryption/decryption is done only on the backend.
 
-## 前端显示地址是否会被“入侵”？
+## Can the displayed address be compromised?
 
-- 地址在**数据库里是密文**，泄露的是 DB 时看不到明文。
-- 前端需要**显示**地址，所以 API 返回的是后端解密后的明文，经 HTTPS 传到已登录的客户端。这是业务必然：合法用户必须能看到自己的地址。
-- 风险与缓解：
-  - **未授权访问**：通过认证（登录态）限制只有本人能请求自己的 properties；API 应按用户做隔离（若当前未做，建议后续按 userId 过滤）。
-  - **抓包**：HTTPS 可防止普通抓包看到明文；设备被 root/越狱或安装根证书时，本机流量可能被查看，与所有移动端应用相同。
-  - **应用被反编译**：反编译只能拿到前端代码和配置，拿不到 `ADDRESS_ENCRYPTION_KEY`（仅在 Render 环境变量），也拿不到 MongoDB 连接串。
+- Addresses are **stored in the database as ciphertext**; a DB leak would not expose plaintext.
+- The frontend **displays** addresses, so the API returns plaintext decrypted on the backend, sent over HTTPS to the logged-in client. This is required: legitimate users must see their own address.
+- Risks and mitigations:
+  - **Unauthorized access**: Use auth (login state) so only the owner can request their properties; the API should be scoped by user (add userId filtering if not already done).
+  - **Traffic interception**: HTTPS prevents normal interception; on rooted/jailbroken devices or with a custom root CA, traffic may be visible, as with any mobile app.
+  - **App reverse engineering**: Reverse engineering yields only frontend code and config, not `ADDRESS_ENCRYPTION_KEY` (only in Render env) or the MongoDB connection string.
 
-结论：地址存库加密 + 密钥仅在 Render + HTTPS，已满足“密钥不进 GitHub、后端加密存 DB”的要求；前端显示地址是正常需求，按用户做好认证与授权即可。
+Conclusion: Encrypting addresses at rest + keeping the key only on Render + HTTPS meets the “no secrets in GitHub, backend encrypts for DB” requirement; showing the address in the frontend is a normal need and should be paired with proper auth and authorization.
 
-## 完全离线时
+## When fully offline
 
-**当前实现**：离线或连不上服务器时，前端会回退到本地 **AsyncStorage**（`src/services/storage.js` 中在 API 失败或 `getApiAvailability()` 为 false 时走 `AsyncStorage.getItem`/`setItem`），数据以**明文 JSON** 存储，**没有**任何加密。
+**Current behavior**: When offline or when the server is unreachable, the frontend falls back to local **AsyncStorage** (in `src/services/storage.js`, when the API fails or `getApiAvailability()` is false it uses `AsyncStorage.getItem`/`setItem`); data is stored as **plain JSON** with **no** encryption.
 
-若设备**完全离线**、连不上服务器，应用使用的就是上述本地、不加密的存储。此时：
+If the device is **fully offline** and cannot reach the server, the app uses that local, unencrypted storage. In that case:
 
-- 读不到服务器上的密钥（`ADDRESS_ENCRYPTION_KEY` 只在 Render 环境变量里，离线时根本连不上服务器）。
-- 本地存的数据**没有**用该密钥加密；若设备丢失或被人物理/权限访问，本地数据库里的内容可能被直接读取。
-- 云端（MongoDB）里的地址仍是密文，只有带密钥的后端能解密；离线端与云端是两套数据，安全边界不同。
+- The server-side key cannot be read (`ADDRESS_ENCRYPTION_KEY` is only in Render env; offline means no server).
+- Locally stored data is **not** encrypted with that key; if the device is lost or accessed by someone else, the local store can be read.
+- Addresses in the cloud (MongoDB) remain ciphertext; only the backend with the key can decrypt them. Offline and cloud are separate data boundaries.
 
-如需在离线场景也保护本地数据，需要单独设计（例如用设备本机密钥做本地加密），与当前“仅后端加密存 DB”的方案是两回事。
+To protect local data when offline, a separate design is needed (e.g. device-local key for local encryption), which is outside the current “backend-only encryption for DB” approach.

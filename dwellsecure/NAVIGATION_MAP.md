@@ -1,38 +1,38 @@
-# DwellSecure 屏幕连接与跳转说明
+# DwellSecure screen flow and navigation
 
-## 一、导航器层级结构
+## 1. Navigator hierarchy
 
 ```
-AppNavigator (根，根据 isSignedIn / showOnboarding 切换)
-├── AuthStack (未登录)
+AppNavigator (root; switches by isSignedIn / showOnboarding)
+├── AuthStack (not logged in)
 │   ├── Login
 │   ├── SignUp
 │   └── ForgotPassword
 │
-├── Onboarding (已登录且 onboarding 未完成)
-│   ├── [阶段 welcome] OnboardingWelcomeScreen（无路由名）
-│   └── [阶段 add-property] Stack
+├── Onboarding (logged in, onboarding not complete)
+│   ├── [phase welcome] OnboardingWelcomeScreen (no route name)
+│   └── [phase add-property] Stack
 │       ├── AddPropertyOnboarding  (AddPropertyScreen, onboardingMode: true)
 │       ├── MapPicker
 │       └── Success
 │
-└── RootStack (已登录且 onboarding 已完成)
-    ├── MainStack (主界面 + 底部 Tab)
-    │   ├── Property  → PropertyStack（见下）
+└── RootStack (logged in, onboarding complete)
+    ├── MainStack (main UI + bottom tabs)
+    │   ├── Property  → PropertyStack (see below)
     │   ├── Reminders → RemindersScreen
     │   ├── AIAssistance
     │   └── Share
-    │   + BottomNav（隐藏于部分屏幕）
+    │   + BottomNav (hidden on some screens)
     └── EmergencyMode
 ```
 
-**PropertyStack**（主 Tab「Property」内的栈）：
+**PropertyStack** (stack inside the main "Property" tab):
 
 ```
 PropertyStack
-├── PropertyList       ← 默认首页
-├── Shutoffs           → ShutoffsStack（嵌套）
-├── Utilities          → UtilitiesStack（嵌套）
+├── PropertyList       ← default home
+├── Shutoffs           → ShutoffsStack (nested)
+├── Utilities          → UtilitiesStack (nested)
 ├── PropertyDetail
 ├── ShutoffDetail
 ├── UtilityDetail
@@ -46,7 +46,7 @@ PropertyStack
 └── Success
 ```
 
-**ShutoffsStack**（作为 PropertyStack 的一个 screen「Shutoffs」）：
+**ShutoffsStack** (as a screen "Shutoffs" inside PropertyStack):
 
 ```
 ShutoffsStack
@@ -58,85 +58,85 @@ ShutoffsStack
 ├── AddProperty
 ├── AddPerson
 └── EditProperty
-（无 MapPicker / Success，依赖父栈 PropertyStack）
+(No MapPicker / Success; uses parent PropertyStack)
 ```
 
-**UtilitiesStack**（作为 PropertyStack 的一个 screen「Utilities」）：
+**UtilitiesStack** (as a screen "Utilities" inside PropertyStack):
 
 ```
 UtilitiesStack
 ├── UtilitiesList
 └── AddEditUtility
-（无 MapPicker，依赖父栈 PropertyStack）
+(No MapPicker; uses parent PropertyStack)
 ```
 
 ---
 
-## 二、各 Screen 的跳转方式汇总
+## 2. Screen navigation summary
 
-| 所在位置 | Screen | 跳转目标 | 方式 |
-|----------|--------|----------|------|
-| AuthStack | Login | ForgotPassword, SignUp | navigate |
-| AuthStack | SignUp | Login | navigate |
-| AuthStack | ForgotPassword | Login, goBack | navigate / goBack |
-| Onboarding | OnboardingWelcomeScreen | （无路由）→ 内部 setOnboardingPhase('add-property') | 状态切换 |
-| Onboarding | AddPropertyScreen (onboarding) | MapPicker, Success；返回 → goBackToWelcome() | navigate / context |
-| Onboarding | SuccessScreen (onboardingMode) | 无路由 → completeOnboarding() 关闭 onboarding | context |
-| MainStack | （911 浮钮） | EmergencyMode | navigate |
-| MainStack | EmergencyModeScreen | goBack | goBack |
-| PropertyStack | PropertyListScreen | PropertyDetail, AddProperty | navigate |
-| PropertyStack | PropertyDetailScreen | PropertyList, goBack, EditProperty, UtilityDetail, AddEditUtility, ShutoffDetail, AddEditShutoff, PersonDetail, AddPerson | navigate / goBack |
-| PropertyStack | AddPropertyScreen (非 onboarding) | MapPicker, Success, AddPerson；step=1 返回 → goBack | navigate / goBack |
-| PropertyStack | SuccessScreen (非 onboarding) | PropertyList（重置栈） | reset |
-| PropertyStack | ShutoffDetailScreen | AddEditShutoff, MapPicker, goBack | navigate / goBack |
-| PropertyStack | AddEditShutoffScreen | goBack, MapPicker | goBack / navigate |
-| PropertyStack | UtilityDetailScreen | goBack, MapPicker | goBack / navigate |
-| PropertyStack | AddEditUtilityScreen | goBack, MapPicker | goBack / navigate |
-| PropertyStack | AddPersonScreen | goBack | goBack |
-| PropertyStack | PersonDetailScreen | AddPerson, goBack | navigate / goBack |
-| PropertyStack | MapPickerScreen | goBack（带 params 回传） | goBack |
-| ShutoffsStack | ShutoffsListScreen | AddEditShutoff | navigate |
-| UtilitiesStack | UtilitiesListScreen | AddEditUtility | navigate |
-| MainStack | RemindersScreen | ShutoffDetail | navigate |
-| BottomNav | — | Property, Reminders, AIAssistance, Share | navigate |
+| Location      | Screen                 | Navigate to                                                                 | Method            |
+|--------------|------------------------|-----------------------------------------------------------------------------|-------------------|
+| AuthStack    | Login                  | ForgotPassword, SignUp                                                     | navigate          |
+| AuthStack    | SignUp                 | Login                                                                       | navigate          |
+| AuthStack    | ForgotPassword         | Login, goBack                                                               | navigate / goBack |
+| Onboarding   | OnboardingWelcomeScreen| (no route) → internal setOnboardingPhase('add-property')                    | state             |
+| Onboarding   | AddPropertyScreen (onboarding) | MapPicker, Success; back → goBackToWelcome()                         | navigate / context|
+| Onboarding   | SuccessScreen (onboardingMode) | no route → completeOnboarding() closes onboarding                    | context           |
+| MainStack    | (911 FAB)              | EmergencyMode                                                               | navigate          |
+| MainStack    | EmergencyModeScreen    | goBack                                                                      | goBack            |
+| PropertyStack| PropertyListScreen     | PropertyDetail, AddProperty                                                 | navigate          |
+| PropertyStack| PropertyDetailScreen   | PropertyList, goBack, EditProperty, UtilityDetail, ShutoffDetail, …        | navigate / goBack |
+| PropertyStack| AddPropertyScreen (non-onboarding) | MapPicker, Success, AddPerson; step=1 back → goBack              | navigate / goBack  |
+| PropertyStack| SuccessScreen (non-onboarding) | PropertyList (reset stack)                                        | reset             |
+| PropertyStack| ShutoffDetailScreen    | AddEditShutoff, MapPicker, goBack                                           | navigate / goBack |
+| PropertyStack| AddEditShutoffScreen   | goBack, MapPicker                                                           | goBack / navigate |
+| PropertyStack| UtilityDetailScreen    | goBack, MapPicker                                                           | goBack / navigate |
+| PropertyStack| AddEditUtilityScreen   | goBack, MapPicker                                                           | goBack / navigate |
+| PropertyStack| AddPersonScreen        | goBack                                                                      | goBack            |
+| PropertyStack| PersonDetailScreen     | AddPerson, goBack                                                           | navigate / goBack |
+| PropertyStack| MapPickerScreen        | goBack (with params)                                                        | goBack            |
+| ShutoffsStack| ShutoffsListScreen     | AddEditShutoff                                                              | navigate          |
+| UtilitiesStack | UtilitiesListScreen  | AddEditUtility                                                              | navigate          |
+| MainStack    | RemindersScreen        | ShutoffDetail                                                               | navigate          |
+| BottomNav    | —                      | Property, Reminders, AIAssistance, Share                                    | navigate          |
 
-**说明：**
+**Notes:**
 
-- **Onboarding 流程**：Welcome → Add Property（AddPropertyOnboarding）→（可选）MapPicker → Success → 点「Go home」调用 `completeOnboarding()`，并写入 `setOnboardingComplete()`，关闭 onboarding，回到 RootStack。
-- **非 Onboarding 的 Add Property**：PropertyList → AddProperty → MapPicker / Success → Success 里 `navigation.reset({ routes: [{ name: 'PropertyList' }] })` 回到物业列表。
-- **返回键逻辑**：AddPropertyScreen 在 step=1 时，若 `onboardingMode` 则 `goBackToWelcome()`，否则 `navigation.goBack()`。
+- **Onboarding flow**: Welcome → Add Property (AddPropertyOnboarding) → (optional) MapPicker → Success → tap "Go home" calls `completeOnboarding()` and `setOnboardingComplete()`, then returns to RootStack.
+- **Add Property (non-onboarding)**: PropertyList → AddProperty → MapPicker / Success → Success uses `navigation.reset({ routes: [{ name: 'PropertyList' }] })` to return to the property list.
+- **Back button**: AddPropertyScreen at step=1: if `onboardingMode` then `goBackToWelcome()`, else `navigation.goBack()`.
 
 ---
 
-## 三、可能需要矫正的逻辑点
+## 3. Logic points that may need adjustment
 
 1. **RemindersScreen → ShutoffDetail**  
-   Reminders 在 MainStack，ShutoffDetail 在 PropertyStack 内。当前使用 `navigation.navigate('ShutoffDetail', { shutoffId })`。若实际运行时无法跳到 ShutoffDetail，需改为嵌套：  
-   `navigation.navigate('Property', { screen: 'ShutoffDetail', params: { shutoffId } })`。
+   Reminders lives in MainStack, ShutoffDetail in PropertyStack. The app uses `navigation.navigate('ShutoffDetail', { shutoffId })`. If that fails at runtime, use nested navigation:  
+   `navigation.navigate('Property', { screen: 'ShutoffDetail', params: { shutoffId } })`.
 
-2. **SuccessScreen（非 onboarding）的 reset**  
-   当前 `navigation.reset({ index: 0, routes: [{ name: 'PropertyList' }] })` 会重置**当前 navigator**。Success 只在 PropertyStack 中注册，因此会重置 PropertyStack 到 PropertyList，逻辑正确。若将来 Success 也在其他栈中注册，需要按来源栈区分 reset 目标。
+2. **SuccessScreen (non-onboarding) reset**  
+   `navigation.reset({ index: 0, routes: [{ name: 'PropertyList' }] })` resets the **current** navigator. Success is only in PropertyStack, so it correctly resets to PropertyList. If Success is later used in other stacks, differentiate reset target by source stack.
 
 3. **HomeScreen**  
-   HomeScreen 未在 AppNavigator 中注册，仅存在文件。若已不用，可考虑删除或改为从某处（如深链）打开；若仍要用，需在合适栈中注册并接好入口。
+   HomeScreen is not registered in AppNavigator and only exists as a file. If unused, remove it or expose via deep link; if used, register it in the right stack and add an entry.
 
-4. **BottomNav 隐藏规则**  
-   `hideNavScreens` 包含 AddProperty, AddPerson, EditProperty, EmergencyMode, MapPicker, Success, AddEditShutoff, AddEditUtility。这些界面不显示底部导航，与当前设计一致。
+4. **BottomNav visibility**  
+   `hideNavScreens` includes AddProperty, AddPerson, EditProperty, EmergencyMode, MapPicker, Success, AddEditShutoff, AddEditUtility. Those screens do not show the bottom nav, matching the current design.
 
-5. **Onboarding 轮询**  
-   AppNavigator 中每 1 秒检查 `isOnboardingComplete()`；若为 false 则 `setShowOnboarding(true)`。完成 onboarding 时必须调用 `setOnboardingComplete()`（已在 `handleOnboardingComplete` 中实现），否则会再次被拉回 Welcome。
+5. **Onboarding polling**  
+   AppNavigator checks `isOnboardingComplete()` every 1s; if false it calls `setShowOnboarding(true)`. Onboarding completion must call `setOnboardingComplete()` (done in `handleOnboardingComplete`); otherwise the user is sent back to Welcome.
 
 ---
 
-## 四、按流程归纳的入口/出口
+## 4. Entry/exit by flow
 
-- **登录流**：Login ⇄ SignUp, Login → ForgotPassword → Login。
-- **Onboarding 流**：Welcome → Add Property →（MapPicker）→ Success → completeOnboarding → 主应用。
-- **主应用 Property**：PropertyList ⇄ PropertyDetail, AddProperty, EditProperty；AddProperty / EditProperty → MapPicker, Success；Success → reset 到 PropertyList。
-- **主应用 Shutoffs**：ShutoffsList → AddEditShutoff, ShutoffDetail；AddEditShutoff / ShutoffDetail → MapPicker（父栈）。
-- **主应用 Utilities**：UtilitiesList → AddEditUtility；AddEditUtility → MapPicker（父栈）。
-- **Reminders**：Reminders → ShutoffDetail（若跳不到需用嵌套 navigate）。
-- **底部 Tab**：Property | Reminders | AIAssistance | Share。
-- **Emergency**：任意主界面（911 浮钮）→ EmergencyMode → goBack。
+- **Login**: Login ⇄ SignUp, Login → ForgotPassword → Login.
+- **Onboarding**: Welcome → Add Property → (MapPicker) → Success → completeOnboarding → main app.
+- **Property**: PropertyList ⇄ PropertyDetail, AddProperty, EditProperty; AddProperty / EditProperty → MapPicker, Success; Success → reset to PropertyList.
+- **Shutoffs**: ShutoffsList → AddEditShutoff, ShutoffDetail; AddEditShutoff / ShutoffDetail → MapPicker (parent stack).
+- **Utilities**: UtilitiesList → AddEditUtility; AddEditUtility → MapPicker (parent stack).
+- **Reminders**: Reminders → ShutoffDetail (use nested navigate if the direct navigate fails).
+- **Bottom tabs**: Property | Reminders | AIAssistance | Share.
+- **Emergency**: Any main screen (911 FAB) → EmergencyMode → goBack.
 
-如需我根据这份地图**具体改某一条跳转或某一块逻辑**（例如 Reminders → ShutoffDetail 或 Success 的 reset），可以说出屏幕名和目标行为，我按文件给出修改片段。
+To change a specific navigation or behavior (e.g. Reminders → ShutoffDetail or Success reset), specify the screen and desired behavior and the exact code changes can be provided.
