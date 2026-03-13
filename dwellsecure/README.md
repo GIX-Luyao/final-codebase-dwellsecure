@@ -146,7 +146,7 @@ Detailed steps per platform (Render, Railway, etc.) are in **`server/README.md`*
 
 ### User manual (PDF)
 
-The **source** user manual is **`docs/USER_MANUAL.md`** (all required sections are there). To satisfy “include a PDF user manual in your codebase,” generate and add **`docs/USER_MANUAL.pdf`** to the repository. To generate it:
+The codebase includes a user manual in Markdown: **`docs/USER_MANUAL.md`**. A **PDF user manual** should be included in the repo as **`docs/USER_MANUAL.pdf`**. To generate it:
 
 - **Option A:** From the project root: `pandoc docs/USER_MANUAL.md -o docs/USER_MANUAL.pdf` (requires [pandoc](https://pandoc.org/) and a LaTeX engine, or `pandoc` with `--pdf-engine=wkhtmltopdf`).
 - **Option B:** Open `docs/USER_MANUAL.md` in a Markdown viewer or VS Code, then use **Print → Save as PDF**.

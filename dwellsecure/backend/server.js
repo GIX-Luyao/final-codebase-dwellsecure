@@ -9,6 +9,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const store = require('./store');
+const { API_BASE_URL } = require('../src/config/api');
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'dwellsecure-admin-secret';
@@ -66,6 +67,6 @@ app.get('/admin', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Dwell Secure backend running at http://localhost:${PORT}`);
-  console.log(`Admin dashboard: http://localhost:${PORT}/admin`);
+  console.log(`Dwell Secure backend running at ${API_BASE_URL}`);
+  console.log(`Admin dashboard: ${API_BASE_URL}/admin`);
 });
