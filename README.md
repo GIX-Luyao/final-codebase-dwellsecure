@@ -2,7 +2,7 @@
 
 # Dwell Secure – Final Codebase
 
-This repository contains the **final codebase for the Dwell Secure app** for the course GitHub Classroom assignment.
+This repository contains the **final codebase for the Dwell Secure app** for the course GitHub Classroom assignment.  
 User manual information (`USER_MANUAL.pdf`)  
 
 ---
